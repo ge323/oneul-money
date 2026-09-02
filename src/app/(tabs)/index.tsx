@@ -11,9 +11,11 @@ import {
   Animated,
   Modal,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
+  useWindowDimensions,
   View,
 } from 'react-native';
 
@@ -49,6 +51,19 @@ const DEFAULT_SETTINGS: BudgetSettings = {
 };
 
 export default function HomeScreen() {
+  const {
+    width: screenWidth,
+    height: screenHeight,
+  } = useWindowDimensions();
+
+  const isCompactHeight =
+    screenHeight < 760;
+
+  const horizontalPadding =
+    screenWidth < 390
+      ? 16
+      : 20;
+
   const [settings, setSettings] =
     useState<BudgetSettings>(
       DEFAULT_SETTINGS
@@ -368,6 +383,13 @@ export default function HomeScreen() {
   const remainingDays =
     getRemainingDays();
 
+  /* =========================
+     생활비 계산
+  ========================= */
+
+  const SAFETY_RESERVE_RATE = 0.1;
+
+  // 실제로 남아 있는 생활비
   const remainingBudget =
     Math.max(
       0,
@@ -379,10 +401,26 @@ export default function HomeScreen() {
         settings.spentAmount
     );
 
+  // 남은 생활비의 10%는 예상치 못한 지출을 위한 안전 여유금으로 보호
+  const safetyReserve =
+    Math.floor(
+      remainingBudget *
+        SAFETY_RESERVE_RATE
+    );
+
+  // 실제로 다음 월급일까지 나눠 사용할 수 있는 생활비
+  const usableRemainingBudget =
+    Math.max(
+      0,
+      remainingBudget -
+        safetyReserve
+    );
+
+  // 오늘 권장 생활비
   const dailyBudget =
     remainingDays > 0
       ? Math.floor(
-          remainingBudget /
+          usableRemainingBudget /
             remainingDays
         )
       : 0;
@@ -535,7 +573,7 @@ export default function HomeScreen() {
             '아직 오늘 기록한 지출이 없어요',
 
           message:
-            '지출을 기록하면 오늘 소비 상태를 알려드려요.',
+            '오늘 지출을 기록하면 권장 금액과 비교해드려요.',
         };
       }
 
@@ -551,9 +589,9 @@ export default function HomeScreen() {
           title:
             '오늘 사용할 수 있는 예산이 없어요',
 
-          message: `오늘 ${formatMoney(
+          message: `기준보다 ${formatMoney(
             todaySpent
-          )}원을 사용했어요.`,
+          )}원 더 사용했어요.`,
         };
       }
 
@@ -571,9 +609,9 @@ export default function HomeScreen() {
             todayOverAmount
           )}원 초과했어요`,
 
-          message: `오늘 ${formatMoney(
-            todaySpent
-          )}원을 사용했어요.`,
+          message: `기준보다 ${formatMoney(
+            todayOverAmount
+          )}원 더 사용했어요.`,
         };
       }
 
@@ -591,9 +629,9 @@ export default function HomeScreen() {
             todayRemaining
           )}원 남았어요`,
 
-          message: `오늘 ${formatMoney(
-            todaySpent
-          )}원을 사용했어요.`,
+          message: `권장 금액에서 ${formatMoney(
+            todayRemaining
+          )}원 남았어요.`,
         };
       }
 
@@ -606,11 +644,9 @@ export default function HomeScreen() {
         title:
           '오늘 소비는 적정해요',
 
-        message: `오늘 ${formatMoney(
-          todaySpent
-        )}원 사용 · ${formatMoney(
+        message: `권장 금액에서 ${formatMoney(
           todayRemaining
-        )}원 여유`,
+        )}원 남았어요.`,
       };
     };
 
@@ -700,6 +736,7 @@ export default function HomeScreen() {
       purchaseAmount
     );
 
+  // 구매 후 남는 전체 생활비
   const budgetAfterPurchase =
     Math.max(
       0,
@@ -707,10 +744,19 @@ export default function HomeScreen() {
         purchase
     );
 
+  // 현재 확보한 안전 여유금은 구매 후에도 그대로 보호
+  const usableBudgetAfterPurchase =
+    Math.max(
+      0,
+      budgetAfterPurchase -
+        safetyReserve
+    );
+
+  // 구매 후 하루 권장 생활비
   const dailyBudgetAfterPurchase =
     remainingDays > 0
       ? Math.floor(
-          budgetAfterPurchase /
+          usableBudgetAfterPurchase /
             remainingDays
         )
       : 0;
@@ -722,9 +768,10 @@ export default function HomeScreen() {
         dailyBudgetAfterPurchase
     );
 
+  // 안전 여유금까지 침범해야 하는 구매인지 확인
   const isOverBudget =
     purchase >
-    remainingBudget;
+    usableRemainingBudget;
 
   const getSimulationStatus =
     () => {
@@ -745,7 +792,7 @@ export default function HomeScreen() {
             '지금 구매하면 부담돼요',
 
           message:
-            '현재 남은 생활비보다 큰 금액이에요.',
+            '안전하게 남겨둔 여유금까지 사용해야 하는 금액이에요.',
         };
       }
 
@@ -763,7 +810,7 @@ export default function HomeScreen() {
             '조금 고민해보는 게 좋아요',
 
           message:
-            '구매 후 하루 사용 가능 금액이 크게 줄어요.',
+            '구매 후 하루에 사용할 수 있는 금액이 크게 줄어요.',
         };
       }
 
@@ -774,10 +821,10 @@ export default function HomeScreen() {
           'checkmark-circle' as const,
 
         title:
-          '생활비 안에서는 가능해요',
+          '생활비 안에서는 괜찮아요',
 
         message:
-          '구매 후에도 월급일까지 사용할 생활비가 남아 있어요.',
+          '안전 여유금을 남기고도 월급일까지 사용할 생활비가 있어요.',
       };
     };
 
@@ -786,97 +833,175 @@ export default function HomeScreen() {
 
   return (
     <>
-      <View
-        style={
-          styles.container
-        }
+      <ScrollView
+        style={styles.screen}
+        contentContainerStyle={[
+          styles.scrollContent,
+
+          isCompactHeight &&
+            styles.scrollContentCompact,
+        ]}
+        showsVerticalScrollIndicator={false}
+        bounces={false}
       >
-        {/* =====================
-            타이틀
-        ===================== */}
-
-        <Text
-          style={
-            styles.title
-          }
-        >
-          오늘 얼마 써도 돼?
-        </Text>
-
-        {/* =====================
-            오늘 사용 가능 카드
-        ===================== */}
-
         <View
-          style={
-            styles.dailyCard
-          }
+          style={[
+            styles.content,
+
+            {
+              paddingHorizontal:
+                horizontalPadding,
+            },
+          ]}
         >
+          {/* 타이틀 */}
+
           <Text
-            style={
-              styles.dailyLabel
-            }
+            style={[
+              styles.title,
+
+              isCompactHeight &&
+                styles.titleCompact,
+            ]}
           >
-            오늘은
+            오늘 얼마 써도 돼?
           </Text>
 
-          <Animated.View
-            style={{
-              transform: [
-                {
-                  scale:
-                    dailyBudgetScale,
-                },
-              ],
-            }}
+          {/* 오늘 권장 생활비 */}
+
+          <View
+            style={[
+              styles.dailyCard,
+
+              isCompactHeight &&
+                styles.dailyCardCompact,
+            ]}
           >
             <Text
               style={
-                styles.dailyAmount
+                styles.dailyLabel
               }
             >
-              {formatMoney(
-                displayedDailyBudget
-              )}
-              원
+              오늘은
             </Text>
-          </Animated.View>
 
-          <Text
-            style={
-              styles.dailyMessage
-            }
-          >
-            까지 써도 괜찮아요
-          </Text>
-
-          <View
-            style={
-              styles.dailyDivider
-            }
-          />
-
-          <View
-            style={
-              styles.dailyBottomRow
-            }
-          >
-            <View>
+            <Animated.View
+              style={{
+                transform: [
+                  {
+                    scale:
+                      dailyBudgetScale,
+                  },
+                ],
+              }}
+            >
               <Text
+                style={[
+                  styles.dailyAmount,
+
+                  screenWidth < 370 &&
+                    styles.dailyAmountSmall,
+                ]}
+              >
+                {formatMoney(
+                  displayedDailyBudget
+                )}
+                원
+              </Text>
+            </Animated.View>
+
+            <Text
+              style={
+                styles.dailyMessage
+              }
+            >
+              정도까지가 적당해요
+            </Text>
+
+            <View
+              style={
+                styles.dailyDivider
+              }
+            />
+
+            <View
+              style={
+                styles.dailyBottomRow
+              }
+            >
+              <View>
+                <Text
+                  style={
+                    styles.monthSpentLabel
+                  }
+                >
+                  이번 달 사용
+                </Text>
+
+                <Text
+                  style={
+                    styles.monthSpentAmount
+                  }
+                >
+                  {formatMoney(
+                    settings.spentAmount
+                  )}
+                  원
+                </Text>
+              </View>
+
+              <View
                 style={
-                  styles.monthSpentLabel
+                  styles.dDayBadge
                 }
               >
-                이번 달 사용
+                <Ionicons
+                  name="calendar-outline"
+                  size={13}
+                  color="#3563C9"
+                />
+
+                <Text
+                  style={
+                    styles.dDayText
+                  }
+                >
+                  D-
+                  {
+                    remainingDays
+                  }
+                </Text>
+              </View>
+            </View>
+          </View>
+
+          {/* 오늘 사용 현황 */}
+
+          <View
+            style={
+              styles.todaySummary
+            }
+          >
+            <View
+              style={
+                styles.todaySummaryTop
+              }
+            >
+              <Text
+                style={
+                  styles.todaySummaryLabel
+                }
+              >
+                오늘 지출
               </Text>
 
               <Text
                 style={
-                  styles.monthSpentAmount
+                  styles.todaySummaryAmount
                 }
               >
                 {formatMoney(
-                  settings.spentAmount
+                  todaySpent
                 )}
                 원
               </Text>
@@ -884,55 +1009,58 @@ export default function HomeScreen() {
 
             <View
               style={
-                styles.dDayBadge
+                styles.todaySummaryBottom
               }
             >
-              <Ionicons
-                name="calendar-outline"
-                size={14}
-                color="#3563C9"
+              <View
+                style={[
+                  styles.statusDot,
+
+                  todayStatus.type ===
+                    'safe' &&
+                    styles.statusDotSafe,
+
+                  todayStatus.type ===
+                    'warning' &&
+                    styles.statusDotWarning,
+
+                  todayStatus.type ===
+                    'danger' &&
+                    styles.statusDotDanger,
+                ]}
               />
 
               <Text
-                style={
-                  styles.dDayText
-                }
+                style={[
+                  styles.todaySummaryMessage,
+
+                  todayStatus.type ===
+                    'safe' &&
+                    styles.todaySummaryMessageSafe,
+
+                  todayStatus.type ===
+                    'warning' &&
+                    styles.todaySummaryMessageWarning,
+
+                  todayStatus.type ===
+                    'danger' &&
+                    styles.todaySummaryMessageDanger,
+                ]}
               >
-                D-
                 {
-                  remainingDays
+                  todayStatus.message
                 }
               </Text>
             </View>
           </View>
-        </View>
 
-        {/* =====================
-            남은 생활비
-        ===================== */}
+          {/* 남은 생활비 */}
 
-        <View
-          style={
-            styles.remainingRow
-          }
-        >
           <View
             style={
-              styles.remainingLeft
+              styles.remainingRow
             }
           >
-            <View
-              style={
-                styles.remainingIcon
-              }
-            >
-              <Ionicons
-                name="wallet-outline"
-                size={17}
-                color="#687386"
-              />
-            </View>
-
             <Text
               style={
                 styles.remainingLabel
@@ -940,173 +1068,114 @@ export default function HomeScreen() {
             >
               남은 생활비
             </Text>
-          </View>
-
-          <Text
-            style={
-              styles.remainingAmount
-            }
-          >
-            {formatMoney(
-              remainingBudget
-            )}
-            원
-          </Text>
-        </View>
-
-        {/* =====================
-            이거 사도 돼?
-        ===================== */}
-
-        <Pressable
-          style={({
-            pressed,
-          }) => [
-            styles.simulatorButton,
-
-            pressed &&
-              styles.simulatorButtonPressed,
-          ]}
-          onPress={
-            openSimulator
-          }
-        >
-          <Ionicons
-            name="bag-handle-outline"
-            size={18}
-            color="#3563C9"
-          />
-
-          <View
-            style={
-              styles.simulatorTextArea
-            }
-          >
-            <Text
-              style={
-                styles.simulatorTitle
-              }
-            >
-              이거 사도 돼?
-            </Text>
 
             <Text
               style={
-                styles.simulatorDescription
+                styles.remainingAmount
               }
             >
-              구매 후 예산을 미리 확인해보세요.
+              {formatMoney(
+                remainingBudget
+              )}
+              원
             </Text>
           </View>
 
-          <Ionicons
-            name="chevron-forward"
-            size={18}
-            color="#A3ADBC"
-          />
-        </Pressable>
-
-        {/* =====================
-            지출 기록
-        ===================== */}
-
-        <Pressable
-          style={({
-            pressed,
-          }) => [
-            styles.expenseButton,
-
-            pressed &&
-              styles.expenseButtonPressed,
-          ]}
-          onPress={() =>
-            router.push(
-              '/expense'
-            )
-          }
-        >
-          <Ionicons
-            name="add"
-            size={21}
-            color="#FFFFFF"
-          />
-
-          <Text
-            style={
-              styles.expenseButtonText
-            }
-          >
-            지출 기록하기
-          </Text>
-        </Pressable>
-
-        {/* =====================
-            오늘 소비 상태
-        ===================== */}
-
-        <View
-          style={
-            styles.todayStatusRow
-          }
-        >
-          <Ionicons
-            name={
-              todayStatus.icon
-            }
-            size={17}
-            color={
-              todayStatus.type ===
-              'safe'
-                ? '#2F7D5A'
-                : todayStatus.type ===
-                    'warning'
-                  ? '#9A6818'
-                  : todayStatus.type ===
-                      'danger'
-                    ? '#D05B5B'
-                    : '#8792A2'
-            }
-          />
+          {/* 행동 영역 */}
 
           <View
             style={
-              styles.todayStatusTextArea
+              styles.actionSection
             }
           >
-            <Text
-              style={[
-                styles.todayStatusTitle,
+            <Pressable
+              style={({
+                pressed,
+              }) => [
+                styles.simulatorButton,
 
-                todayStatus.type ===
-                  'safe' &&
-                  styles.todayStatusTitleSafe,
-
-                todayStatus.type ===
-                  'warning' &&
-                  styles.todayStatusTitleWarning,
-
-                todayStatus.type ===
-                  'danger' &&
-                  styles.todayStatusTitleDanger,
+                pressed &&
+                  styles.simulatorButtonPressed,
               ]}
-            >
-              {
-                todayStatus.title
+              onPress={
+                openSimulator
               }
-            </Text>
+            >
+              <Ionicons
+                name="bag-handle-outline"
+                size={18}
+                color="#3563C9"
+              />
 
-            <Text
-              style={
-                styles.todayStatusMessage
+              <View
+                style={
+                  styles.simulatorTextArea
+                }
+              >
+                <Text
+                  style={
+                    styles.simulatorTitle
+                  }
+                >
+                  이거 사도 돼?
+                </Text>
+
+                <Text
+                  style={
+                    styles.simulatorDescription
+                  }
+                >
+                  구매 후 예산을 미리 확인해보세요.
+                </Text>
+              </View>
+
+              <Ionicons
+                name="chevron-forward"
+                size={18}
+                color="#A3ADBC"
+              />
+            </Pressable>
+
+            <Pressable
+              style={({
+                pressed,
+              }) => [
+                styles.expenseButton,
+
+                pressed &&
+                  styles.expenseButtonPressed,
+              ]}
+              onPress={() =>
+                router.push(
+                  '/expense'
+                )
               }
             >
-              {
-                todayStatus.message
-              }
-            </Text>
+              <Ionicons
+                name="add"
+                size={20}
+                color="#FFFFFF"
+              />
+
+              <Text
+                style={
+                  styles.expenseButtonText
+                }
+              >
+                지출 기록하기
+              </Text>
+            </Pressable>
           </View>
+
+          <Text
+            style={
+              styles.reserveGuide
+            }
+          >
+            남은 생활비의 10%는 여유금으로 남겨두고 계산해요.
+          </Text>
         </View>
-      </View>
+      </ScrollView>
 
       {/* =========================
           Bottom Sheet
@@ -1448,7 +1517,7 @@ export default function HomeScreen() {
                       styles.remainingAfterLabel
                     }
                   >
-                    구매 후 남는 생활비
+                    구매 후 사용 가능한 생활비
                   </Text>
 
                   <Text
@@ -1456,11 +1525,9 @@ export default function HomeScreen() {
                       styles.remainingAfterAmount
                     }
                   >
-                    {isOverBudget
-                      ? '0'
-                      : formatMoney(
-                          budgetAfterPurchase
-                        )}
+                    {formatMoney(
+                      usableBudgetAfterPurchase
+                    )}
                     원
                   </Text>
                 </View>
@@ -1479,27 +1546,48 @@ const styles =
        Home
     ======================== */
 
-    container: {
+    screen: {
       flex: 1,
 
       backgroundColor:
         '#FFFFFF',
+    },
 
-      paddingHorizontal: 20,
+    scrollContent: {
+      flexGrow: 1,
 
-      paddingTop: 70,
+      paddingTop: 58,
 
-      paddingBottom: 96,
+      paddingBottom: 118,
+    },
+
+    scrollContentCompact: {
+      paddingTop: 34,
+
+      paddingBottom: 104,
+    },
+
+    content: {
+      width: '100%',
+
+      maxWidth: 520,
+
+      alignSelf: 'center',
     },
 
     title: {
       fontSize: 21,
 
-      fontFamily: 'Pretendard-ExtraBold',
+      fontFamily:
+        'Pretendard-ExtraBold',
 
       color: '#172033',
 
-      marginBottom: 26,
+      marginBottom: 24,
+    },
+
+    titleCompact: {
+      marginBottom: 18,
     },
 
     /* ========================
@@ -1517,16 +1605,21 @@ const styles =
       paddingTop: 22,
 
       paddingBottom: 15,
+    },
 
-      marginBottom: 14,
+    dailyCardCompact: {
+      paddingTop: 18,
+
+      paddingBottom: 13,
     },
 
     dailyLabel: {
       textAlign: 'center',
 
-      fontSize: 14,
+      fontSize: 13,
 
-     fontFamily: 'Pretendard-Medium',
+      fontFamily:
+        'Pretendard-Medium',
 
       color: '#7C8798',
     },
@@ -1542,17 +1635,25 @@ const styles =
 
       letterSpacing: -1.3,
 
-      fontFamily: 'Pretendard-ExtraBold',
+      fontFamily:
+        'Pretendard-ExtraBold',
 
       color: '#3563C9',
     },
 
-    dailyMessage: {
-      marginTop: 0,
+    dailyAmountSmall: {
+      fontSize: 41,
 
+      lineHeight: 49,
+    },
+
+    dailyMessage: {
       textAlign: 'center',
 
-      fontSize: 14,
+      fontSize: 13,
+
+      fontFamily:
+        'Pretendard-Regular',
 
       color: '#687386',
     },
@@ -1563,9 +1664,9 @@ const styles =
       backgroundColor:
         '#E2E8F2',
 
-      marginTop: 19,
+      marginTop: 18,
 
-      marginBottom: 13,
+      marginBottom: 12,
     },
 
     dailyBottomRow: {
@@ -1578,17 +1679,21 @@ const styles =
     },
 
     monthSpentLabel: {
-      fontSize: 11,
+      fontSize: 10,
+
+      fontFamily:
+        'Pretendard-Regular',
 
       color: '#98A2B3',
     },
 
     monthSpentAmount: {
-      marginTop: 3,
+      marginTop: 2,
 
-      fontSize: 13,
+      fontSize: 12,
 
-      fontFamily: 'Pretendard-Bold',
+      fontFamily:
+        'Pretendard-Bold',
 
       color: '#687386',
     },
@@ -1598,24 +1703,128 @@ const styles =
 
       alignItems: 'center',
 
-      gap: 5,
+      gap: 4,
 
       backgroundColor:
-        '#E4ECFC',
+        '#E7EEFC',
 
-      paddingHorizontal: 11,
+      paddingHorizontal: 10,
 
-      paddingVertical: 7,
+      paddingVertical: 6,
 
       borderRadius: 999,
     },
 
     dDayText: {
-      fontSize: 12,
+      fontSize: 11,
 
-      fontFamily: 'Pretendard-ExtraBold',
+      fontFamily:
+        'Pretendard-ExtraBold',
 
       color: '#3563C9',
+    },
+
+    /* ========================
+       Today summary
+    ======================== */
+
+    todaySummary: {
+      paddingTop: 18,
+
+      paddingBottom: 17,
+
+      borderBottomWidth: 1,
+
+      borderBottomColor:
+        '#EEF1F5',
+    },
+
+    todaySummaryTop: {
+      flexDirection: 'row',
+
+      alignItems: 'center',
+
+      justifyContent:
+        'space-between',
+    },
+
+    todaySummaryLabel: {
+      fontSize: 13,
+
+      fontFamily:
+        'Pretendard-Medium',
+
+      color: '#687386',
+    },
+
+    todaySummaryAmount: {
+      fontSize: 15,
+
+      fontFamily:
+        'Pretendard-ExtraBold',
+
+      color: '#172033',
+    },
+
+    todaySummaryBottom: {
+      marginTop: 7,
+
+      flexDirection: 'row',
+
+      alignItems: 'center',
+    },
+
+    statusDot: {
+      width: 6,
+
+      height: 6,
+
+      borderRadius: 3,
+
+      backgroundColor:
+        '#98A2B3',
+
+      marginRight: 7,
+    },
+
+    statusDotSafe: {
+      backgroundColor:
+        '#4D9471',
+    },
+
+    statusDotWarning: {
+      backgroundColor:
+        '#B5822F',
+    },
+
+    statusDotDanger: {
+      backgroundColor:
+        '#D86666',
+    },
+
+    todaySummaryMessage: {
+      flex: 1,
+
+      fontSize: 11,
+
+      lineHeight: 16,
+
+      fontFamily:
+        'Pretendard-Medium',
+
+      color: '#8792A2',
+    },
+
+    todaySummaryMessageSafe: {
+      color: '#4D8167',
+    },
+
+    todaySummaryMessageWarning: {
+      color: '#8C6A2D',
+    },
+
+    todaySummaryMessageDanger: {
+      color: '#C65353',
     },
 
     /* ========================
@@ -1623,7 +1832,7 @@ const styles =
     ======================== */
 
     remainingRow: {
-      minHeight: 58,
+      minHeight: 56,
 
       flexDirection: 'row',
 
@@ -1632,37 +1841,17 @@ const styles =
       justifyContent:
         'space-between',
 
-      paddingHorizontal: 5,
+      borderBottomWidth: 1,
 
-      marginBottom: 10,
-    },
-
-    remainingLeft: {
-      flexDirection: 'row',
-
-      alignItems: 'center',
-    },
-
-    remainingIcon: {
-      width: 34,
-
-      height: 34,
-
-      borderRadius: 11,
-
-      backgroundColor:
-        '#F5F7FA',
-
-      alignItems: 'center',
-
-      justifyContent:
-        'center',
-
-      marginRight: 9,
+      borderBottomColor:
+        '#EEF1F5',
     },
 
     remainingLabel: {
       fontSize: 13,
+
+      fontFamily:
+        'Pretendard-Medium',
 
       color: '#687386',
     },
@@ -1670,38 +1859,34 @@ const styles =
     remainingAmount: {
       fontSize: 15,
 
-      fontFamily: 'Pretendard-ExtraBold',
+      fontFamily:
+        'Pretendard-ExtraBold',
 
       color: '#172033',
     },
 
     /* ========================
-       Simulator
+       Actions
     ======================== */
 
+    actionSection: {
+      marginTop: 8,
+    },
+
     simulatorButton: {
-      minHeight: 58,
+      minHeight: 60,
 
       flexDirection: 'row',
 
       alignItems: 'center',
 
-      paddingHorizontal: 4,
+      paddingHorizontal: 2,
 
-      paddingVertical: 8,
-
-      borderTopWidth: 1,
-
-      borderBottomWidth: 1,
-
-      borderColor:
-        '#EEF1F5',
-
-      marginBottom: 12,
+      paddingVertical: 9,
     },
 
     simulatorButtonPressed: {
-      opacity: 0.6,
+      opacity: 0.55,
     },
 
     simulatorTextArea: {
@@ -1715,27 +1900,29 @@ const styles =
     simulatorTitle: {
       fontSize: 14,
 
-      fontFamily: 'Pretendard-ExtraBold',
+      fontFamily:
+        'Pretendard-Bold',
 
       color: '#172033',
     },
 
     simulatorDescription: {
-      marginTop: 3,
+      marginTop: 2,
 
-      fontSize: 11,
+      fontSize: 10,
 
-      lineHeight: 16,
+      lineHeight: 15,
 
-      color: '#8792A2',
+      fontFamily:
+        'Pretendard-Regular',
+
+      color: '#98A2B3',
     },
-
-    /* ========================
-       Expense button
-    ======================== */
 
     expenseButton: {
       minHeight: 54,
+
+      marginTop: 4,
 
       flexDirection: 'row',
 
@@ -1768,61 +1955,23 @@ const styles =
 
       fontSize: 15,
 
-      fontFamily: 'Pretendard-ExtraBold',
+      fontFamily:
+        'Pretendard-ExtraBold',
     },
 
-    /* ========================
-       Today status
-    ======================== */
+    reserveGuide: {
+      marginTop: 14,
 
-    todayStatusRow: {
-      marginTop: 3,
-
-      minHeight: 52,
-
-      flexDirection: 'row',
-
-      alignItems: 'center',
-
-      paddingHorizontal: 4,
-
-      paddingVertical: 10,
-    },
-
-    todayStatusTextArea: {
-      flex: 1,
-
-      marginLeft: 9,
-    },
-
-    todayStatusTitle: {
-      fontSize: 12,
-
-      fontFamily: 'Pretendard-Bold',
-
-      color: '#172033',
-    },
-
-    todayStatusTitleSafe: {
-      color: '#2F7D5A',
-    },
-
-    todayStatusTitleWarning: {
-      color: '#8A631C',
-    },
-
-    todayStatusTitleDanger: {
-      color: '#C65353',
-    },
-
-    todayStatusMessage: {
-      marginTop: 2,
+      textAlign: 'center',
 
       fontSize: 10,
 
-      lineHeight: 13,
+      lineHeight: 15,
 
-      color: '#98A2B3',
+      fontFamily:
+        'Pretendard-Regular',
+
+      color: '#A5ADBA',
     },
 
     /* ========================
