@@ -16,6 +16,7 @@ type BudgetSettings = {
   savingGoal: number;
   spentAmount: number;
   payday: number;
+  paydayType?: 'date' | 'lastDay';
 };
 
 const DEFAULT_SETTINGS: BudgetSettings = {
@@ -24,6 +25,7 @@ const DEFAULT_SETTINGS: BudgetSettings = {
   savingGoal: 200000,
   spentAmount: 100000,
   payday: 25,
+  paydayType: 'date',
 };
 
 export default function HomeScreen() {
@@ -38,7 +40,8 @@ export default function HomeScreen() {
 
   const loadSettings = async () => {
     try {
-      const saved = await AsyncStorage.getItem(BUDGET_KEY);
+      const saved =
+        await AsyncStorage.getItem(BUDGET_KEY);
 
       if (!saved) return;
 
@@ -47,21 +50,42 @@ export default function HomeScreen() {
       setSettings({
         monthlyBudget:
           Number(data.monthlyBudget) || 0,
+
         fixedExpense:
           Number(data.fixedExpense) || 0,
+
         savingGoal:
           Number(data.savingGoal) || 0,
+
         spentAmount:
           Number(data.spentAmount) || 0,
+
         payday:
           Number(data.payday) || 25,
+
+        paydayType:
+          data.paydayType || 'date',
       });
     } catch (error) {
-      console.error('예산 불러오기 실패:', error);
+      console.error(
+        '예산 불러오기 실패:',
+        error
+      );
     }
   };
 
-  const getRemainingDays = (payday: number) => {
+  const getLastDay = (
+    year: number,
+    month: number
+  ) => {
+    return new Date(
+      year,
+      month + 1,
+      0
+    ).getDate();
+  };
+
+  const getRemainingDays = () => {
     const today = new Date();
 
     const year = today.getFullYear();
@@ -70,18 +94,50 @@ export default function HomeScreen() {
 
     let targetDate: Date;
 
-    if (todayDate < payday) {
-      targetDate = new Date(
-        year,
-        month,
-        payday
-      );
+    if (settings.paydayType === 'lastDay') {
+      const thisMonthLastDay =
+        getLastDay(year, month);
+
+      if (todayDate < thisMonthLastDay) {
+        targetDate = new Date(
+          year,
+          month,
+          thisMonthLastDay
+        );
+      } else {
+        const nextMonthLastDay =
+          getLastDay(year, month + 1);
+
+        targetDate = new Date(
+          year,
+          month + 1,
+          nextMonthLastDay
+        );
+      }
     } else {
-      targetDate = new Date(
-        year,
-        month + 1,
-        payday
+      const thisMonthPayday = Math.min(
+        settings.payday,
+        getLastDay(year, month)
       );
+
+      if (todayDate < thisMonthPayday) {
+        targetDate = new Date(
+          year,
+          month,
+          thisMonthPayday
+        );
+      } else {
+        const nextMonthPayday = Math.min(
+          settings.payday,
+          getLastDay(year, month + 1)
+        );
+
+        targetDate = new Date(
+          year,
+          month + 1,
+          nextMonthPayday
+        );
+      }
     }
 
     const todayStart = new Date(
@@ -95,14 +151,15 @@ export default function HomeScreen() {
       todayStart.getTime();
 
     const days = Math.ceil(
-      difference / (1000 * 60 * 60 * 24)
+      difference /
+        (1000 * 60 * 60 * 24)
     );
 
     return Math.max(days, 1);
   };
 
   const remainingDays =
-    getRemainingDays(settings.payday);
+    getRemainingDays();
 
   const remainingBudget = Math.max(
     0,
@@ -115,12 +172,17 @@ export default function HomeScreen() {
   const dailyBudget =
     remainingDays > 0
       ? Math.floor(
-          remainingBudget / remainingDays
+          remainingBudget /
+            remainingDays
         )
       : 0;
 
-  const formatMoney = (amount: number) => {
-    return amount.toLocaleString('ko-KR');
+  const formatMoney = (
+    amount: number
+  ) => {
+    return amount.toLocaleString(
+      'ko-KR'
+    );
   };
 
   return (
@@ -146,11 +208,14 @@ export default function HomeScreen() {
       <View style={styles.infoBox}>
         <View style={styles.infoRow}>
           <Text style={styles.infoLabel}>
-            이번 달 남은 생활비
+            남은 생활비
           </Text>
 
           <Text style={styles.infoValue}>
-            {formatMoney(remainingBudget)}원
+            {formatMoney(
+              remainingBudget
+            )}
+            원
           </Text>
         </View>
 
@@ -166,31 +231,28 @@ export default function HomeScreen() {
       </View>
 
       <Pressable
-        style={styles.expenseButton}
-        onPress={() => router.push('/expense')}
+        style={({ pressed }) => [
+          styles.expenseButton,
+          pressed &&
+            styles.expenseButtonPressed,
+        ]}
+        onPress={() =>
+          router.push('/expense')
+        }
       >
-        <Text style={styles.expenseButtonText}>
+        <Text
+          style={
+            styles.expenseButtonText
+          }
+        >
           + 지출 기록하기
         </Text>
       </Pressable>
 
-      <Pressable
-        style={styles.historyButton}
-        onPress={() => router.push('/history')}
-      >
-        <Text style={styles.historyButtonText}>
-          지출 내역 보기
-        </Text>
-      </Pressable>
-
-      <Pressable
-        style={styles.settingButton}
-        onPress={() => router.push('/settings')}
-      >
-        <Text style={styles.settingButtonText}>
-          예산 설정하기
-        </Text>
-      </Pressable>
+      <Text style={styles.guide}>
+        지출을 기록하면 오늘 쓸 수 있는
+        금액이 자동으로 다시 계산돼요.
+      </Text>
     </View>
   );
 }
@@ -201,11 +263,12 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     paddingHorizontal: 24,
     paddingTop: 60,
+    paddingBottom: 100,
   },
 
   title: {
     fontSize: 22,
-    fontWeight: '700',
+    fontWeight: '800',
     color: '#172033',
   },
 
@@ -259,42 +322,27 @@ const styles = StyleSheet.create({
   },
 
   expenseButton: {
-    backgroundColor: '#EAF0FB',
-    paddingVertical: 16,
-    borderRadius: 16,
-    alignItems: 'center',
-    marginBottom: 10,
-  },
-
-  expenseButtonText: {
-    color: '#3563C9',
-    fontSize: 16,
-    fontWeight: '700',
-  },
-
-  historyButton: {
-    paddingVertical: 14,
-    alignItems: 'center',
-    marginBottom: 10,
-  },
-
-  historyButtonText: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: '#3563C9',
-  },
-
-  settingButton: {
     backgroundColor: '#3563C9',
     paddingVertical: 16,
     borderRadius: 16,
     alignItems: 'center',
-    marginBottom: 24,
   },
 
-  settingButtonText: {
+  expenseButtonPressed: {
+    backgroundColor: '#294FA5',
+  },
+
+  expenseButtonText: {
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '700',
+  },
+
+  guide: {
+    marginTop: 12,
+    fontSize: 12,
+    lineHeight: 18,
+    color: '#98A2B3',
+    textAlign: 'center',
   },
 });

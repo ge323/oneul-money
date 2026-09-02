@@ -12,7 +12,7 @@ import {
   View,
 } from 'react-native';
 
-import AppHeader from '../components/AppHeader';
+import AppHeader from '../../components/AppHeader';
 
 const EXPENSES_KEY = 'expenses';
 const BUDGET_KEY = 'budget-settings';

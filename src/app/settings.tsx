@@ -26,61 +26,94 @@ export default function SettingsScreen() {
   }, []);
 
   const formatMoneyInput = (text: string) => {
-    const numbersOnly = text.replace(/[^0-9]/g, '');
+    const numbersOnly =
+      text.replace(/[^0-9]/g, '');
 
     if (!numbersOnly) {
       return '';
     }
 
-    return Number(numbersOnly).toLocaleString('ko-KR');
+    return Number(
+      numbersOnly
+    ).toLocaleString('ko-KR');
   };
 
   const parseMoney = (text: string) => {
-    return Number(text.replace(/,/g, '')) || 0;
+    return (
+      Number(
+        text.replace(/,/g, '')
+      ) || 0
+    );
   };
 
   const loadSettings = async () => {
     try {
-      const saved = await AsyncStorage.getItem(BUDGET_KEY);
+      const saved =
+        await AsyncStorage.getItem(BUDGET_KEY);
 
       if (!saved) return;
 
       const data = JSON.parse(saved);
 
       setMonthlyBudget(
-        Number(data.monthlyBudget ?? 0).toLocaleString('ko-KR')
+        Number(
+          data.monthlyBudget ?? 0
+        ).toLocaleString('ko-KR')
       );
 
       setFixedExpense(
-        Number(data.fixedExpense ?? 0).toLocaleString('ko-KR')
+        Number(
+          data.fixedExpense ?? 0
+        ).toLocaleString('ko-KR')
       );
 
       setSavingGoal(
-        Number(data.savingGoal ?? 0).toLocaleString('ko-KR')
+        Number(
+          data.savingGoal ?? 0
+        ).toLocaleString('ko-KR')
       );
 
       setSpentAmount(
-        Number(data.spentAmount ?? 0).toLocaleString('ko-KR')
+        Number(
+          data.spentAmount ?? 0
+        ).toLocaleString('ko-KR')
       );
 
-      setPayday(String(data.payday ?? '25'));
+      setPayday(
+        String(data.payday ?? '25')
+      );
     } catch (error) {
-      console.error('예산 불러오기 실패:', error);
+      console.error(
+        '예산 불러오기 실패:',
+        error
+      );
     }
   };
 
   const saveSettings = async () => {
-    const paydayNumber = Number(payday);
+    const paydayNumber =
+      Number(payday);
 
-    if (paydayNumber < 1 || paydayNumber > 31) {
+    if (
+      paydayNumber < 1 ||
+      paydayNumber > 31
+    ) {
       return;
     }
 
     const data = {
-      monthlyBudget: parseMoney(monthlyBudget),
-      fixedExpense: parseMoney(fixedExpense),
-      savingGoal: parseMoney(savingGoal),
-      spentAmount: parseMoney(spentAmount),
+      monthlyBudget:
+        parseMoney(monthlyBudget),
+
+      fixedExpense:
+        parseMoney(fixedExpense),
+
+      savingGoal:
+        parseMoney(savingGoal),
+
+      spentAmount:
+        parseMoney(spentAmount),
+
       payday: paydayNumber,
     };
 
@@ -92,15 +125,22 @@ export default function SettingsScreen() {
 
       router.back();
     } catch (error) {
-      console.error('예산 저장 실패:', error);
+      console.error(
+        '예산 저장 실패:',
+        error
+      );
     }
   };
 
   return (
     <ScrollView
       style={styles.screen}
-      contentContainerStyle={styles.container}
-      showsVerticalScrollIndicator={false}
+      contentContainerStyle={
+        styles.container
+      }
+      showsVerticalScrollIndicator={
+        false
+      }
     >
       <AppHeader
         title="예산 설정"
@@ -112,7 +152,9 @@ export default function SettingsScreen() {
           label="월 예산"
           value={monthlyBudget}
           onChangeText={(text) =>
-            setMonthlyBudget(formatMoneyInput(text))
+            setMonthlyBudget(
+              formatMoneyInput(text)
+            )
           }
           placeholder="1,000,000"
         />
@@ -121,7 +163,9 @@ export default function SettingsScreen() {
           label="고정비"
           value={fixedExpense}
           onChangeText={(text) =>
-            setFixedExpense(formatMoneyInput(text))
+            setFixedExpense(
+              formatMoneyInput(text)
+            )
           }
           placeholder="400,000"
         />
@@ -130,7 +174,9 @@ export default function SettingsScreen() {
           label="저축 목표"
           value={savingGoal}
           onChangeText={(text) =>
-            setSavingGoal(formatMoneyInput(text))
+            setSavingGoal(
+              formatMoneyInput(text)
+            )
           }
           placeholder="200,000"
         />
@@ -139,23 +185,42 @@ export default function SettingsScreen() {
           label="이미 사용한 금액"
           value={spentAmount}
           onChangeText={(text) =>
-            setSpentAmount(formatMoneyInput(text))
+            setSpentAmount(
+              formatMoneyInput(text)
+            )
           }
           placeholder="100,000"
         />
 
-        <View style={styles.inputGroup}>
-          <Text style={styles.label}>
+        <View style={styles.paydayBox}>
+          <Text style={styles.paydayTitle}>
             월급일
           </Text>
 
-          <View style={styles.daysInputBox}>
+          <Text
+            style={
+              styles.paydayDescription
+            }
+          >
+            다음 월급일까지 남은 날짜를 자동으로 계산해요.
+          </Text>
+
+          <View
+            style={
+              styles.paydayInputBox
+            }
+          >
             <TextInput
-              style={styles.daysInput}
+              style={
+                styles.paydayInput
+              }
               value={payday}
               onChangeText={(text) =>
                 setPayday(
-                  text.replace(/[^0-9]/g, '')
+                  text.replace(
+                    /[^0-9]/g,
+                    ''
+                  )
                 )
               }
               placeholder="25"
@@ -163,13 +228,15 @@ export default function SettingsScreen() {
               maxLength={2}
             />
 
-            <Text style={styles.unitText}>
+            <Text
+              style={styles.unitText}
+            >
               일
             </Text>
           </View>
 
           <Text style={styles.helperText}>
-            매월 월급이 들어오는 날짜를 입력해주세요.
+            1일부터 31일까지 입력할 수 있어요.
           </Text>
         </View>
       </View>
@@ -177,11 +244,14 @@ export default function SettingsScreen() {
       <Pressable
         style={({ pressed }) => [
           styles.saveButton,
-          pressed && styles.saveButtonPressed,
+          pressed &&
+            styles.saveButtonPressed,
         ]}
         onPress={saveSettings}
       >
-        <Text style={styles.saveButtonText}>
+        <Text
+          style={styles.saveButtonText}
+        >
           저장하기
         </Text>
       </Pressable>
@@ -192,7 +262,9 @@ export default function SettingsScreen() {
 type MoneyInputProps = {
   label: string;
   value: string;
-  onChangeText: (text: string) => void;
+  onChangeText: (
+    text: string
+  ) => void;
   placeholder: string;
 };
 
@@ -208,7 +280,9 @@ function MoneyInput({
         {label}
       </Text>
 
-      <View style={styles.moneyInputBox}>
+      <View
+        style={styles.moneyInputBox}
+      >
         <TextInput
           style={styles.moneyInput}
           value={value}
@@ -268,22 +342,6 @@ const styles = StyleSheet.create({
     color: '#172033',
   },
 
-  daysInputBox: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#F5F7FA',
-    borderRadius: 16,
-    paddingHorizontal: 16,
-  },
-
-  daysInput: {
-    flex: 1,
-    paddingVertical: 17,
-    fontSize: 17,
-    fontWeight: '600',
-    color: '#172033',
-  },
-
   unitText: {
     marginLeft: 8,
     fontSize: 15,
@@ -291,8 +349,46 @@ const styles = StyleSheet.create({
     color: '#687386',
   },
 
-  helperText: {
+  paydayBox: {
+    marginTop: 4,
+    backgroundColor: '#F1F5FC',
+    borderRadius: 18,
+    padding: 18,
+  },
+
+  paydayTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#172033',
+  },
+
+  paydayDescription: {
+    marginTop: 6,
     fontSize: 13,
+    lineHeight: 19,
+    color: '#8792A2',
+  },
+
+  paydayInputBox: {
+    marginTop: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 14,
+    paddingHorizontal: 16,
+  },
+
+  paydayInput: {
+    flex: 1,
+    paddingVertical: 15,
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#172033',
+  },
+
+  helperText: {
+    marginTop: 8,
+    fontSize: 12,
     color: '#8792A2',
   },
 
