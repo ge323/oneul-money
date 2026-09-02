@@ -20,9 +20,79 @@ import {
   View,
 } from 'react-native';
 
+import {
+  Calendar,
+  DateData,
+  LocaleConfig,
+} from 'react-native-calendars';
+
 const PLANNED_EXPENSES_KEY = 'planned-expenses';
 const EXPENSES_KEY = 'expenses';
 const BUDGET_KEY = 'budget-settings';
+
+/* =========================
+   달력 한국어 설정
+========================= */
+
+LocaleConfig.locales.ko = {
+  monthNames: [
+    '1월',
+    '2월',
+    '3월',
+    '4월',
+    '5월',
+    '6월',
+    '7월',
+    '8월',
+    '9월',
+    '10월',
+    '11월',
+    '12월',
+  ],
+
+  monthNamesShort: [
+    '1월',
+    '2월',
+    '3월',
+    '4월',
+    '5월',
+    '6월',
+    '7월',
+    '8월',
+    '9월',
+    '10월',
+    '11월',
+    '12월',
+  ],
+
+  dayNames: [
+    '일요일',
+    '월요일',
+    '화요일',
+    '수요일',
+    '목요일',
+    '금요일',
+    '토요일',
+  ],
+
+  dayNamesShort: [
+    '일',
+    '월',
+    '화',
+    '수',
+    '목',
+    '금',
+    '토',
+  ],
+
+  today: '오늘',
+};
+
+LocaleConfig.defaultLocale = 'ko';
+
+/* =========================
+   Types
+========================= */
 
 type PlannedExpense = {
   id: string;
@@ -50,11 +120,49 @@ type BudgetSettings = {
 };
 
 export default function PlanScreen() {
-  const [plannedExpenses, setPlannedExpenses] =
-    useState<PlannedExpense[]>([]);
+  const [
+    plannedExpenses,
+    setPlannedExpenses,
+  ] = useState<PlannedExpense[]>([]);
 
-  const [showModal, setShowModal] =
-    useState(false);
+  const [
+    showPlanModal,
+    setShowPlanModal,
+  ] = useState(false);
+
+  const [
+    showCompleteModal,
+    setShowCompleteModal,
+  ] = useState(false);
+
+  const [
+    showCalendar,
+    setShowCalendar,
+  ] = useState(false);
+
+  const [
+    editingExpense,
+    setEditingExpense,
+  ] =
+    useState<PlannedExpense | null>(
+      null
+    );
+
+  const [
+    completingExpense,
+    setCompletingExpense,
+  ] =
+    useState<PlannedExpense | null>(
+      null
+    );
+
+  const [
+    openedMenuId,
+    setOpenedMenuId,
+  ] =
+    useState<string | null>(
+      null
+    );
 
   const [title, setTitle] =
     useState('');
@@ -65,17 +173,38 @@ export default function PlanScreen() {
   const [date, setDate] =
     useState('');
 
-  const slideAnim = useRef(
-    new Animated.Value(500)
-  ).current;
+  const [
+    actualAmount,
+    setActualAmount,
+  ] = useState('');
 
-  const backdropOpacity = useRef(
-    new Animated.Value(0)
-  ).current;
+  const planSlideAnim =
+    useRef(
+      new Animated.Value(500)
+    ).current;
+
+  const planBackdropOpacity =
+    useRef(
+      new Animated.Value(0)
+    ).current;
+
+  const completeSlideAnim =
+    useRef(
+      new Animated.Value(500)
+    ).current;
+
+  const completeBackdropOpacity =
+    useRef(
+      new Animated.Value(0)
+    ).current;
 
   useFocusEffect(
     useCallback(() => {
       loadPlannedExpenses();
+
+      setOpenedMenuId(
+        null
+      );
     }, [])
   );
 
@@ -141,85 +270,339 @@ export default function PlanScreen() {
     );
   };
 
-  const getTodayString = () => {
-    const today = new Date();
+  /* =========================
+     날짜
+  ========================= */
 
+  const toDateString = (
+    value: Date
+  ) => {
     const year =
-      today.getFullYear();
+      value.getFullYear();
 
-    const month = String(
-      today.getMonth() + 1
-    ).padStart(2, '0');
+    const month =
+      String(
+        value.getMonth() + 1
+      ).padStart(
+        2,
+        '0'
+      );
 
-    const day = String(
-      today.getDate()
-    ).padStart(2, '0');
+    const day =
+      String(
+        value.getDate()
+      ).padStart(
+        2,
+        '0'
+      );
 
     return `${year}-${month}-${day}`;
   };
 
-  const openModal = () => {
+  const getTodayString = () => {
+    return toDateString(
+      new Date()
+    );
+  };
+
+  const formatDate = (
+    value: string
+  ) => {
+    const targetDate =
+      new Date(
+        `${value}T00:00:00`
+      );
+
+    return `${
+      targetDate.getMonth() + 1
+    }월 ${targetDate.getDate()}일`;
+  };
+
+  const formatDisplayDate = (
+    value: string
+  ) => {
+    if (!value) {
+      return '날짜를 선택해주세요';
+    }
+
+    const targetDate =
+      new Date(
+        `${value}T00:00:00`
+      );
+
+    const weekdays = [
+      '일',
+      '월',
+      '화',
+      '수',
+      '목',
+      '금',
+      '토',
+    ];
+
+    return `${
+      targetDate.getFullYear()
+    }년 ${
+      targetDate.getMonth() + 1
+    }월 ${
+      targetDate.getDate()
+    }일 ${
+      weekdays[
+        targetDate.getDay()
+      ]
+    }요일`;
+  };
+
+  const selectToday = () => {
+    setDate(
+      getTodayString()
+    );
+  };
+
+  const selectTomorrow = () => {
+    const tomorrow =
+      new Date();
+
+    tomorrow.setDate(
+      tomorrow.getDate() + 1
+    );
+
+    setDate(
+      toDateString(
+        tomorrow
+      )
+    );
+  };
+
+  const selectWeekend = () => {
+    const target =
+      new Date();
+
+    const currentDay =
+      target.getDay();
+
+    let daysToSaturday =
+      6 - currentDay;
+
+    if (
+      currentDay === 0
+    ) {
+      daysToSaturday = 6;
+    }
+
+    if (
+      currentDay === 6
+    ) {
+      daysToSaturday = 0;
+    }
+
+    target.setDate(
+      target.getDate() +
+        daysToSaturday
+    );
+
+    setDate(
+      toDateString(
+        target
+      )
+    );
+  };
+
+  const openCalendar = () => {
+    setShowCalendar(
+      true
+    );
+  };
+
+  const closeCalendar = () => {
+    setShowCalendar(
+      false
+    );
+  };
+
+  const selectCalendarDate = (
+    day: DateData
+  ) => {
+    setDate(
+      day.dateString
+    );
+
+    setShowCalendar(
+      false
+    );
+  };
+
+  /* =========================
+     예정 지출 추가
+  ========================= */
+
+  const openAddModal = () => {
+    setOpenedMenuId(
+      null
+    );
+
+    setEditingExpense(
+      null
+    );
+
     setTitle('');
     setAmount('');
+
     setDate(
       getTodayString()
     );
 
-    slideAnim.setValue(500);
-    backdropOpacity.setValue(0);
+    planSlideAnim.setValue(
+      500
+    );
 
-    setShowModal(true);
+    planBackdropOpacity.setValue(
+      0
+    );
 
-    requestAnimationFrame(() => {
+    setShowPlanModal(
+      true
+    );
+
+    requestAnimationFrame(
+      () => {
+        Animated.parallel([
+          Animated.timing(
+            planSlideAnim,
+            {
+              toValue: 0,
+              duration: 250,
+              useNativeDriver:
+                true,
+            }
+          ),
+
+          Animated.timing(
+            planBackdropOpacity,
+            {
+              toValue: 1,
+              duration: 100,
+              useNativeDriver:
+                true,
+            }
+          ),
+        ]).start();
+      }
+    );
+  };
+
+  /* =========================
+     예정 지출 수정
+  ========================= */
+
+  const openEditModal = (
+    expense: PlannedExpense
+  ) => {
+    setOpenedMenuId(
+      null
+    );
+
+    setEditingExpense(
+      expense
+    );
+
+    setTitle(
+      expense.title
+    );
+
+    setAmount(
+      formatMoney(
+        expense.amount
+      )
+    );
+
+    setDate(
+      expense.date
+    );
+
+    planSlideAnim.setValue(
+      500
+    );
+
+    planBackdropOpacity.setValue(
+      0
+    );
+
+    setShowPlanModal(
+      true
+    );
+
+    requestAnimationFrame(
+      () => {
+        Animated.parallel([
+          Animated.timing(
+            planSlideAnim,
+            {
+              toValue: 0,
+              duration: 250,
+              useNativeDriver:
+                true,
+            }
+          ),
+
+          Animated.timing(
+            planBackdropOpacity,
+            {
+              toValue: 1,
+              duration: 100,
+              useNativeDriver:
+                true,
+            }
+          ),
+        ]).start();
+      }
+    );
+  };
+
+  const closePlanModal =
+    () => {
       Animated.parallel([
         Animated.timing(
-          slideAnim,
+          planSlideAnim,
           {
-            toValue: 0,
-            duration: 250,
-            useNativeDriver: true,
+            toValue: 500,
+            duration: 200,
+            useNativeDriver:
+              true,
           }
         ),
 
         Animated.timing(
-          backdropOpacity,
+          planBackdropOpacity,
           {
-            toValue: 1,
+            toValue: 0,
             duration: 100,
-            useNativeDriver: true,
+            useNativeDriver:
+              true,
           }
         ),
-      ]).start();
-    });
-  };
+      ]).start(() => {
+        setShowPlanModal(
+          false
+        );
 
-  const closeModal = () => {
-    Animated.parallel([
-      Animated.timing(
-        slideAnim,
-        {
-          toValue: 500,
-          duration: 200,
-          useNativeDriver: true,
-        }
-      ),
+        setShowCalendar(
+          false
+        );
 
-      Animated.timing(
-        backdropOpacity,
-        {
-          toValue: 0,
-          duration: 100,
-          useNativeDriver: true,
-        }
-      ),
-    ]).start(() => {
-      setShowModal(false);
+        setEditingExpense(
+          null
+        );
 
-      setTitle('');
-      setAmount('');
-      setDate('');
-    });
-  };
+        setTitle('');
+        setAmount('');
+        setDate('');
+      });
+    };
+
+  /* =========================
+     예정 지출 저장
+  ========================= */
 
   const savePlannedExpense =
     async () => {
@@ -229,43 +612,75 @@ export default function PlanScreen() {
       if (
         !title.trim() ||
         numericAmount <= 0 ||
-        !date.trim()
+        !date
       ) {
         return;
       }
 
-      const newExpense: PlannedExpense =
-        {
-          id:
-            Date.now().toString(),
-
-          title:
-            title.trim(),
-
-          amount:
-            numericAmount,
-
-          date:
-            date.trim(),
-
-          createdAt:
-            new Date().toISOString(),
-        };
-
-      const updated = [
-        ...plannedExpenses,
-        newExpense,
-      ].sort(
-        (a, b) =>
-          new Date(
-            a.date
-          ).getTime() -
-          new Date(
-            b.date
-          ).getTime()
-      );
-
       try {
+        let updated:
+          PlannedExpense[];
+
+        if (
+          editingExpense
+        ) {
+          updated =
+            plannedExpenses.map(
+              (item) => {
+                if (
+                  item.id !==
+                  editingExpense.id
+                ) {
+                  return item;
+                }
+
+                return {
+                  ...item,
+
+                  title:
+                    title.trim(),
+
+                  amount:
+                    numericAmount,
+
+                  date,
+                };
+              }
+            );
+        } else {
+          const newExpense:
+            PlannedExpense = {
+            id:
+              Date.now().toString(),
+
+            title:
+              title.trim(),
+
+            amount:
+              numericAmount,
+
+            date,
+
+            createdAt:
+              new Date().toISOString(),
+          };
+
+          updated = [
+            ...plannedExpenses,
+            newExpense,
+          ];
+        }
+
+        updated.sort(
+          (a, b) =>
+            new Date(
+              `${a.date}T00:00:00`
+            ).getTime() -
+            new Date(
+              `${b.date}T00:00:00`
+            ).getTime()
+        );
+
         await AsyncStorage.setItem(
           PLANNED_EXPENSES_KEY,
           JSON.stringify(
@@ -277,14 +692,20 @@ export default function PlanScreen() {
           updated
         );
 
-        closeModal();
+        closePlanModal();
       } catch (error) {
         console.error(
-          '예정 지출 저장 실패:',
+          editingExpense
+            ? '예정 지출 수정 실패:'
+            : '예정 지출 저장 실패:',
           error
         );
       }
     };
+
+  /* =========================
+     삭제
+  ========================= */
 
   const deleteExpense =
     async (
@@ -307,6 +728,10 @@ export default function PlanScreen() {
         setPlannedExpenses(
           updated
         );
+
+        setOpenedMenuId(
+          null
+        );
       } catch (error) {
         console.error(
           '예정 지출 삭제 실패:',
@@ -318,6 +743,10 @@ export default function PlanScreen() {
   const confirmDelete = (
     expense: PlannedExpense
   ) => {
+    setOpenedMenuId(
+      null
+    );
+
     if (
       Platform.OS === 'web'
     ) {
@@ -337,15 +766,20 @@ export default function PlanScreen() {
 
     Alert.alert(
       '예정 지출 삭제',
+
       `${expense.title}을 삭제할까요?`,
+
       [
         {
           text: '취소',
           style: 'cancel',
         },
+
         {
           text: '삭제',
-          style: 'destructive',
+          style:
+            'destructive',
+
           onPress: () =>
             deleteExpense(
               expense.id
@@ -355,36 +789,147 @@ export default function PlanScreen() {
     );
   };
 
+  /* =========================
+     실제 지출 완료
+  ========================= */
+
+  const openCompleteModal = (
+    expense: PlannedExpense
+  ) => {
+    setOpenedMenuId(
+      null
+    );
+
+    setCompletingExpense(
+      expense
+    );
+
+    setActualAmount(
+      formatMoney(
+        expense.amount
+      )
+    );
+
+    completeSlideAnim.setValue(
+      500
+    );
+
+    completeBackdropOpacity.setValue(
+      0
+    );
+
+    setShowCompleteModal(
+      true
+    );
+
+    requestAnimationFrame(
+      () => {
+        Animated.parallel([
+          Animated.timing(
+            completeSlideAnim,
+            {
+              toValue: 0,
+              duration: 250,
+              useNativeDriver:
+                true,
+            }
+          ),
+
+          Animated.timing(
+            completeBackdropOpacity,
+            {
+              toValue: 1,
+              duration: 100,
+              useNativeDriver:
+                true,
+            }
+          ),
+        ]).start();
+      }
+    );
+  };
+
+  const closeCompleteModal =
+    () => {
+      Animated.parallel([
+        Animated.timing(
+          completeSlideAnim,
+          {
+            toValue: 500,
+            duration: 200,
+            useNativeDriver:
+              true,
+          }
+        ),
+
+        Animated.timing(
+          completeBackdropOpacity,
+          {
+            toValue: 0,
+            duration: 100,
+            useNativeDriver:
+              true,
+          }
+        ),
+      ]).start(() => {
+        setShowCompleteModal(
+          false
+        );
+
+        setCompletingExpense(
+          null
+        );
+
+        setActualAmount('');
+      });
+    };
+
   const completePlannedExpense =
-    async (
-      plannedExpense: PlannedExpense
-    ) => {
+    async () => {
+      if (
+        !completingExpense
+      ) {
+        return;
+      }
+
+      const numericActualAmount =
+        parseMoney(
+          actualAmount
+        );
+
+      if (
+        numericActualAmount <= 0
+      ) {
+        return;
+      }
+
       try {
         const savedExpenses =
           await AsyncStorage.getItem(
             EXPENSES_KEY
           );
 
-        const expenses: Expense[] =
+        const expenses:
+          Expense[] =
           savedExpenses
             ? JSON.parse(
                 savedExpenses
               )
             : [];
 
-        const newExpense: Expense = {
+        const newExpense:
+          Expense = {
           id:
             Date.now().toString(),
 
           title:
-            plannedExpense.title,
+            completingExpense.title,
 
           amount:
-            plannedExpense.amount,
+            numericActualAmount,
 
-          // 예정 지출은 카테고리를 따로 받지 않으므로
-          // 우선 기타 카테고리로 저장
-          category: 'etc',
+          category:
+            'etc',
 
           createdAt:
             new Date().toISOString(),
@@ -408,7 +953,8 @@ export default function PlanScreen() {
           );
 
         if (savedBudget) {
-          const budget: BudgetSettings =
+          const budget:
+            BudgetSettings =
             JSON.parse(
               savedBudget
             );
@@ -420,7 +966,7 @@ export default function PlanScreen() {
               (Number(
                 budget.spentAmount
               ) || 0) +
-              plannedExpense.amount,
+              numericActualAmount,
           };
 
           await AsyncStorage.setItem(
@@ -435,7 +981,7 @@ export default function PlanScreen() {
           plannedExpenses.filter(
             (item) =>
               item.id !==
-              plannedExpense.id
+              completingExpense.id
           );
 
         await AsyncStorage.setItem(
@@ -448,6 +994,8 @@ export default function PlanScreen() {
         setPlannedExpenses(
           updatedPlanned
         );
+
+        closeCompleteModal();
       } catch (error) {
         console.error(
           '예정 지출 완료 처리 실패:',
@@ -456,48 +1004,9 @@ export default function PlanScreen() {
       }
     };
 
-  const confirmComplete = (
-    expense: PlannedExpense
-  ) => {
-    if (
-      Platform.OS === 'web'
-    ) {
-      const confirmed =
-        window.confirm(
-          `${expense.title} ${formatMoney(
-            expense.amount
-          )}원을 실제 지출로 기록할까요?`
-        );
-
-      if (confirmed) {
-        completePlannedExpense(
-          expense
-        );
-      }
-
-      return;
-    }
-
-    Alert.alert(
-      '지출 완료',
-      `${expense.title} ${formatMoney(
-        expense.amount
-      )}원을 실제 지출로 기록할까요?`,
-      [
-        {
-          text: '취소',
-          style: 'cancel',
-        },
-        {
-          text: '지출 완료',
-          onPress: () =>
-            completePlannedExpense(
-              expense
-            ),
-        },
-      ]
-    );
-  };
+  /* =========================
+     데이터 계산
+  ========================= */
 
   const upcomingExpenses =
     useMemo(() => {
@@ -528,13 +1037,15 @@ export default function PlanScreen() {
         .sort(
           (a, b) =>
             new Date(
-              a.date
+              `${a.date}T00:00:00`
             ).getTime() -
             new Date(
-              b.date
+              `${b.date}T00:00:00`
             ).getTime()
         );
-    }, [plannedExpenses]);
+    }, [
+      plannedExpenses,
+    ]);
 
   const totalPlanned =
     upcomingExpenses.reduce(
@@ -543,16 +1054,16 @@ export default function PlanScreen() {
       0
     );
 
-  const formatDate = (
-    value: string
-  ) => {
-    const date =
-      new Date(
-        `${value}T00:00:00`
-      );
+  const actualNumericAmount =
+    parseMoney(
+      actualAmount
+    );
 
-    return `${date.getMonth() + 1}월 ${date.getDate()}일`;
-  };
+  const amountDifference =
+    completingExpense
+      ? actualNumericAmount -
+        completingExpense.amount
+      : 0;
 
   return (
     <>
@@ -568,9 +1079,7 @@ export default function PlanScreen() {
         }
       >
         <Text
-          style={
-            styles.title
-          }
+          style={styles.title}
         >
           소비 계획
         </Text>
@@ -628,7 +1137,7 @@ export default function PlanScreen() {
               styles.addButtonPressed,
           ]}
           onPress={
-            openModal
+            openAddModal
           }
         >
           <Ionicons
@@ -647,9 +1156,7 @@ export default function PlanScreen() {
         </Pressable>
 
         <View
-          style={
-            styles.list
-          }
+          style={styles.list}
         >
           <Text
             style={
@@ -666,13 +1173,17 @@ export default function PlanScreen() {
                 styles.empty
               }
             >
-              <Text
+              <View
                 style={
-                  styles.emptyEmoji
+                  styles.emptyIconBox
                 }
               >
-                📅
-              </Text>
+                <Ionicons
+                  name="calendar-outline"
+                  size={30}
+                  color="#98A2B3"
+                />
+              </View>
 
               <Text
                 style={
@@ -692,136 +1203,213 @@ export default function PlanScreen() {
             </View>
           ) : (
             upcomingExpenses.map(
-              (expense) => (
-                <View
-                  key={
-                    expense.id
-                  }
-                  style={
-                    styles.expenseCard
-                  }
-                >
+              (expense) => {
+                const isMenuOpen =
+                  openedMenuId ===
+                  expense.id;
+
+                return (
                   <View
-                    style={
-                      styles.expenseTop
+                    key={
+                      expense.id
                     }
+                    style={[
+                      styles.expenseCard,
+
+                      isMenuOpen &&
+                        styles.expenseCardOpen,
+                    ]}
                   >
                     <View
                       style={
-                        styles.expenseIcon
+                        styles.expenseTop
                       }
                     >
-                      <Ionicons
-                        name="calendar-outline"
-                        size={21}
-                        color="#3563C9"
-                      />
-                    </View>
-
-                    <View
-                      style={
-                        styles.expenseInfo
-                      }
-                    >
-                      <Text
+                      <View
                         style={
-                          styles.expenseTitle
+                          styles.expenseIcon
                         }
                       >
-                        {
-                          expense.title
+                        <Ionicons
+                          name="calendar-outline"
+                          size={20}
+                          color="#5F6F86"
+                        />
+                      </View>
+
+                      <View
+                        style={
+                          styles.expenseInfo
                         }
-                      </Text>
+                      >
+                        <Text
+                          style={
+                            styles.expenseTitle
+                          }
+                        >
+                          {
+                            expense.title
+                          }
+                        </Text>
+
+                        <Text
+                          style={
+                            styles.expenseDate
+                          }
+                        >
+                          {formatDate(
+                            expense.date
+                          )}
+                        </Text>
+                      </View>
 
                       <Text
                         style={
-                          styles.expenseDate
+                          styles.expenseAmount
                         }
                       >
-                        {formatDate(
-                          expense.date
+                        {formatMoney(
+                          expense.amount
                         )}
+                        원
                       </Text>
+
+                      <Pressable
+                        style={
+                          styles.menuButton
+                        }
+                        onPress={() =>
+                          setOpenedMenuId(
+                            isMenuOpen
+                              ? null
+                              : expense.id
+                          )
+                        }
+                        hitSlop={10}
+                      >
+                        <Ionicons
+                          name="ellipsis-vertical"
+                          size={20}
+                          color="#687386"
+                        />
+                      </Pressable>
                     </View>
 
-                    <Text
-                      style={
-                        styles.expenseAmount
-                      }
-                    >
-                      {formatMoney(
-                        expense.amount
-                      )}
-                      원
-                    </Text>
-                  </View>
+                    {/* 메뉴 */}
 
-                  <View
-                    style={
-                      styles.actionRow
-                    }
-                  >
-                    <Pressable
-                      style={({ pressed }) => [
-                        styles.completeButton,
-
-                        pressed &&
-                          styles.completeButtonPressed,
-                      ]}
-                      onPress={() =>
-                        confirmComplete(
-                          expense
-                        )
-                      }
-                    >
-                      <Ionicons
-                        name="checkmark-circle-outline"
-                        size={18}
-                        color="#3563C9"
-                      />
-
-                      <Text
+                    {isMenuOpen && (
+                      <View
                         style={
-                          styles.completeButtonText
+                          styles.menu
                         }
                       >
-                        지출 완료
-                      </Text>
-                    </Pressable>
+                        <Pressable
+                          style={
+                            styles.menuItem
+                          }
+                          onPress={() =>
+                            openCompleteModal(
+                              expense
+                            )
+                          }
+                        >
+                          <Ionicons
+                            name="checkmark-circle-outline"
+                            size={18}
+                            color="#3563C9"
+                          />
 
-                    <Pressable
-                      style={
-                        styles.deleteButton
-                      }
-                      onPress={() =>
-                        confirmDelete(
-                          expense
-                        )
-                      }
-                    >
-                      <Ionicons
-                        name="trash-outline"
-                        size={18}
-                        color="#98A2B3"
-                      />
-                    </Pressable>
+                          <Text
+                            style={
+                              styles.completeMenuText
+                            }
+                          >
+                            지출 완료
+                          </Text>
+                        </Pressable>
+
+                        <View
+                          style={
+                            styles.menuDivider
+                          }
+                        />
+
+                        <Pressable
+                          style={
+                            styles.menuItem
+                          }
+                          onPress={() =>
+                            openEditModal(
+                              expense
+                            )
+                          }
+                        >
+                          <Ionicons
+                            name="pencil-outline"
+                            size={18}
+                            color="#172033"
+                          />
+
+                          <Text
+                            style={
+                              styles.menuText
+                            }
+                          >
+                            수정하기
+                          </Text>
+                        </Pressable>
+
+                        <View
+                          style={
+                            styles.menuDivider
+                          }
+                        />
+
+                        <Pressable
+                          style={
+                            styles.menuItem
+                          }
+                          onPress={() =>
+                            confirmDelete(
+                              expense
+                            )
+                          }
+                        >
+                          <Ionicons
+                            name="trash-outline"
+                            size={18}
+                            color="#D84B4B"
+                          />
+
+                          <Text
+                            style={
+                              styles.deleteText
+                            }
+                          >
+                            삭제하기
+                          </Text>
+                        </Pressable>
+                      </View>
+                    )}
                   </View>
-                </View>
-              )
+                );
+              }
             )
           )}
         </View>
       </ScrollView>
 
+      {/* 예정 지출 추가/수정 */}
+
       <Modal
         visible={
-          showModal
+          showPlanModal
         }
         transparent
         animationType="none"
         statusBarTranslucent
         onRequestClose={
-          closeModal
+          closePlanModal
         }
       >
         <View
@@ -835,7 +1423,7 @@ export default function PlanScreen() {
 
               {
                 opacity:
-                  backdropOpacity,
+                  planBackdropOpacity,
               },
             ]}
           >
@@ -844,7 +1432,7 @@ export default function PlanScreen() {
                 styles.backdropPressArea
               }
               onPress={
-                closeModal
+                closePlanModal
               }
             />
           </Animated.View>
@@ -857,7 +1445,7 @@ export default function PlanScreen() {
                 transform: [
                   {
                     translateY:
-                      slideAnim,
+                      planSlideAnim,
                   },
                 ],
               },
@@ -884,7 +1472,9 @@ export default function PlanScreen() {
                     styles.sheetTitle
                   }
                 >
-                  예정 지출 추가
+                  {editingExpense
+                    ? '예정 지출 수정'
+                    : '예정 지출 추가'}
                 </Text>
 
                 <Text
@@ -901,7 +1491,7 @@ export default function PlanScreen() {
                   styles.closeButton
                 }
                 onPress={
-                  closeModal
+                  closePlanModal
                 }
               >
                 <Ionicons
@@ -924,9 +1514,7 @@ export default function PlanScreen() {
               style={
                 styles.input
               }
-              value={
-                title
-              }
+              value={title}
               onChangeText={
                 setTitle
               }
@@ -939,7 +1527,7 @@ export default function PlanScreen() {
                 styles.inputTopMargin,
               ]}
             >
-              예정 금액
+              예상 금액
             </Text>
 
             <View
@@ -951,9 +1539,7 @@ export default function PlanScreen() {
                 style={
                   styles.amountInput
                 }
-                value={
-                  amount
-                }
+                value={amount}
                 onChangeText={(
                   text
                 ) =>
@@ -985,26 +1571,105 @@ export default function PlanScreen() {
               언제 사용할 예정인가요?
             </Text>
 
-            <TextInput
+            <Pressable
               style={
-                styles.input
+                styles.dateSelectButton
               }
-              value={
-                date
-              }
-              onChangeText={
-                setDate
-              }
-              placeholder="2026-09-05"
-            />
-
-            <Text
-              style={
-                styles.dateGuide
+              onPress={
+                openCalendar
               }
             >
-              예: 2026-09-05
-            </Text>
+              <View
+                style={
+                  styles.dateSelectLeft
+                }
+              >
+                <View
+                  style={
+                    styles.dateIconBox
+                  }
+                >
+                  <Ionicons
+                    name="calendar-outline"
+                    size={19}
+                    color="#3563C9"
+                  />
+                </View>
+
+                <Text
+                  style={
+                    styles.dateSelectText
+                  }
+                >
+                  {formatDisplayDate(
+                    date
+                  )}
+                </Text>
+              </View>
+
+              <Ionicons
+                name="chevron-forward"
+                size={18}
+                color="#98A2B3"
+              />
+            </Pressable>
+
+            <View
+              style={
+                styles.quickDateRow
+              }
+            >
+              <Pressable
+                style={
+                  styles.quickDateButton
+                }
+                onPress={
+                  selectToday
+                }
+              >
+                <Text
+                  style={
+                    styles.quickDateText
+                  }
+                >
+                  오늘
+                </Text>
+              </Pressable>
+
+              <Pressable
+                style={
+                  styles.quickDateButton
+                }
+                onPress={
+                  selectTomorrow
+                }
+              >
+                <Text
+                  style={
+                    styles.quickDateText
+                  }
+                >
+                  내일
+                </Text>
+              </Pressable>
+
+              <Pressable
+                style={
+                  styles.quickDateButton
+                }
+                onPress={
+                  selectWeekend
+                }
+              >
+                <Text
+                  style={
+                    styles.quickDateText
+                  }
+                >
+                  이번 주말
+                </Text>
+              </Pressable>
+            </View>
 
             <Pressable
               style={
@@ -1019,10 +1684,494 @@ export default function PlanScreen() {
                   styles.saveButtonText
                 }
               >
-                추가하기
+                {editingExpense
+                  ? '수정하기'
+                  : '추가하기'}
               </Text>
             </Pressable>
           </Animated.View>
+        </View>
+      </Modal>
+
+      {/* 실제 지출 */}
+
+      <Modal
+        visible={
+          showCompleteModal
+        }
+        transparent
+        animationType="none"
+        statusBarTranslucent
+        onRequestClose={
+          closeCompleteModal
+        }
+      >
+        <View
+          style={
+            styles.modalRoot
+          }
+        >
+          <Animated.View
+            style={[
+              styles.backdrop,
+
+              {
+                opacity:
+                  completeBackdropOpacity,
+              },
+            ]}
+          >
+            <Pressable
+              style={
+                styles.backdropPressArea
+              }
+              onPress={
+                closeCompleteModal
+              }
+            />
+          </Animated.View>
+
+          <Animated.View
+            style={[
+              styles.bottomSheet,
+
+              {
+                transform: [
+                  {
+                    translateY:
+                      completeSlideAnim,
+                  },
+                ],
+              },
+            ]}
+          >
+            <View
+              style={
+                styles.sheetHandle
+              }
+            />
+
+            <View
+              style={
+                styles.sheetHeader
+              }
+            >
+              <View
+                style={
+                  styles.sheetTitleArea
+                }
+              >
+                <Text
+                  style={
+                    styles.sheetTitle
+                  }
+                >
+                  실제 지출 기록
+                </Text>
+
+                <Text
+                  style={
+                    styles.sheetDescription
+                  }
+                >
+                  실제로 사용한 금액을 확인해주세요.
+                </Text>
+              </View>
+
+              <Pressable
+                style={
+                  styles.closeButton
+                }
+                onPress={
+                  closeCompleteModal
+                }
+              >
+                <Ionicons
+                  name="close"
+                  size={22}
+                  color="#687386"
+                />
+              </Pressable>
+            </View>
+
+            {completingExpense && (
+              <>
+                <View
+                  style={
+                    styles.completeSummary
+                  }
+                >
+                  <View>
+                    <Text
+                      style={
+                        styles.completeTitle
+                      }
+                    >
+                      {
+                        completingExpense.title
+                      }
+                    </Text>
+
+                    <Text
+                      style={
+                        styles.completeDate
+                      }
+                    >
+                      {formatDate(
+                        completingExpense.date
+                      )}
+                    </Text>
+                  </View>
+
+                  <View
+                    style={
+                      styles.expectedArea
+                    }
+                  >
+                    <Text
+                      style={
+                        styles.expectedLabel
+                      }
+                    >
+                      예상
+                    </Text>
+
+                    <Text
+                      style={
+                        styles.expectedAmount
+                      }
+                    >
+                      {formatMoney(
+                        completingExpense.amount
+                      )}
+                      원
+                    </Text>
+                  </View>
+                </View>
+
+                <Text
+                  style={[
+                    styles.inputLabel,
+                    styles.actualAmountLabel,
+                  ]}
+                >
+                  실제 사용 금액
+                </Text>
+
+                <View
+                  style={
+                    styles.actualAmountBox
+                  }
+                >
+                  <TextInput
+                    style={
+                      styles.actualAmountInput
+                    }
+                    value={
+                      actualAmount
+                    }
+                    onChangeText={(
+                      text
+                    ) =>
+                      setActualAmount(
+                        formatMoneyInput(
+                          text
+                        )
+                      )
+                    }
+                    keyboardType="numeric"
+                    placeholder="0"
+                  />
+
+                  <Text
+                    style={
+                      styles.unit
+                    }
+                  >
+                    원
+                  </Text>
+                </View>
+
+                {actualNumericAmount >
+                  0 && (
+                  <View
+                    style={
+                      styles.differenceBox
+                    }
+                  >
+                    {amountDifference ===
+                    0 ? (
+                      <>
+                        <Ionicons
+                          name="checkmark-circle-outline"
+                          size={18}
+                          color="#3563C9"
+                        />
+
+                        <Text
+                          style={
+                            styles.sameAmountText
+                          }
+                        >
+                          예상한 금액과 같아요.
+                        </Text>
+                      </>
+                    ) : amountDifference >
+                      0 ? (
+                      <>
+                        <Ionicons
+                          name="arrow-up-outline"
+                          size={18}
+                          color="#C56A43"
+                        />
+
+                        <Text
+                          style={
+                            styles.moreAmountText
+                          }
+                        >
+                          예상보다{' '}
+                          <Text
+                            style={
+                              styles.differenceStrong
+                            }
+                          >
+                            {formatMoney(
+                              amountDifference
+                            )}
+                            원
+                          </Text>{' '}
+                          더 사용했어요.
+                        </Text>
+                      </>
+                    ) : (
+                      <>
+                        <Ionicons
+                          name="arrow-down-outline"
+                          size={18}
+                          color="#2F7D5A"
+                        />
+
+                        <Text
+                          style={
+                            styles.lessAmountText
+                          }
+                        >
+                          예상보다{' '}
+                          <Text
+                            style={
+                              styles.differenceStrong
+                            }
+                          >
+                            {formatMoney(
+                              Math.abs(
+                                amountDifference
+                              )
+                            )}
+                            원
+                          </Text>{' '}
+                          덜 사용했어요.
+                        </Text>
+                      </>
+                    )}
+                  </View>
+                )}
+
+                <Text
+                  style={
+                    styles.completeGuide
+                  }
+                >
+                  완료하면 예정 지출에서는 사라지고 실제 지출 내역에 기록돼요.
+                </Text>
+
+                <Pressable
+                  style={
+                    styles.saveButton
+                  }
+                  onPress={
+                    completePlannedExpense
+                  }
+                >
+                  <Text
+                    style={
+                      styles.saveButtonText
+                    }
+                  >
+                    지출로 기록하기
+                  </Text>
+                </Pressable>
+              </>
+            )}
+          </Animated.View>
+        </View>
+      </Modal>
+
+      {/* 달력 */}
+
+      <Modal
+        visible={
+          showCalendar
+        }
+        transparent
+        animationType="fade"
+        onRequestClose={
+          closeCalendar
+        }
+      >
+        <View
+          style={
+            styles.calendarModalRoot
+          }
+        >
+          <Pressable
+            style={
+              styles.calendarBackdrop
+            }
+            onPress={
+              closeCalendar
+            }
+          />
+
+          <View
+            style={
+              styles.calendarCard
+            }
+          >
+            <View
+              style={
+                styles.calendarHeader
+              }
+            >
+              <View>
+                <Text
+                  style={
+                    styles.calendarTitle
+                  }
+                >
+                  날짜 선택
+                </Text>
+
+                <Text
+                  style={
+                    styles.calendarDescription
+                  }
+                >
+                  예정 지출 날짜를 선택해주세요.
+                </Text>
+              </View>
+
+              <Pressable
+                style={
+                  styles.calendarCloseButton
+                }
+                onPress={
+                  closeCalendar
+                }
+              >
+                <Ionicons
+                  name="close"
+                  size={21}
+                  color="#687386"
+                />
+              </Pressable>
+            </View>
+
+            <Calendar
+              current={
+                date ||
+                getTodayString()
+              }
+              minDate={
+                getTodayString()
+              }
+              onDayPress={
+                selectCalendarDate
+              }
+              enableSwipeMonths
+              markedDates={
+                date
+                  ? {
+                      [date]: {
+                        selected:
+                          true,
+
+                        selectedColor:
+                          '#3563C9',
+
+                        selectedTextColor:
+                          '#FFFFFF',
+                      },
+                    }
+                  : {}
+              }
+              theme={{
+                calendarBackground:
+                  '#FFFFFF',
+
+                selectedDayBackgroundColor:
+                  '#3563C9',
+
+                selectedDayTextColor:
+                  '#FFFFFF',
+
+                todayTextColor:
+                  '#3563C9',
+
+                dayTextColor:
+                  '#172033',
+
+                textDisabledColor:
+                  '#D5DAE2',
+
+                arrowColor:
+                  '#3563C9',
+
+                monthTextColor:
+                  '#172033',
+
+                textMonthFontWeight:
+                  '700',
+
+                textDayFontWeight:
+                  '500',
+
+                textDayHeaderFontWeight:
+                  '600',
+
+                textMonthFontSize:
+                  17,
+
+                textDayFontSize:
+                  14,
+
+                textDayHeaderFontSize:
+                  12,
+              }}
+            />
+
+            <View
+              style={
+                styles.selectedDateBox
+              }
+            >
+              <Ionicons
+                name="calendar-outline"
+                size={18}
+                color="#3563C9"
+              />
+
+              <Text
+                style={
+                  styles.selectedDateText
+                }
+              >
+                {formatDisplayDate(
+                  date
+                )}
+              </Text>
+            </View>
+          </View>
         </View>
       </Modal>
     </>
@@ -1033,34 +2182,26 @@ const styles =
   StyleSheet.create({
     screen: {
       flex: 1,
-
       backgroundColor:
         '#FFFFFF',
     },
 
     container: {
       paddingHorizontal: 24,
-
       paddingTop: 60,
-
       paddingBottom: 120,
     },
 
     title: {
       fontSize: 28,
-
       fontWeight: '800',
-
       color: '#172033',
     },
 
     description: {
       marginTop: 8,
-
       fontSize: 15,
-
       lineHeight: 21,
-
       color: '#8792A2',
     },
 
@@ -1152,12 +2293,23 @@ const styles =
     },
 
     expenseCard: {
-      paddingVertical: 16,
+      position: 'relative',
+
+      minHeight: 74,
+
+      justifyContent:
+        'center',
 
       borderBottomWidth: 1,
 
       borderBottomColor:
         '#EEF1F5',
+
+      zIndex: 1,
+    },
+
+    expenseCardOpen: {
+      zIndex: 100,
     },
 
     expenseTop: {
@@ -1168,13 +2320,12 @@ const styles =
 
     expenseIcon: {
       width: 44,
-
       height: 44,
 
       borderRadius: 14,
 
       backgroundColor:
-        '#EEF3FB',
+        '#F5F7FA',
 
       alignItems: 'center',
 
@@ -1212,53 +2363,11 @@ const styles =
       color: '#172033',
     },
 
-    actionRow: {
-      flexDirection: 'row',
+    menuButton: {
+      width: 34,
+      height: 34,
 
-      alignItems: 'center',
-
-      justifyContent:
-        'flex-end',
-
-      marginTop: 12,
-    },
-
-    completeButton: {
-      flexDirection: 'row',
-
-      alignItems: 'center',
-
-      gap: 5,
-
-      backgroundColor:
-        '#EEF3FB',
-
-      borderRadius: 12,
-
-      paddingHorizontal: 13,
-
-      paddingVertical: 9,
-    },
-
-    completeButtonPressed: {
-      backgroundColor:
-        '#E1EAF9',
-    },
-
-    completeButtonText: {
-      fontSize: 13,
-
-      fontWeight: '700',
-
-      color: '#3563C9',
-    },
-
-    deleteButton: {
-      width: 36,
-
-      height: 36,
-
-      marginLeft: 6,
+      marginLeft: 3,
 
       alignItems: 'center',
 
@@ -1266,14 +2375,105 @@ const styles =
         'center',
     },
 
+    /* 메뉴 */
+
+    menu: {
+      position: 'absolute',
+
+      top: 55,
+      right: 0,
+
+      width: 150,
+
+      backgroundColor:
+        '#FFFFFF',
+
+      borderRadius: 14,
+
+      paddingVertical: 6,
+
+      zIndex: 200,
+
+      shadowColor:
+        '#000000',
+
+      shadowOffset: {
+        width: 0,
+        height: 4,
+      },
+
+      shadowOpacity: 0.12,
+
+      shadowRadius: 10,
+
+      elevation: 8,
+    },
+
+    menuItem: {
+      flexDirection: 'row',
+
+      alignItems: 'center',
+
+      gap: 8,
+
+      paddingHorizontal: 14,
+
+      paddingVertical: 12,
+    },
+
+    menuDivider: {
+      height: 1,
+
+      backgroundColor:
+        '#EEF1F5',
+    },
+
+    completeMenuText: {
+      fontSize: 14,
+
+      fontWeight: '700',
+
+      color: '#3563C9',
+    },
+
+    menuText: {
+      fontSize: 14,
+
+      fontWeight: '600',
+
+      color: '#172033',
+    },
+
+    deleteText: {
+      fontSize: 14,
+
+      fontWeight: '600',
+
+      color: '#D84B4B',
+    },
+
+    /* 빈 화면 */
+
     empty: {
       alignItems: 'center',
 
       paddingVertical: 60,
     },
 
-    emptyEmoji: {
-      fontSize: 34,
+    emptyIconBox: {
+      width: 58,
+
+      height: 58,
+
+      borderRadius: 18,
+
+      backgroundColor:
+        '#F5F7FA',
+
+      alignItems: 'center',
+
+      justifyContent:
+        'center',
     },
 
     emptyTitle: {
@@ -1298,6 +2498,8 @@ const styles =
       textAlign: 'center',
     },
 
+    /* Modal */
+
     modalRoot: {
       flex: 1,
 
@@ -1309,11 +2511,8 @@ const styles =
       position: 'absolute',
 
       top: 0,
-
       bottom: 0,
-
       left: 0,
-
       right: 0,
 
       backgroundColor:
@@ -1329,7 +2528,6 @@ const styles =
         '#FFFFFF',
 
       borderTopLeftRadius: 28,
-
       borderTopRightRadius: 28,
 
       paddingHorizontal: 24,
@@ -1343,7 +2541,6 @@ const styles =
 
       shadowOffset: {
         width: 0,
-
         height: -5,
       },
 
@@ -1399,6 +2596,8 @@ const styles =
       marginTop: 6,
 
       fontSize: 13,
+
+      lineHeight: 19,
 
       color: '#8792A2',
     },
@@ -1481,14 +2680,6 @@ const styles =
       color: '#687386',
     },
 
-    dateGuide: {
-      marginTop: 6,
-
-      fontSize: 11,
-
-      color: '#98A2B3',
-    },
-
     saveButton: {
       marginTop: 26,
 
@@ -1508,5 +2699,358 @@ const styles =
       fontSize: 16,
 
       fontWeight: '700',
+    },
+
+    /* 날짜 */
+
+    dateSelectButton: {
+      minHeight: 58,
+
+      flexDirection: 'row',
+
+      alignItems: 'center',
+
+      justifyContent:
+        'space-between',
+
+      backgroundColor:
+        '#F5F7FA',
+
+      borderRadius: 15,
+
+      paddingHorizontal: 13,
+
+      borderWidth: 1,
+
+      borderColor:
+        '#EEF1F5',
+    },
+
+    dateSelectLeft: {
+      flex: 1,
+
+      flexDirection: 'row',
+
+      alignItems: 'center',
+    },
+
+    dateIconBox: {
+      width: 38,
+
+      height: 38,
+
+      borderRadius: 12,
+
+      backgroundColor:
+        '#EAF0FB',
+
+      alignItems: 'center',
+
+      justifyContent:
+        'center',
+
+      marginRight: 11,
+    },
+
+    dateSelectText: {
+      flex: 1,
+
+      fontSize: 14,
+
+      fontWeight: '600',
+
+      color: '#172033',
+    },
+
+    quickDateRow: {
+      flexDirection: 'row',
+
+      gap: 8,
+
+      marginTop: 10,
+    },
+
+    quickDateButton: {
+      backgroundColor:
+        '#F5F7FA',
+
+      borderRadius: 999,
+
+      paddingHorizontal: 14,
+
+      paddingVertical: 9,
+
+      borderWidth: 1,
+
+      borderColor:
+        '#EEF1F5',
+    },
+
+    quickDateText: {
+      fontSize: 12,
+
+      fontWeight: '600',
+
+      color: '#687386',
+    },
+
+    /* 달력 */
+
+    calendarModalRoot: {
+      flex: 1,
+
+      alignItems: 'center',
+
+      justifyContent:
+        'center',
+
+      paddingHorizontal: 20,
+    },
+
+    calendarBackdrop: {
+      position: 'absolute',
+
+      top: 0,
+      bottom: 0,
+      left: 0,
+      right: 0,
+
+      backgroundColor:
+        'rgba(23, 32, 51, 0.42)',
+    },
+
+    calendarCard: {
+      width: '100%',
+
+      maxWidth: 430,
+
+      backgroundColor:
+        '#FFFFFF',
+
+      borderRadius: 24,
+
+      paddingHorizontal: 18,
+
+      paddingTop: 20,
+
+      paddingBottom: 18,
+
+      shadowColor:
+        '#000000',
+
+      shadowOffset: {
+        width: 0,
+        height: 8,
+      },
+
+      shadowOpacity: 0.16,
+
+      shadowRadius: 24,
+
+      elevation: 14,
+    },
+
+    calendarHeader: {
+      flexDirection: 'row',
+
+      justifyContent:
+        'space-between',
+
+      alignItems:
+        'flex-start',
+
+      marginBottom: 10,
+    },
+
+    calendarTitle: {
+      fontSize: 20,
+
+      fontWeight: '800',
+
+      color: '#172033',
+    },
+
+    calendarDescription: {
+      marginTop: 5,
+
+      fontSize: 12,
+
+      color: '#8792A2',
+    },
+
+    calendarCloseButton: {
+      width: 36,
+
+      height: 36,
+
+      borderRadius: 18,
+
+      backgroundColor:
+        '#F5F7FA',
+
+      alignItems: 'center',
+
+      justifyContent:
+        'center',
+    },
+
+    selectedDateBox: {
+      flexDirection: 'row',
+
+      alignItems: 'center',
+
+      justifyContent:
+        'center',
+
+      gap: 7,
+
+      marginTop: 8,
+
+      backgroundColor:
+        '#F1F5FC',
+
+      borderRadius: 14,
+
+      paddingVertical: 12,
+
+      paddingHorizontal: 12,
+    },
+
+    selectedDateText: {
+      fontSize: 14,
+
+      fontWeight: '700',
+
+      color: '#3563C9',
+    },
+
+    /* 실제 지출 */
+
+    completeSummary: {
+      flexDirection: 'row',
+
+      justifyContent:
+        'space-between',
+
+      alignItems: 'center',
+
+      backgroundColor:
+        '#F8FAFC',
+
+      borderRadius: 16,
+
+      padding: 16,
+    },
+
+    completeTitle: {
+      fontSize: 16,
+
+      fontWeight: '700',
+
+      color: '#172033',
+    },
+
+    completeDate: {
+      marginTop: 5,
+
+      fontSize: 12,
+
+      color: '#8792A2',
+    },
+
+    expectedArea: {
+      alignItems:
+        'flex-end',
+
+      marginLeft: 15,
+    },
+
+    expectedLabel: {
+      fontSize: 11,
+
+      color: '#98A2B3',
+    },
+
+    expectedAmount: {
+      marginTop: 4,
+
+      fontSize: 15,
+
+      fontWeight: '700',
+
+      color: '#687386',
+    },
+
+    actualAmountLabel: {
+      marginTop: 24,
+    },
+
+    actualAmountBox: {
+      flexDirection: 'row',
+
+      alignItems: 'center',
+
+      backgroundColor:
+        '#F1F5FC',
+
+      borderRadius: 16,
+
+      paddingHorizontal: 18,
+    },
+
+    actualAmountInput: {
+      flex: 1,
+
+      paddingVertical: 17,
+
+      fontSize: 24,
+
+      fontWeight: '800',
+
+      color: '#3563C9',
+    },
+
+    differenceBox: {
+      flexDirection: 'row',
+
+      alignItems: 'center',
+
+      marginTop: 14,
+
+      paddingHorizontal: 2,
+
+      gap: 6,
+    },
+
+    sameAmountText: {
+      fontSize: 13,
+
+      color: '#687386',
+    },
+
+    moreAmountText: {
+      fontSize: 13,
+
+      color: '#C56A43',
+    },
+
+    lessAmountText: {
+      fontSize: 13,
+
+      color: '#2F7D5A',
+    },
+
+    differenceStrong: {
+      fontWeight: '800',
+    },
+
+    completeGuide: {
+      marginTop: 20,
+
+      fontSize: 12,
+
+      lineHeight: 18,
+
+      color: '#98A2B3',
     },
   });

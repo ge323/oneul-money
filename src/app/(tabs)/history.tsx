@@ -14,6 +14,7 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   View,
 } from 'react-native';
 
@@ -55,6 +56,50 @@ type ExpenseGroup = {
   expenses: Expense[];
 };
 
+type CategoryOption = {
+  id: string;
+  label: string;
+  icon: IoniconName;
+};
+
+const DEFAULT_CATEGORIES: CategoryOption[] = [
+  {
+    id: 'food',
+    label: '식비',
+    icon: 'restaurant-outline',
+  },
+  {
+    id: 'cafe',
+    label: '카페',
+    icon: 'cafe-outline',
+  },
+  {
+    id: 'transport',
+    label: '교통',
+    icon: 'subway-outline',
+  },
+  {
+    id: 'shopping',
+    label: '쇼핑',
+    icon: 'bag-handle-outline',
+  },
+  {
+    id: 'leisure',
+    label: '여가',
+    icon: 'game-controller-outline',
+  },
+  {
+    id: 'life',
+    label: '생활',
+    icon: 'home-outline',
+  },
+  {
+    id: 'etc',
+    label: '기타',
+    icon: 'ellipsis-horizontal-outline',
+  },
+];
+
 const DEFAULT_CATEGORY_ICONS: Record<
   string,
   IoniconName
@@ -83,6 +128,16 @@ export default function HistoryScreen() {
   ] = useState<string | null>(null);
 
   const [
+    searchQuery,
+    setSearchQuery,
+  ] = useState('');
+
+  const [
+    selectedCategory,
+    setSelectedCategory,
+  ] = useState('all');
+
+  const [
     selectedMonth,
     setSelectedMonth,
   ] = useState(() => {
@@ -98,7 +153,6 @@ export default function HistoryScreen() {
   useFocusEffect(
     useCallback(() => {
       loadData();
-
       setOpenedMenuId(null);
     }, [])
   );
@@ -124,9 +178,7 @@ export default function HistoryScreen() {
           : []
       );
 
-      if (
-        savedCustomCategories
-      ) {
+      if (savedCustomCategories) {
         const parsed:
           CustomCategory[] =
           JSON.parse(
@@ -217,6 +269,12 @@ export default function HistoryScreen() {
   const selectedMonthIndex =
     selectedMonth.getMonth();
 
+  /*
+   * =========================
+   * 해당 월 전체 지출
+   * =========================
+   */
+
   const monthExpenses =
     useMemo(() => {
       return expenses
@@ -248,6 +306,13 @@ export default function HistoryScreen() {
       selectedMonthIndex,
     ]);
 
+  /*
+   * 월 전체 총액
+   *
+   * 검색/필터를 걸어도
+   * 이 금액은 변경하지 않음
+   */
+
   const totalExpense =
     useMemo(() => {
       return monthExpenses.reduce(
@@ -256,6 +321,262 @@ export default function HistoryScreen() {
         0
       );
     }, [monthExpenses]);
+
+  /*
+   * =========================
+   * 사용자 카테고리
+   * =========================
+   */
+
+  const customCategoryIcons =
+    useMemo(() => {
+      const map: Record<
+        string,
+        IoniconName
+      > = {};
+
+      customCategories.forEach(
+        (item) => {
+          map[item.id] =
+            item.icon ||
+            'ellipsis-horizontal-outline';
+        }
+      );
+
+      return map;
+    }, [customCategories]);
+
+  const customCategoryLabels =
+    useMemo(() => {
+      const map: Record<
+        string,
+        string
+      > = {};
+
+      customCategories.forEach(
+        (item) => {
+          map[item.id] =
+            item.label;
+        }
+      );
+
+      return map;
+    }, [customCategories]);
+
+  const getCategoryIcon = (
+    category?: string
+  ): IoniconName => {
+    if (!category) {
+      return 'card-outline';
+    }
+
+    return (
+      DEFAULT_CATEGORY_ICONS[
+        category
+      ] ??
+      customCategoryIcons[
+        category
+      ] ??
+      'ellipsis-horizontal-outline'
+    );
+  };
+
+  const getCategoryLabel = (
+    category?: string
+  ) => {
+    if (!category) {
+      return '기타';
+    }
+
+    const defaultCategory =
+      DEFAULT_CATEGORIES.find(
+        (item) =>
+          item.id === category
+      );
+
+    if (defaultCategory) {
+      return defaultCategory.label;
+    }
+
+    return (
+      customCategoryLabels[
+        category
+      ] ?? '기타'
+    );
+  };
+
+  /*
+   * =========================
+   * 필터에 표시할 카테고리
+   * =========================
+   */
+
+  const categoryOptions =
+    useMemo<CategoryOption[]>(
+      () => {
+        const custom:
+          CategoryOption[] =
+          customCategories.map(
+            (item) => ({
+              id: item.id,
+
+              label:
+                item.label,
+
+              icon:
+                item.icon ||
+                'ellipsis-horizontal-outline',
+            })
+          );
+
+        return [
+          ...DEFAULT_CATEGORIES,
+          ...custom,
+        ];
+      },
+      [customCategories]
+    );
+
+  /*
+   * =========================
+   * 검색 + 카테고리 필터
+   * =========================
+   */
+
+  const normalizeText = (value: string) => {
+  return value
+    .toLowerCase()
+    .replace(/\s+/g, '');
+};
+
+const filteredExpenses =
+  useMemo(() => {
+    const trimmed =
+      searchQuery
+        .trim()
+        .toLowerCase();
+
+    const normalizedSearch =
+      normalizeText(trimmed);
+
+    const numericSearch =
+      trimmed.replace(
+        /[^0-9]/g,
+        ''
+      );
+
+    return monthExpenses.filter(
+      (expense) => {
+        const categoryMatches =
+          selectedCategory ===
+            'all' ||
+          expense.category ===
+            selectedCategory;
+
+        if (!categoryMatches) {
+          return false;
+        }
+
+        if (!trimmed) {
+          return true;
+        }
+
+        const title =
+          expense.title
+            .toLowerCase();
+
+        const categoryLabel =
+          getCategoryLabel(
+            expense.category
+          ).toLowerCase();
+
+        const normalizedTitle =
+          normalizeText(title);
+
+        const normalizedCategory =
+          normalizeText(
+            categoryLabel
+          );
+
+        const rawAmount =
+          String(
+            expense.amount
+          );
+
+        const formattedAmount =
+          formatMoney(
+            expense.amount
+          );
+
+        const titleMatches =
+          title.includes(
+            trimmed
+          ) ||
+          normalizedTitle.includes(
+            normalizedSearch
+          );
+
+        const categoryNameMatches =
+          categoryLabel.includes(
+            trimmed
+          ) ||
+          normalizedCategory.includes(
+            normalizedSearch
+          );
+
+        const amountMatches =
+          numericSearch.length >
+            0 &&
+          (
+            rawAmount.includes(
+              numericSearch
+            ) ||
+            formattedAmount
+              .replace(
+                /,/g,
+                ''
+              )
+              .includes(
+                numericSearch
+              )
+          );
+
+        return (
+          titleMatches ||
+          categoryNameMatches ||
+          amountMatches
+        );
+      }
+    );
+  }, [
+    monthExpenses,
+    searchQuery,
+    selectedCategory,
+    customCategoryLabels,
+  ]);
+  /*
+   * 검색/필터 결과 총액
+   */
+
+  const filteredTotal =
+    useMemo(() => {
+      return filteredExpenses.reduce(
+        (sum, expense) =>
+          sum + expense.amount,
+        0
+      );
+    }, [filteredExpenses]);
+
+  const isFiltering =
+    searchQuery.trim().length >
+      0 ||
+    selectedCategory !== 'all';
+
+  /*
+   * =========================
+   * 필터 결과를 날짜별 그룹화
+   * =========================
+   */
 
   const groupedExpenses =
     useMemo<ExpenseGroup[]>(
@@ -266,7 +587,7 @@ export default function HistoryScreen() {
             ExpenseGroup
           >();
 
-        monthExpenses.forEach(
+        filteredExpenses.forEach(
           (expense) => {
             const date =
               new Date(
@@ -277,7 +598,8 @@ export default function HistoryScreen() {
               date.getFullYear(),
 
               String(
-                date.getMonth() + 1
+                date.getMonth() +
+                  1
               ).padStart(
                 2,
                 '0'
@@ -327,43 +649,15 @@ export default function HistoryScreen() {
             a.date.getTime()
         );
       },
-      [monthExpenses]
+      [filteredExpenses]
     );
 
-  const customCategoryIcons =
-    useMemo(() => {
-      const map: Record<
-        string,
-        IoniconName
-      > = {};
-
-      customCategories.forEach(
-        (item) => {
-          map[item.id] =
-            item.icon ||
-            'ellipsis-horizontal-outline';
-        }
-      );
-
-      return map;
-    }, [customCategories]);
-
-  const getCategoryIcon = (
-    category?: string
-  ): IoniconName => {
-    if (!category) {
-      return 'card-outline';
-    }
-
-    return (
-      DEFAULT_CATEGORY_ICONS[
-        category
-      ] ??
-      customCategoryIcons[
-        category
-      ] ??
-      'ellipsis-horizontal-outline'
+  const clearFilters = () => {
+    setSearchQuery('');
+    setSelectedCategory(
+      'all'
     );
+    setOpenedMenuId(null);
   };
 
   const getWeekday = (
@@ -409,6 +703,12 @@ export default function HistoryScreen() {
       }
     );
   };
+
+  /*
+   * =========================
+   * 삭제
+   * =========================
+   */
 
   const deleteExpense =
     async (
@@ -513,7 +813,8 @@ export default function HistoryScreen() {
 
         {
           text: '삭제',
-          style: 'destructive',
+          style:
+            'destructive',
 
           onPress: () =>
             deleteExpense(
@@ -523,6 +824,12 @@ export default function HistoryScreen() {
       ]
     );
   };
+
+  /*
+   * =========================
+   * 수정
+   * =========================
+   */
 
   const editExpense = (
     expense: Expense
@@ -550,15 +857,20 @@ export default function HistoryScreen() {
 
   return (
     <ScrollView
-      style={styles.screen}
+      style={
+        styles.screen
+      }
       contentContainerStyle={
         styles.container
       }
       showsVerticalScrollIndicator={
         false
       }
+      keyboardShouldPersistTaps="handled"
     >
-      {/* 상단 */}
+      {/* =====================
+          상단
+      ====================== */}
 
       <View
         style={
@@ -566,7 +878,9 @@ export default function HistoryScreen() {
         }
       >
         <Text
-          style={styles.title}
+          style={
+            styles.title
+          }
         >
           지출 내역
         </Text>
@@ -580,7 +894,75 @@ export default function HistoryScreen() {
         </Text>
       </View>
 
-      {/* 월 선택 */}
+      {/* =====================
+          소비 리포트
+      ====================== */}
+
+      <Pressable
+        style={({
+          pressed,
+        }) => [
+          styles.reportButton,
+
+          pressed &&
+            styles.reportButtonPressed,
+        ]}
+        onPress={() =>
+          router.push(
+            '/report'
+          )
+        }
+      >
+        <View
+          style={
+            styles.reportButtonLeft
+          }
+        >
+          <View
+            style={
+              styles.reportIconBox
+            }
+          >
+            <Ionicons
+              name="stats-chart-outline"
+              size={19}
+              color="#3563C9"
+            />
+          </View>
+
+          <View
+            style={
+              styles.reportTextArea
+            }
+          >
+            <Text
+              style={
+                styles.reportButtonTitle
+              }
+            >
+              소비 리포트
+            </Text>
+
+            <Text
+              style={
+                styles.reportButtonDescription
+              }
+            >
+              1주, 1개월, 1년 소비 흐름을 확인해보세요.
+            </Text>
+          </View>
+        </View>
+
+        <Ionicons
+          name="chevron-forward"
+          size={18}
+          color="#98A2B3"
+        />
+      </Pressable>
+
+      {/* =====================
+          월 선택
+      ====================== */}
 
       <View
         style={
@@ -650,7 +1032,9 @@ export default function HistoryScreen() {
         </Pressable>
       </View>
 
-      {/* 월 총 지출 */}
+      {/* =====================
+          월 총 지출
+      ====================== */}
 
       <View
         style={
@@ -691,15 +1075,257 @@ export default function HistoryScreen() {
         </Text>
       </View>
 
-      {/* 내역 */}
+      {/* =====================
+          검색
+      ====================== */}
 
       <View
-        style={styles.list}
+        style={
+          styles.searchSection
+        }
       >
-        {groupedExpenses.length ===
+        <View
+          style={
+            styles.searchBox
+          }
+        >
+          <Ionicons
+            name="search-outline"
+            size={20}
+            color="#98A2B3"
+          />
+
+          <TextInput
+            style={
+              styles.searchInput
+            }
+            value={
+              searchQuery
+            }
+            onChangeText={(
+              value
+            ) => {
+              setSearchQuery(
+                value
+              );
+
+              setOpenedMenuId(
+                null
+              );
+            }}
+            placeholder="지출 내역 검색"
+            placeholderTextColor="#A8B0BE"
+            returnKeyType="search"
+          />
+
+          {searchQuery.length >
+            0 && (
+            <Pressable
+              style={
+                styles.searchClearButton
+              }
+              onPress={() =>
+                setSearchQuery(
+                  ''
+                )
+              }
+            >
+              <Ionicons
+                name="close-circle"
+                size={20}
+                color="#A8B0BE"
+              />
+            </Pressable>
+          )}
+        </View>
+
+        {/* =====================
+            카테고리 필터
+        ====================== */}
+
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={
+            false
+          }
+          contentContainerStyle={
+            styles.categoryFilterContent
+          }
+          style={
+            styles.categoryFilterScroll
+          }
+        >
+          <Pressable
+            style={[
+              styles.filterChip,
+
+              selectedCategory ===
+                'all' &&
+                styles.filterChipSelected,
+            ]}
+            onPress={() => {
+              setSelectedCategory(
+                'all'
+              );
+
+              setOpenedMenuId(
+                null
+              );
+            }}
+          >
+            <Text
+              style={[
+                styles.filterChipText,
+
+                selectedCategory ===
+                  'all' &&
+                  styles.filterChipTextSelected,
+              ]}
+            >
+              전체
+            </Text>
+          </Pressable>
+
+          {categoryOptions.map(
+            (item) => {
+              const isSelected =
+                selectedCategory ===
+                item.id;
+
+              return (
+                <Pressable
+                  key={
+                    item.id
+                  }
+                  style={[
+                    styles.filterChip,
+
+                    isSelected &&
+                      styles.filterChipSelected,
+                  ]}
+                  onPress={() => {
+                    setSelectedCategory(
+                      item.id
+                    );
+
+                    setOpenedMenuId(
+                      null
+                    );
+                  }}
+                >
+                  <Ionicons
+                    name={
+                      item.icon
+                    }
+                    size={15}
+                    color={
+                      isSelected
+                        ? '#3563C9'
+                        : '#687386'
+                    }
+                  />
+
+                  <Text
+                    style={[
+                      styles.filterChipText,
+
+                      isSelected &&
+                        styles.filterChipTextSelected,
+                    ]}
+                  >
+                    {
+                      item.label
+                    }
+                  </Text>
+                </Pressable>
+              );
+            }
+          )}
+        </ScrollView>
+
+        {/* 결과 요약 */}
+
+        {isFiltering && (
+          <View
+            style={
+              styles.searchResultSummary
+            }
+          >
+            <View>
+              <Text
+                style={
+                  styles.searchResultTitle
+                }
+              >
+                {searchQuery.trim()
+                  ? `'${searchQuery.trim()}' 검색 결과`
+                  : selectedCategory ===
+                      'all'
+                    ? '검색 결과'
+                    : `${getCategoryLabel(
+                        selectedCategory
+                      )} 지출`}
+              </Text>
+
+              <Text
+                style={
+                  styles.searchResultInfo
+                }
+              >
+                {
+                  filteredExpenses.length
+                }
+                건 ·{' '}
+                {formatMoney(
+                  filteredTotal
+                )}
+                원
+              </Text>
+            </View>
+
+            <Pressable
+              style={
+                styles.resetButton
+              }
+              onPress={
+                clearFilters
+              }
+            >
+              <Ionicons
+                name="refresh-outline"
+                size={14}
+                color="#687386"
+              />
+
+              <Text
+                style={
+                  styles.resetButtonText
+                }
+              >
+                초기화
+              </Text>
+            </Pressable>
+          </View>
+        )}
+      </View>
+
+      {/* =====================
+          지출 목록
+      ====================== */}
+
+      <View
+        style={
+          styles.list
+        }
+      >
+        {/* 월 자체에 데이터가 없음 */}
+
+        {monthExpenses.length ===
         0 ? (
           <View
-            style={styles.empty}
+            style={
+              styles.empty
+            }
           >
             <View
               style={
@@ -728,6 +1354,62 @@ export default function HistoryScreen() {
             >
               지출을 기록하면 날짜별로 정리해서 보여드려요.
             </Text>
+          </View>
+        ) : groupedExpenses.length ===
+          0 ? (
+          /*
+           * 월 데이터는 있는데
+           * 검색/필터 결과가 없음
+           */
+          <View
+            style={
+              styles.empty
+            }
+          >
+            <View
+              style={
+                styles.emptyIcon
+              }
+            >
+              <Ionicons
+                name="search-outline"
+                size={29}
+                color="#98A2B3"
+              />
+            </View>
+
+            <Text
+              style={
+                styles.emptyTitle
+              }
+            >
+              검색 결과가 없어요
+            </Text>
+
+            <Text
+              style={
+                styles.emptyText
+              }
+            >
+              다른 검색어나 카테고리로 다시 찾아보세요.
+            </Text>
+
+            <Pressable
+              style={
+                styles.emptyResetButton
+              }
+              onPress={
+                clearFilters
+              }
+            >
+              <Text
+                style={
+                  styles.emptyResetButtonText
+                }
+              >
+                전체 내역 보기
+              </Text>
+            </Pressable>
           </View>
         ) : (
           groupedExpenses.map(
@@ -853,15 +1535,37 @@ export default function HistoryScreen() {
                                     }
                                   </Text>
 
-                                  <Text
+                                  <View
                                     style={
-                                      styles.expenseTime
+                                      styles.expenseMetaRow
                                     }
                                   >
-                                    {formatTime(
-                                      expense.createdAt
-                                    )}
-                                  </Text>
+                                    <Text
+                                      style={
+                                        styles.expenseTime
+                                      }
+                                    >
+                                      {formatTime(
+                                        expense.createdAt
+                                      )}
+                                    </Text>
+
+                                    <View
+                                      style={
+                                        styles.metaDot
+                                      }
+                                    />
+
+                                    <Text
+                                      style={
+                                        styles.expenseCategoryName
+                                      }
+                                    >
+                                      {getCategoryLabel(
+                                        expense.category
+                                      )}
+                                    </Text>
+                                  </View>
                                 </View>
                               </View>
 
@@ -1009,7 +1713,7 @@ const styles =
     },
 
     header: {
-      marginBottom: 26,
+      marginBottom: 20,
     },
 
     title: {
@@ -1021,6 +1725,90 @@ const styles =
     description: {
       marginTop: 8,
       fontSize: 15,
+      color: '#8792A2',
+    },
+
+    // ========================
+    // 소비 리포트
+    // ========================
+
+    reportButton: {
+      flexDirection: 'row',
+
+      alignItems: 'center',
+
+      justifyContent:
+        'space-between',
+
+      backgroundColor:
+        '#F8FAFC',
+
+      borderRadius: 18,
+
+      paddingHorizontal: 14,
+
+      paddingVertical: 14,
+
+      borderWidth: 1,
+
+      borderColor:
+        '#EDF0F4',
+
+      marginBottom: 16,
+    },
+
+    reportButtonPressed: {
+      backgroundColor:
+        '#F1F5FC',
+    },
+
+    reportButtonLeft: {
+      flex: 1,
+
+      flexDirection: 'row',
+
+      alignItems: 'center',
+    },
+
+    reportIconBox: {
+      width: 42,
+
+      height: 42,
+
+      borderRadius: 14,
+
+      backgroundColor:
+        '#EAF0FB',
+
+      alignItems: 'center',
+
+      justifyContent:
+        'center',
+
+      marginRight: 11,
+    },
+
+    reportTextArea: {
+      flex: 1,
+
+      paddingRight: 8,
+    },
+
+    reportButtonTitle: {
+      fontSize: 14,
+
+      fontWeight: '800',
+
+      color: '#172033',
+    },
+
+    reportButtonDescription: {
+      marginTop: 4,
+
+      fontSize: 11,
+
+      lineHeight: 16,
+
       color: '#8792A2',
     },
 
@@ -1115,6 +1903,183 @@ const styles =
       fontSize: 13,
 
       color: '#8792A2',
+    },
+
+    // ========================
+    // 검색
+    // ========================
+
+    searchSection: {
+      marginTop: 18,
+    },
+
+    searchBox: {
+      minHeight: 52,
+
+      flexDirection: 'row',
+
+      alignItems: 'center',
+
+      backgroundColor:
+        '#F5F7FA',
+
+      borderRadius: 16,
+
+      paddingHorizontal: 15,
+
+      borderWidth: 1,
+
+      borderColor:
+        '#EDF0F4',
+    },
+
+    searchInput: {
+      flex: 1,
+
+      marginLeft: 9,
+
+      paddingVertical: 13,
+
+      fontSize: 14,
+
+      color: '#172033',
+
+      outlineStyle: 'none' as any,
+    },
+
+    searchClearButton: {
+      width: 32,
+      height: 32,
+
+      alignItems: 'center',
+
+      justifyContent:
+        'center',
+    },
+
+    // ========================
+    // 카테고리 필터
+    // ========================
+
+    categoryFilterScroll: {
+      marginTop: 11,
+
+      marginHorizontal: -24,
+    },
+
+    categoryFilterContent: {
+      paddingHorizontal: 24,
+
+      gap: 8,
+    },
+
+    filterChip: {
+      height: 38,
+
+      flexDirection: 'row',
+
+      alignItems: 'center',
+
+      gap: 5,
+
+      paddingHorizontal: 13,
+
+      borderRadius: 999,
+
+      backgroundColor:
+        '#F5F7FA',
+
+      borderWidth: 1,
+
+      borderColor:
+        '#EEF1F5',
+    },
+
+    filterChipSelected: {
+      backgroundColor:
+        '#EAF0FB',
+
+      borderColor:
+        '#D4E0F7',
+    },
+
+    filterChipText: {
+      fontSize: 12,
+
+      fontWeight: '600',
+
+      color: '#687386',
+    },
+
+    filterChipTextSelected: {
+      fontWeight: '700',
+
+      color: '#3563C9',
+    },
+
+    // ========================
+    // 검색 결과 요약
+    // ========================
+
+    searchResultSummary: {
+      marginTop: 14,
+
+      flexDirection: 'row',
+
+      alignItems: 'center',
+
+      justifyContent:
+        'space-between',
+
+      backgroundColor:
+        '#F8FAFC',
+
+      borderRadius: 14,
+
+      paddingHorizontal: 14,
+
+      paddingVertical: 12,
+    },
+
+    searchResultTitle: {
+      fontSize: 12,
+
+      fontWeight: '700',
+
+      color: '#172033',
+    },
+
+    searchResultInfo: {
+      marginTop: 3,
+
+      fontSize: 12,
+
+      color: '#8792A2',
+    },
+
+    resetButton: {
+      flexDirection: 'row',
+
+      alignItems: 'center',
+
+      gap: 4,
+
+      paddingHorizontal: 9,
+
+      paddingVertical: 7,
+
+      borderRadius: 10,
+
+      backgroundColor:
+        '#FFFFFF',
+    },
+
+    resetButtonText: {
+      fontSize: 11,
+
+      fontWeight: '600',
+
+      color: '#687386',
     },
 
     // ========================
@@ -1231,10 +2196,35 @@ const styles =
       color: '#172033',
     },
 
-    expenseTime: {
-      marginTop: 5,
+    expenseMetaRow: {
+      flexDirection: 'row',
 
+      alignItems: 'center',
+
+      marginTop: 5,
+    },
+
+    expenseTime: {
       fontSize: 12,
+
+      color: '#98A2B3',
+    },
+
+    metaDot: {
+      width: 3,
+
+      height: 3,
+
+      borderRadius: 2,
+
+      marginHorizontal: 6,
+
+      backgroundColor:
+        '#CBD1DA',
+    },
+
+    expenseCategoryName: {
+      fontSize: 11,
 
       color: '#98A2B3',
     },
@@ -1341,7 +2331,7 @@ const styles =
     },
 
     // ========================
-    // 빈 화면
+    // Empty
     // ========================
 
     empty: {
@@ -1386,5 +2376,26 @@ const styles =
       color: '#8792A2',
 
       textAlign: 'center',
+    },
+
+    emptyResetButton: {
+      marginTop: 18,
+
+      backgroundColor:
+        '#EAF0FB',
+
+      borderRadius: 12,
+
+      paddingHorizontal: 15,
+
+      paddingVertical: 10,
+    },
+
+    emptyResetButtonText: {
+      fontSize: 13,
+
+      fontWeight: '700',
+
+      color: '#3563C9',
     },
   });
