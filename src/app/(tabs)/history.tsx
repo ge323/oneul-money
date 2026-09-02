@@ -221,10 +221,13 @@ export default function HistoryScreen() {
               openedMenuId === expense.id;
 
             return (
-              <View
-                key={expense.id}
-                style={styles.expenseWrapper}
-              >
+             <View
+                  key={expense.id}
+                  style={[
+                    styles.expenseWrapper,
+                    isMenuOpen && styles.expenseWrapperOpen,
+                  ]}
+                >
                 <View style={styles.expenseItem}>
                   <View style={styles.leftArea}>
                     <View style={styles.categoryIcon}>
@@ -351,10 +354,10 @@ const styles = StyleSheet.create({
     marginTop: 28,
   },
 
-  expenseWrapper: {
-    position: 'relative',
-  },
-
+expenseWrapper: {
+  position: 'relative',
+  zIndex: 1,
+},
   expenseItem: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -420,23 +423,31 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
 
-  menu: {
-    alignSelf: 'flex-end',
-    width: 150,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 14,
-    paddingVertical: 6,
-    marginTop: 4,
+menu: {
+  position: 'absolute',
 
-    shadowColor: '#000000',
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 10,
-    elevation: 4,
+  top: 58,
+  right: 0,
+
+  width: 150,
+
+  backgroundColor: '#FFFFFF',
+
+  borderRadius: 14,
+  paddingVertical: 6,
+
+  zIndex: 100,
+
+  shadowColor: '#000000',
+  shadowOffset: {
+    width: 0,
+    height: 4,
   },
+  shadowOpacity: 0.12,
+  shadowRadius: 10,
+
+  elevation: 8,
+},
 
   menuItem: {
     flexDirection: 'row',
@@ -484,5 +495,8 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#8792A2',
     textAlign: 'center',
+  },
+  expenseWrapperOpen: {
+    zIndex: 100,
   },
 });
