@@ -21,7 +21,27 @@ import {
   View,
 } from 'react-native';
 
+import { Calendar, LocaleConfig } from 'react-native-calendars';
+
 import AppHeader from '../components/AppHeader';
+
+LocaleConfig.locales.ko = {
+  monthNames: [
+    '1월', '2월', '3월', '4월', '5월', '6월',
+    '7월', '8월', '9월', '10월', '11월', '12월',
+  ],
+  monthNamesShort: [
+    '1월', '2월', '3월', '4월', '5월', '6월',
+    '7월', '8월', '9월', '10월', '11월', '12월',
+  ],
+  dayNames: [
+    '일요일', '월요일', '화요일', '수요일',
+    '목요일', '금요일', '토요일',
+  ],
+  dayNamesShort: ['일', '월', '화', '수', '목', '금', '토'],
+  today: '오늘',
+};
+LocaleConfig.defaultLocale = 'ko';
 
 const BUDGET_KEY = 'budget-settings';
 const EXPENSES_KEY = 'expenses';
@@ -111,6 +131,33 @@ const ICON_OPTIONS: IoniconName[] = [
   'ticket-outline',
 ];
 
+const getLocalISOString = () => {
+  const date = new Date();
+
+  const pad = (value: number) =>
+    String(value).padStart(2, '0');
+
+  const timezoneOffset = -date.getTimezoneOffset();
+  const sign = timezoneOffset >= 0 ? '+' : '-';
+  const offsetHours = pad(
+    Math.floor(Math.abs(timezoneOffset) / 60)
+  );
+  const offsetMinutes = pad(
+    Math.abs(timezoneOffset) % 60
+  );
+
+  return (
+    `${date.getFullYear()}-` +
+    `${pad(date.getMonth() + 1)}-` +
+    `${pad(date.getDate())}T` +
+    `${pad(date.getHours())}:` +
+    `${pad(date.getMinutes())}:` +
+    `${pad(date.getSeconds())}.` +
+    `${String(date.getMilliseconds()).padStart(3, '0')}` +
+    `${sign}${offsetHours}:${offsetMinutes}`
+  );
+};
+
 export default function ExpenseScreen() {
   const params = useLocalSearchParams<{
     id?: string;
@@ -132,6 +179,21 @@ export default function ExpenseScreen() {
 
   const [category, setCategory] =
     useState('food');
+
+  const [expenseDate, setExpenseDate] =
+    useState(() => {
+      const now = new Date();
+      return [
+        now.getFullYear(),
+        String(now.getMonth() + 1).padStart(2, '0'),
+        String(now.getDate()).padStart(2, '0'),
+      ].join('-');
+    });
+
+  const [
+    showDateModal,
+    setShowDateModal,
+  ] = useState(false);
 
   const [
     originalExpense,
@@ -276,7 +338,18 @@ export default function ExpenseScreen() {
 
         setCategory(
           target.category ||
-            'etc'
+          'etc'
+        );
+
+        const targetDate =
+          new Date(target.createdAt);
+
+        setExpenseDate(
+          [
+            targetDate.getFullYear(),
+            String(targetDate.getMonth() + 1).padStart(2, '0'),
+            String(targetDate.getDate()).padStart(2, '0'),
+          ].join('-')
         );
       } catch (error) {
         console.error(
@@ -414,13 +487,13 @@ export default function ExpenseScreen() {
       }
 
       const newCategory: Category =
-        {
-          id: `custom-${Date.now()}`,
-          label: name,
-          icon:
-            newCategoryIcon,
-          custom: true,
-        };
+      {
+        id: `custom-${Date.now()}`,
+        label: name,
+        icon:
+          newCategoryIcon,
+        custom: true,
+      };
 
       const updatedCategories = [
         ...customCategories,
@@ -481,7 +554,7 @@ export default function ExpenseScreen() {
         spentAmount: Math.max(
           0,
           currentSpent +
-            difference
+          difference
         ),
       };
 
@@ -492,6 +565,77 @@ export default function ExpenseScreen() {
         )
       );
     };
+
+  const formatExpenseDateLabel = (
+    dateKey: string
+  ) => {
+    const [year, month, day] =
+      dateKey.split('-').map(Number);
+
+    const date = new Date(
+      year,
+      month - 1,
+      day
+    );
+
+    const weekday = [
+      '일', '월', '화', '수', '목', '금', '토',
+    ][date.getDay()];
+
+    return `${year}년 ${month}월 ${day}일 ${weekday}요일`;
+  };
+
+  const buildExpenseDateTime = (
+    dateKey: string,
+    baseCreatedAt?: string
+  ) => {
+    const [year, month, day] =
+      dateKey.split('-').map(Number);
+
+    const baseDate = baseCreatedAt
+      ? new Date(baseCreatedAt)
+      : new Date();
+
+    const date = new Date(
+      year,
+      month - 1,
+      day,
+      baseDate.getHours(),
+      baseDate.getMinutes(),
+      baseDate.getSeconds(),
+      baseDate.getMilliseconds()
+    );
+
+    const pad = (value: number) =>
+      String(value).padStart(2, '0');
+
+    const timezoneOffset =
+      -date.getTimezoneOffset();
+
+    const sign =
+      timezoneOffset >= 0 ? '+' : '-';
+
+    const offsetHours = pad(
+      Math.floor(
+        Math.abs(timezoneOffset) / 60
+      )
+    );
+
+    const offsetMinutes = pad(
+      Math.abs(timezoneOffset) % 60
+    );
+
+    return (
+      `${date.getFullYear()}-` +
+      `${pad(date.getMonth() + 1)}-` +
+      `${pad(date.getDate())}T` +
+      `${pad(date.getHours())}:` +
+      `${pad(date.getMinutes())}:` +
+      `${pad(date.getSeconds())}.` +
+      `${String(date.getMilliseconds()).padStart(3, '0')}` +
+      `${sign}${offsetHours}:${offsetMinutes}`
+    );
+  };
 
   const createExpense =
     async (
@@ -505,27 +649,27 @@ export default function ExpenseScreen() {
       const expenses: Expense[] =
         savedExpenses
           ? JSON.parse(
-              savedExpenses
-            )
+            savedExpenses
+          )
           : [];
 
       const newExpense: Expense =
-        {
-          id:
-            Date.now().toString(),
+      {
+        id:
+          Date.now().toString(),
 
-          title:
-            title.trim() ||
-            '지출',
+        title:
+          title.trim() ||
+          '지출',
 
-          amount:
-            numericAmount,
+        amount:
+          numericAmount,
 
-          category,
+        category,
 
-          createdAt:
-            new Date().toISOString(),
-        };
+        createdAt:
+          buildExpenseDateTime(expenseDate),
+      };
 
       const updatedExpenses = [
         newExpense,
@@ -590,6 +734,12 @@ export default function ExpenseScreen() {
                 numericAmount,
 
               category,
+
+              createdAt:
+                buildExpenseDateTime(
+                  expenseDate,
+                  expense.createdAt
+                ),
             };
           }
         );
@@ -740,6 +890,53 @@ export default function ExpenseScreen() {
             <Text
               style={styles.label}
             >
+              날짜
+            </Text>
+
+            <Pressable
+              style={({ pressed }) => [
+                styles.dateSelectButton,
+                pressed &&
+                styles.dateSelectButtonPressed,
+              ]}
+              onPress={() =>
+                setShowDateModal(true)
+              }
+            >
+              <View
+                style={styles.dateSelectLeft}
+              >
+                <Ionicons
+                  name="calendar-outline"
+                  size={20}
+                  color="#687386"
+                />
+
+                <Text
+                  style={styles.dateSelectText}
+                >
+                  {formatExpenseDateLabel(
+                    expenseDate
+                  )}
+                </Text>
+              </View>
+
+              <Ionicons
+                name="chevron-forward"
+                size={18}
+                color="#98A2B3"
+              />
+            </Pressable>
+          </View>
+
+          <View
+            style={
+              styles.inputGroup
+            }
+          >
+            <Text
+              style={styles.label}
+            >
               카테고리
             </Text>
 
@@ -761,7 +958,7 @@ export default function ExpenseScreen() {
                         styles.categoryButton,
 
                         isSelected &&
-                          styles.categoryButtonSelected,
+                        styles.categoryButtonSelected,
                       ]}
                       onPress={() =>
                         setCategory(
@@ -786,7 +983,7 @@ export default function ExpenseScreen() {
                           styles.categoryText,
 
                           isSelected &&
-                            styles.categoryTextSelected,
+                          styles.categoryTextSelected,
                         ]}
                       >
                         {
@@ -830,7 +1027,7 @@ export default function ExpenseScreen() {
             styles.saveButton,
 
             pressed &&
-              styles.saveButtonPressed,
+            styles.saveButtonPressed,
           ]}
           onPress={saveExpense}
         >
@@ -845,6 +1042,118 @@ export default function ExpenseScreen() {
           </Text>
         </Pressable>
       </ScrollView>
+
+      <Modal
+        visible={showDateModal}
+        transparent
+        animationType="fade"
+        statusBarTranslucent
+        onRequestClose={() =>
+          setShowDateModal(false)
+        }
+      >
+        <View
+          style={styles.dateModalRoot}
+        >
+          <Pressable
+            style={styles.dateModalBackdrop}
+            onPress={() =>
+              setShowDateModal(false)
+            }
+          />
+
+          <View
+            style={styles.calendarSheet}
+          >
+            <View
+              style={styles.calendarHeader}
+            >
+              <View>
+                <Text
+                  style={styles.calendarTitle}
+                >
+                  지출 날짜
+                </Text>
+                <Text
+                  style={styles.calendarSubtitle}
+                >
+                  실제로 사용한 날짜를 선택해주세요.
+                </Text>
+              </View>
+
+              <Pressable
+                style={styles.calendarCloseButton}
+                onPress={() =>
+                  setShowDateModal(false)
+                }
+              >
+                <Ionicons
+                  name="close"
+                  size={22}
+                  color="#687386"
+                />
+              </Pressable>
+            </View>
+
+            <Calendar
+              current={expenseDate}
+              markedDates={{
+                [expenseDate]: {
+                  selected: true,
+                  selectedColor: '#3563C9',
+                  selectedTextColor: '#FFFFFF',
+                },
+              }}
+              onDayPress={(day) => {
+                setExpenseDate(
+                  day.dateString
+                );
+                setShowDateModal(false);
+              }}
+              enableSwipeMonths
+              theme={{
+                backgroundColor: '#FFFFFF',
+                calendarBackground: '#FFFFFF',
+                textSectionTitleColor: '#98A2B3',
+                selectedDayBackgroundColor: '#3563C9',
+                selectedDayTextColor: '#FFFFFF',
+                todayTextColor: '#3563C9',
+                dayTextColor: '#172033',
+                textDisabledColor: '#D0D5DD',
+                arrowColor: '#3563C9',
+                monthTextColor: '#172033',
+                textDayFontFamily: 'Pretendard-Medium',
+                textMonthFontFamily: 'Pretendard-Bold',
+                textDayHeaderFontFamily: 'Pretendard-Medium',
+                textDayFontSize: 14,
+                textMonthFontSize: 17,
+                textDayHeaderFontSize: 12,
+              }}
+            />
+
+            <Pressable
+              style={styles.todayButton}
+              onPress={() => {
+                const now = new Date();
+                const today = [
+                  now.getFullYear(),
+                  String(now.getMonth() + 1).padStart(2, '0'),
+                  String(now.getDate()).padStart(2, '0'),
+                ].join('-');
+
+                setExpenseDate(today);
+                setShowDateModal(false);
+              }}
+            >
+              <Text
+                style={styles.todayButtonText}
+              >
+                오늘로 선택
+              </Text>
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
 
       <Modal
         visible={
@@ -992,7 +1301,7 @@ export default function ExpenseScreen() {
                         styles.iconOption,
 
                         isSelected &&
-                          styles.iconOptionSelected,
+                        styles.iconOptionSelected,
                       ]}
                       onPress={() =>
                         setNewCategoryIcon(
@@ -1020,7 +1329,7 @@ export default function ExpenseScreen() {
                 styles.categorySaveButton,
 
                 pressed &&
-                  styles.categorySaveButtonPressed,
+                styles.categorySaveButtonPressed,
               ]}
               onPress={
                 addCustomCategory
@@ -1114,6 +1423,96 @@ const styles =
       fontSize: 16,
 
       color: '#172033',
+    },
+
+    dateSelectButton: {
+      minHeight: 58,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      backgroundColor: '#F5F7FA',
+      borderRadius: 16,
+      paddingHorizontal: 16,
+    },
+
+    dateSelectButtonPressed: {
+      opacity: 0.72,
+    },
+
+    dateSelectLeft: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 10,
+    },
+
+    dateSelectText: {
+      fontSize: 16,
+      fontFamily: 'Pretendard-Medium',
+      color: '#172033',
+    },
+
+    dateModalRoot: {
+      flex: 1,
+      justifyContent: 'flex-end',
+    },
+
+    dateModalBackdrop: {
+      ...StyleSheet.absoluteFill,
+      backgroundColor: 'rgba(23, 32, 51, 0.34)',
+    },
+
+    calendarSheet: {
+      backgroundColor: '#FFFFFF',
+      borderTopLeftRadius: 28,
+      borderTopRightRadius: 28,
+      paddingHorizontal: 18,
+      paddingTop: 20,
+      paddingBottom: 28,
+    },
+
+    calendarHeader: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      justifyContent: 'space-between',
+      paddingHorizontal: 4,
+      marginBottom: 12,
+    },
+
+    calendarTitle: {
+      fontSize: 20,
+      fontFamily: 'Pretendard-Bold',
+      color: '#172033',
+    },
+
+    calendarSubtitle: {
+      marginTop: 5,
+      fontSize: 13,
+      fontFamily: 'Pretendard-Regular',
+      color: '#98A2B3',
+    },
+
+    calendarCloseButton: {
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: '#F5F7FA',
+    },
+
+    todayButton: {
+      minHeight: 50,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginTop: 12,
+      borderRadius: 15,
+      backgroundColor: '#E7EEFC',
+    },
+
+    todayButtonText: {
+      fontSize: 15,
+      fontFamily: 'Pretendard-Bold',
+      color: '#3563C9',
     },
 
     categoryContainer: {

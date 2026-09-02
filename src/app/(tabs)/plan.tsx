@@ -305,6 +305,31 @@ export default function PlanScreen() {
     );
   };
 
+  // UTC(toISOString)로 저장하면 한국 시간 새벽에 날짜가 하루 전으로
+  // 보일 수 있어서, 지출 기록 시각은 기기 로컬 시간 기준 문자열로 저장합니다.
+  const toLocalDateTimeString = (
+    value: Date
+  ) => {
+    const year = value.getFullYear();
+    const month = String(
+      value.getMonth() + 1
+    ).padStart(2, '0');
+    const day = String(
+      value.getDate()
+    ).padStart(2, '0');
+    const hours = String(
+      value.getHours()
+    ).padStart(2, '0');
+    const minutes = String(
+      value.getMinutes()
+    ).padStart(2, '0');
+    const seconds = String(
+      value.getSeconds()
+    ).padStart(2, '0');
+
+    return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
+  };
+
   const formatDate = (
     value: string
   ) => {
@@ -313,9 +338,8 @@ export default function PlanScreen() {
         `${value}T00:00:00`
       );
 
-    return `${
-      targetDate.getMonth() + 1
-    }월 ${targetDate.getDate()}일`;
+    return `${targetDate.getMonth() + 1
+      }월 ${targetDate.getDate()}일`;
   };
 
   const formatDisplayDate = (
@@ -340,17 +364,13 @@ export default function PlanScreen() {
       '토',
     ];
 
-    return `${
-      targetDate.getFullYear()
-    }년 ${
-      targetDate.getMonth() + 1
-    }월 ${
-      targetDate.getDate()
-    }일 ${
-      weekdays[
-        targetDate.getDay()
+    return `${targetDate.getFullYear()
+      }년 ${targetDate.getMonth() + 1
+      }월 ${targetDate.getDate()
+      }일 ${weekdays[
+      targetDate.getDay()
       ]
-    }요일`;
+      }요일`;
   };
 
   const selectToday = () => {
@@ -398,7 +418,7 @@ export default function PlanScreen() {
 
     target.setDate(
       target.getDate() +
-        daysToSaturday
+      daysToSaturday
     );
 
     setDate(
@@ -662,7 +682,7 @@ export default function PlanScreen() {
             date,
 
             createdAt:
-              new Date().toISOString(),
+              toLocalDateTimeString(new Date()),
           };
 
           updated = [
@@ -913,8 +933,8 @@ export default function PlanScreen() {
           Expense[] =
           savedExpenses
             ? JSON.parse(
-                savedExpenses
-              )
+              savedExpenses
+            )
             : [];
 
         const newExpense:
@@ -932,7 +952,7 @@ export default function PlanScreen() {
             'etc',
 
           createdAt:
-            new Date().toISOString(),
+            toLocalDateTimeString(new Date()),
         };
 
         const updatedExpenses = [
@@ -1062,7 +1082,7 @@ export default function PlanScreen() {
   const amountDifference =
     completingExpense
       ? actualNumericAmount -
-        completingExpense.amount
+      completingExpense.amount
       : 0;
 
   return (
@@ -1134,7 +1154,7 @@ export default function PlanScreen() {
             styles.addButton,
 
             pressed &&
-              styles.addButtonPressed,
+            styles.addButtonPressed,
           ]}
           onPress={
             openAddModal
@@ -1167,7 +1187,7 @@ export default function PlanScreen() {
           </Text>
 
           {upcomingExpenses.length ===
-          0 ? (
+            0 ? (
             <View
               style={
                 styles.empty
@@ -1217,7 +1237,7 @@ export default function PlanScreen() {
                       styles.expenseCard,
 
                       isMenuOpen &&
-                        styles.expenseCardOpen,
+                      styles.expenseCardOpen,
                     ]}
                   >
                     <View
@@ -1894,88 +1914,88 @@ export default function PlanScreen() {
 
                 {actualNumericAmount >
                   0 && (
-                  <View
-                    style={
-                      styles.differenceBox
-                    }
-                  >
-                    {amountDifference ===
-                    0 ? (
-                      <>
-                        <Ionicons
-                          name="checkmark-circle-outline"
-                          size={18}
-                          color="#3563C9"
-                        />
+                    <View
+                      style={
+                        styles.differenceBox
+                      }
+                    >
+                      {amountDifference ===
+                        0 ? (
+                        <>
+                          <Ionicons
+                            name="checkmark-circle-outline"
+                            size={18}
+                            color="#3563C9"
+                          />
 
-                        <Text
-                          style={
-                            styles.sameAmountText
-                          }
-                        >
-                          예상한 금액과 같아요.
-                        </Text>
-                      </>
-                    ) : amountDifference >
-                      0 ? (
-                      <>
-                        <Ionicons
-                          name="arrow-up-outline"
-                          size={18}
-                          color="#C56A43"
-                        />
-
-                        <Text
-                          style={
-                            styles.moreAmountText
-                          }
-                        >
-                          예상보다{' '}
                           <Text
                             style={
-                              styles.differenceStrong
+                              styles.sameAmountText
                             }
                           >
-                            {formatMoney(
-                              amountDifference
-                            )}
-                            원
-                          </Text>{' '}
-                          더 사용했어요.
-                        </Text>
-                      </>
-                    ) : (
-                      <>
-                        <Ionicons
-                          name="arrow-down-outline"
-                          size={18}
-                          color="#2F7D5A"
-                        />
+                            예상한 금액과 같아요.
+                          </Text>
+                        </>
+                      ) : amountDifference >
+                        0 ? (
+                        <>
+                          <Ionicons
+                            name="arrow-up-outline"
+                            size={18}
+                            color="#C56A43"
+                          />
 
-                        <Text
-                          style={
-                            styles.lessAmountText
-                          }
-                        >
-                          예상보다{' '}
                           <Text
                             style={
-                              styles.differenceStrong
+                              styles.moreAmountText
                             }
                           >
-                            {formatMoney(
-                              Math.abs(
+                            예상보다{' '}
+                            <Text
+                              style={
+                                styles.differenceStrong
+                              }
+                            >
+                              {formatMoney(
                                 amountDifference
-                              )
-                            )}
-                            원
-                          </Text>{' '}
-                          덜 사용했어요.
-                        </Text>
-                      </>
-                    )}
-                  </View>
-                )}
+                              )}
+                              원
+                            </Text>{' '}
+                            더 사용했어요.
+                          </Text>
+                        </>
+                      ) : (
+                        <>
+                          <Ionicons
+                            name="arrow-down-outline"
+                            size={18}
+                            color="#2F7D5A"
+                          />
+
+                          <Text
+                            style={
+                              styles.lessAmountText
+                            }
+                          >
+                            예상보다{' '}
+                            <Text
+                              style={
+                                styles.differenceStrong
+                              }
+                            >
+                              {formatMoney(
+                                Math.abs(
+                                  amountDifference
+                                )
+                              )}
+                              원
+                            </Text>{' '}
+                            덜 사용했어요.
+                          </Text>
+                        </>
+                      )}
+                    </View>
+                  )}
 
                 <Text
                   style={
@@ -2092,17 +2112,17 @@ export default function PlanScreen() {
               markedDates={
                 date
                   ? {
-                      [date]: {
-                        selected:
-                          true,
+                    [date]: {
+                      selected:
+                        true,
 
-                        selectedColor:
-                          '#3563C9',
+                      selectedColor:
+                        '#3563C9',
 
-                        selectedTextColor:
-                          '#FFFFFF',
-                      },
-                    }
+                      selectedTextColor:
+                        '#FFFFFF',
+                    },
+                  }
                   : {}
               }
               theme={{
