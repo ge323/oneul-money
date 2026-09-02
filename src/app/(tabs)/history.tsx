@@ -5,10 +5,12 @@ import type { ComponentProps } from 'react';
 import {
   useCallback,
   useMemo,
+  useRef,
   useState,
 } from 'react';
 import {
   Alert,
+  PanResponder,
   Platform,
   Pressable,
   ScrollView,
@@ -136,6 +138,64 @@ export default function HistoryScreen() {
     selectedCategory,
     setSelectedCategory,
   ] = useState('all');
+
+  const categoryScrollRef =
+    useRef<ScrollView>(null);
+
+  const categoryScrollX =
+    useRef(0);
+
+  const dragStartX =
+    useRef(0);
+
+  const categoryPanResponder =
+    useMemo(
+      () =>
+        PanResponder.create({
+          onMoveShouldSetPanResponder: (
+            _,
+            gestureState
+          ) => {
+            return (
+              Platform.OS === 'web' &&
+              Math.abs(
+                gestureState.dx
+              ) > 5 &&
+              Math.abs(
+                gestureState.dx
+              ) >
+                Math.abs(
+                  gestureState.dy
+                )
+            );
+          },
+
+          onPanResponderGrant: () => {
+            dragStartX.current =
+              categoryScrollX.current;
+          },
+
+          onPanResponderMove: (
+            _,
+            gestureState
+          ) => {
+            const nextX =
+              Math.max(
+                0,
+                dragStartX.current -
+                  gestureState.dx
+              );
+
+            categoryScrollRef.current?.scrollTo(
+              {
+                x: nextX,
+                animated: false,
+              }
+            );
+          },
+        }),
+      []
+    );
 
   const [
     selectedMonth,
@@ -1143,18 +1203,28 @@ const filteredExpenses =
             카테고리 필터
         ====================== */}
 
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={
-            false
-          }
-          contentContainerStyle={
-            styles.categoryFilterContent
-          }
-          style={
-            styles.categoryFilterScroll
-          }
+        <View
+          {...categoryPanResponder.panHandlers}
         >
+          <ScrollView
+            ref={categoryScrollRef}
+            horizontal
+            nestedScrollEnabled
+            showsHorizontalScrollIndicator={
+              false
+            }
+            contentContainerStyle={
+              styles.categoryFilterContent
+            }
+            style={
+              styles.categoryFilterScroll
+            }
+            scrollEventThrottle={16}
+            onScroll={(event) => {
+              categoryScrollX.current =
+                event.nativeEvent.contentOffset.x;
+            }}
+          >
           <Pressable
             style={[
               styles.filterChip,
@@ -1241,7 +1311,8 @@ const filteredExpenses =
               );
             }
           )}
-        </ScrollView>
+          </ScrollView>
+        </View>
 
         {/* 결과 요약 */}
 
@@ -1968,7 +2039,8 @@ const styles =
     },
 
     categoryFilterContent: {
-      paddingHorizontal: 24,
+      paddingLeft: 24,
+      paddingRight: 44,
 
       gap: 8,
     },
