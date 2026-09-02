@@ -111,21 +111,21 @@ export default function HomeScreen() {
 
       <Pressable
         style={styles.expenseButton}
-        onPress={() => router.push('./expense')}
+        onPress={() => router.push('/expense')}
       >
         <Text style={styles.expenseButtonText}>
           + 지출 기록하기
         </Text>
       </Pressable>
-      
+
       <Pressable
-      style={styles.historyButton}
-      onPress={() => router.push('/history')}
-    >
-      <Text style={styles.historyButtonText}>
-        지출 내역 보기
-      </Text>
-    </Pressable>
+        style={styles.historyButton}
+        onPress={() => router.push('/history')}
+      >
+        <Text style={styles.historyButtonText}>
+          지출 내역 보기
+        </Text>
+      </Pressable>
 
       <Pressable
         style={styles.settingButton}
@@ -150,6 +150,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 22,
     fontWeight: '700',
+    color: '#111827',
   },
 
   main: {
@@ -160,80 +161,82 @@ const styles = StyleSheet.create({
 
   label: {
     fontSize: 18,
-    color: '#777777',
+    color: '#6B7280',
     marginBottom: 12,
   },
 
-  amount: {
-    fontSize: 48,
-    fontWeight: '800',
-    marginBottom: 12,
-  },
+amount: {
+  fontSize: 48,
+  fontWeight: '800',
+  marginBottom: 12,
+  color: '#3563C9',
+},
 
   description: {
     fontSize: 18,
-    color: '#777777',
+    color: '#6B7280',
   },
 
-  infoBox: {
-    backgroundColor: '#F7F7F7',
-    borderRadius: 20,
-    padding: 20,
-    marginBottom: 16,
-    gap: 18,
-  },
+infoBox: {
+  backgroundColor: '#F1F5FC',
+  borderRadius: 20,
+  padding: 20,
+  marginBottom: 16,
+  gap: 18,
+},
 
   infoRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    alignItems: 'center',
   },
 
   infoLabel: {
     fontSize: 15,
-    color: '#777777',
+    color: '#6B7280',
   },
 
   infoValue: {
     fontSize: 15,
     fontWeight: '700',
+    color: '#111827',
   },
 
-  expenseButton: {
-    backgroundColor: '#F2F2F2',
-    paddingVertical: 16,
-    borderRadius: 16,
+expenseButton: {
+  backgroundColor: '#EDF3FC',
+  paddingVertical: 16,
+  borderRadius: 16,
+  alignItems: 'center',
+  marginBottom: 10,
+},
+
+expenseButtonText: {
+  color: '#3563C9',
+  fontSize: 16,
+  fontWeight: '700',
+},
+
+  historyButton: {
+    paddingVertical: 14,
     alignItems: 'center',
     marginBottom: 10,
   },
 
-  expenseButtonText: {
-    color: '#111111',
-    fontSize: 16,
-    fontWeight: '700',
-  },
-
-  settingButton: {
-    backgroundColor: '#111111',
-    paddingVertical: 16,
-    borderRadius: 16,
-    alignItems: 'center',
-    marginBottom: 24,
-  },
-
+historyButtonText: {
+  fontSize: 15,
+  fontWeight: '600',
+  color: '#3563C9',
+},
+settingButton: {
+  backgroundColor: '#3563C9',
+  paddingVertical: 16,
+  borderRadius: 16,
+  alignItems: 'center',
+  marginBottom: 24,
+},
   settingButtonText: {
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '700',
-  },
-  historyButton: {
-  paddingVertical: 14,
-  alignItems: 'center',
-  marginBottom: 10,
-  },
-
-  historyButtonText: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: '#555555',
   },
 });
