@@ -10,6 +10,8 @@ import {
   View,
 } from 'react-native';
 
+import AppHeader from '../components/AppHeader';
+
 const BUDGET_KEY = 'budget-settings';
 
 export default function SettingsScreen() {
@@ -23,6 +25,20 @@ export default function SettingsScreen() {
     loadSettings();
   }, []);
 
+  const formatMoneyInput = (text: string) => {
+    const numbersOnly = text.replace(/[^0-9]/g, '');
+
+    if (!numbersOnly) {
+      return '';
+    }
+
+    return Number(numbersOnly).toLocaleString('ko-KR');
+  };
+
+  const parseMoney = (text: string) => {
+    return Number(text.replace(/,/g, '')) || 0;
+  };
+
   const loadSettings = async () => {
     try {
       const saved = await AsyncStorage.getItem(BUDGET_KEY);
@@ -31,11 +47,25 @@ export default function SettingsScreen() {
 
       const data = JSON.parse(saved);
 
-      setMonthlyBudget(String(data.monthlyBudget ?? ''));
-      setFixedExpense(String(data.fixedExpense ?? ''));
-      setSavingGoal(String(data.savingGoal ?? ''));
-      setSpentAmount(String(data.spentAmount ?? ''));
-      setRemainingDays(String(data.remainingDays ?? ''));
+      setMonthlyBudget(
+        Number(data.monthlyBudget ?? 0).toLocaleString('ko-KR')
+      );
+
+      setFixedExpense(
+        Number(data.fixedExpense ?? 0).toLocaleString('ko-KR')
+      );
+
+      setSavingGoal(
+        Number(data.savingGoal ?? 0).toLocaleString('ko-KR')
+      );
+
+      setSpentAmount(
+        Number(data.spentAmount ?? 0).toLocaleString('ko-KR')
+      );
+
+      setRemainingDays(
+        String(data.remainingDays ?? '')
+      );
     } catch (error) {
       console.error('예산 불러오기 실패:', error);
     }
@@ -43,15 +73,19 @@ export default function SettingsScreen() {
 
   const saveSettings = async () => {
     const data = {
-      monthlyBudget: Number(monthlyBudget) || 0,
-      fixedExpense: Number(fixedExpense) || 0,
-      savingGoal: Number(savingGoal) || 0,
-      spentAmount: Number(spentAmount) || 0,
+      monthlyBudget: parseMoney(monthlyBudget),
+      fixedExpense: parseMoney(fixedExpense),
+      savingGoal: parseMoney(savingGoal),
+      spentAmount: parseMoney(spentAmount),
       remainingDays: Number(remainingDays) || 1,
     };
 
     try {
-      await AsyncStorage.setItem(BUDGET_KEY, JSON.stringify(data));
+      await AsyncStorage.setItem(
+        BUDGET_KEY,
+        JSON.stringify(data)
+      );
+
       router.back();
     } catch (error) {
       console.error('예산 저장 실패:', error);
@@ -59,52 +93,83 @@ export default function SettingsScreen() {
   };
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
-      <Text style={styles.title}>예산 설정</Text>
-
-      <Text style={styles.description}>
-        이번 달 예산 정보를 입력해주세요.
-      </Text>
+    <ScrollView
+      style={styles.screen}
+      contentContainerStyle={styles.container}
+      showsVerticalScrollIndicator={false}
+    >
+      <AppHeader
+        title="예산 설정"
+        description="이번 달 예산 정보를 입력해주세요."
+      />
 
       <View style={styles.form}>
-        <InputItem
+        <MoneyInput
           label="월 예산"
           value={monthlyBudget}
-          onChangeText={setMonthlyBudget}
-          placeholder="1000000"
+          onChangeText={(text) =>
+            setMonthlyBudget(formatMoneyInput(text))
+          }
+          placeholder="1,000,000"
         />
 
-        <InputItem
+        <MoneyInput
           label="고정비"
           value={fixedExpense}
-          onChangeText={setFixedExpense}
-          placeholder="400000"
+          onChangeText={(text) =>
+            setFixedExpense(formatMoneyInput(text))
+          }
+          placeholder="400,000"
         />
 
-        <InputItem
+        <MoneyInput
           label="저축 목표"
           value={savingGoal}
-          onChangeText={setSavingGoal}
-          placeholder="200000"
+          onChangeText={(text) =>
+            setSavingGoal(formatMoneyInput(text))
+          }
+          placeholder="200,000"
         />
 
-        <InputItem
+        <MoneyInput
           label="이미 사용한 금액"
           value={spentAmount}
-          onChangeText={setSpentAmount}
-          placeholder="100000"
+          onChangeText={(text) =>
+            setSpentAmount(formatMoneyInput(text))
+          }
+          placeholder="100,000"
         />
 
-        <InputItem
-          label="남은 일수"
-          value={remainingDays}
-          onChangeText={setRemainingDays}
-          placeholder="10"
-        />
+        <View style={styles.inputGroup}>
+          <Text style={styles.label}>
+            남은 일수
+          </Text>
+
+          <View style={styles.daysInputBox}>
+            <TextInput
+              style={styles.daysInput}
+              value={remainingDays}
+              onChangeText={(text) =>
+                setRemainingDays(
+                  text.replace(/[^0-9]/g, '')
+                )
+              }
+              placeholder="10"
+              keyboardType="numeric"
+            />
+
+            <Text style={styles.unitText}>
+              일
+            </Text>
+          </View>
+        </View>
       </View>
 
       <Pressable
-        style={styles.saveButton}
+        style={({ pressed }) => [
+          styles.saveButton,
+          pressed && styles.saveButtonPressed,
+        ]}
         onPress={saveSettings}
       >
         <Text style={styles.saveButtonText}>
@@ -115,82 +180,118 @@ export default function SettingsScreen() {
   );
 }
 
-type InputItemProps = {
+type MoneyInputProps = {
   label: string;
   value: string;
   onChangeText: (text: string) => void;
   placeholder: string;
 };
 
-function InputItem({
+function MoneyInput({
   label,
   value,
   onChangeText,
   placeholder,
-}: InputItemProps) {
+}: MoneyInputProps) {
   return (
     <View style={styles.inputGroup}>
-      <Text style={styles.label}>{label}</Text>
+      <Text style={styles.label}>
+        {label}
+      </Text>
 
-      <TextInput
-        style={styles.input}
-        value={value}
-        onChangeText={onChangeText}
-        placeholder={placeholder}
-        keyboardType="numeric"
-      />
+      <View style={styles.moneyInputBox}>
+        <TextInput
+          style={styles.moneyInput}
+          value={value}
+          onChangeText={onChangeText}
+          placeholder={placeholder}
+          keyboardType="numeric"
+        />
+
+        <Text style={styles.unitText}>
+          원
+        </Text>
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+  screen: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+  },
+
   container: {
     flexGrow: 1,
-    backgroundColor: '#FFFFFF',
     paddingHorizontal: 24,
-    paddingTop: 60,
+    paddingTop: 32,
     paddingBottom: 40,
   },
 
-  title: {
-    fontSize: 28,
-    fontWeight: '800',
-  },
-
-  description: {
-    marginTop: 8,
-    fontSize: 15,
-    color: '#777777',
-  },
-
   form: {
-    marginTop: 40,
     gap: 24,
   },
 
   inputGroup: {
-    gap: 8,
+    gap: 9,
   },
 
   label: {
-    fontSize: 14,
-    fontWeight: '600',
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#172033',
   },
 
-  input: {
-    backgroundColor: '#F5F5F5',
-    borderRadius: 14,
+  moneyInputBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F5F7FA',
+    borderRadius: 16,
     paddingHorizontal: 16,
-    paddingVertical: 16,
+  },
+
+  moneyInput: {
+    flex: 1,
+    paddingVertical: 17,
     fontSize: 17,
+    fontWeight: '600',
+    color: '#172033',
+  },
+
+  daysInputBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F5F7FA',
+    borderRadius: 16,
+    paddingHorizontal: 16,
+  },
+
+  daysInput: {
+    flex: 1,
+    paddingVertical: 17,
+    fontSize: 17,
+    fontWeight: '600',
+    color: '#172033',
+  },
+
+  unitText: {
+    marginLeft: 8,
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#687386',
   },
 
   saveButton: {
-    marginTop: 40,
-    backgroundColor: '#111111',
+    marginTop: 36,
+    backgroundColor: '#3563C9',
     borderRadius: 16,
     paddingVertical: 17,
     alignItems: 'center',
+  },
+
+  saveButtonPressed: {
+    backgroundColor: '#294FA5',
   },
 
   saveButtonText: {

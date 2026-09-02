@@ -1,6 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router } from 'expo-router';
 import { useState } from 'react';
+import AppHeader from '../components/AppHeader';
 import {
   Pressable,
   StyleSheet,
@@ -154,13 +155,10 @@ export default function ExpenseScreen() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>
-        지출 기록
-      </Text>
-
-      <Text style={styles.description}>
-        오늘 사용한 금액을 기록해보세요.
-      </Text>
+        <AppHeader
+            title="지출 기록"
+            description="오늘 사용한 금액을 기록해보세요."
+            />
 
       <View style={styles.form}>
         <View style={styles.inputGroup}>
