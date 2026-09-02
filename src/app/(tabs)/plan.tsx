@@ -8,6 +8,7 @@ import {
   useState,
 } from 'react';
 import {
+  Alert,
   Animated,
   Modal,
   Platform,
@@ -19,8 +20,9 @@ import {
   View,
 } from 'react-native';
 
-const PLANNED_EXPENSES_KEY =
-  'planned-expenses';
+const PLANNED_EXPENSES_KEY = 'planned-expenses';
+const EXPENSES_KEY = 'expenses';
+const BUDGET_KEY = 'budget-settings';
 
 type PlannedExpense = {
   id: string;
@@ -28,6 +30,23 @@ type PlannedExpense = {
   amount: number;
   date: string;
   createdAt: string;
+};
+
+type Expense = {
+  id: string;
+  title: string;
+  amount: number;
+  category: string;
+  createdAt: string;
+};
+
+type BudgetSettings = {
+  monthlyBudget?: number;
+  fixedExpense?: number;
+  savingGoal?: number;
+  spentAmount?: number;
+  payday?: number;
+  paydayType?: 'date' | 'lastDay';
 };
 
 export default function PlanScreen() {
@@ -316,8 +335,167 @@ export default function PlanScreen() {
       return;
     }
 
-    deleteExpense(
-      expense.id
+    Alert.alert(
+      '예정 지출 삭제',
+      `${expense.title}을 삭제할까요?`,
+      [
+        {
+          text: '취소',
+          style: 'cancel',
+        },
+        {
+          text: '삭제',
+          style: 'destructive',
+          onPress: () =>
+            deleteExpense(
+              expense.id
+            ),
+        },
+      ]
+    );
+  };
+
+  const completePlannedExpense =
+    async (
+      plannedExpense: PlannedExpense
+    ) => {
+      try {
+        const savedExpenses =
+          await AsyncStorage.getItem(
+            EXPENSES_KEY
+          );
+
+        const expenses: Expense[] =
+          savedExpenses
+            ? JSON.parse(
+                savedExpenses
+              )
+            : [];
+
+        const newExpense: Expense = {
+          id:
+            Date.now().toString(),
+
+          title:
+            plannedExpense.title,
+
+          amount:
+            plannedExpense.amount,
+
+          // 예정 지출은 카테고리를 따로 받지 않으므로
+          // 우선 기타 카테고리로 저장
+          category: 'etc',
+
+          createdAt:
+            new Date().toISOString(),
+        };
+
+        const updatedExpenses = [
+          newExpense,
+          ...expenses,
+        ];
+
+        await AsyncStorage.setItem(
+          EXPENSES_KEY,
+          JSON.stringify(
+            updatedExpenses
+          )
+        );
+
+        const savedBudget =
+          await AsyncStorage.getItem(
+            BUDGET_KEY
+          );
+
+        if (savedBudget) {
+          const budget: BudgetSettings =
+            JSON.parse(
+              savedBudget
+            );
+
+          const updatedBudget = {
+            ...budget,
+
+            spentAmount:
+              (Number(
+                budget.spentAmount
+              ) || 0) +
+              plannedExpense.amount,
+          };
+
+          await AsyncStorage.setItem(
+            BUDGET_KEY,
+            JSON.stringify(
+              updatedBudget
+            )
+          );
+        }
+
+        const updatedPlanned =
+          plannedExpenses.filter(
+            (item) =>
+              item.id !==
+              plannedExpense.id
+          );
+
+        await AsyncStorage.setItem(
+          PLANNED_EXPENSES_KEY,
+          JSON.stringify(
+            updatedPlanned
+          )
+        );
+
+        setPlannedExpenses(
+          updatedPlanned
+        );
+      } catch (error) {
+        console.error(
+          '예정 지출 완료 처리 실패:',
+          error
+        );
+      }
+    };
+
+  const confirmComplete = (
+    expense: PlannedExpense
+  ) => {
+    if (
+      Platform.OS === 'web'
+    ) {
+      const confirmed =
+        window.confirm(
+          `${expense.title} ${formatMoney(
+            expense.amount
+          )}원을 실제 지출로 기록할까요?`
+        );
+
+      if (confirmed) {
+        completePlannedExpense(
+          expense
+        );
+      }
+
+      return;
+    }
+
+    Alert.alert(
+      '지출 완료',
+      `${expense.title} ${formatMoney(
+        expense.amount
+      )}원을 실제 지출로 기록할까요?`,
+      [
+        {
+          text: '취소',
+          style: 'cancel',
+        },
+        {
+          text: '지출 완료',
+          onPress: () =>
+            completePlannedExpense(
+              expense
+            ),
+        },
+      ]
     );
   };
 
@@ -333,19 +511,29 @@ export default function PlanScreen() {
         0
       );
 
-      return plannedExpenses.filter(
-        (item) => {
-          const expenseDate =
-            new Date(
-              `${item.date}T00:00:00`
-            );
+      return plannedExpenses
+        .filter(
+          (item) => {
+            const expenseDate =
+              new Date(
+                `${item.date}T00:00:00`
+              );
 
-          return (
-            expenseDate >=
-            today
-          );
-        }
-      );
+            return (
+              expenseDate >=
+              today
+            );
+          }
+        )
+        .sort(
+          (a, b) =>
+            new Date(
+              a.date
+            ).getTime() -
+            new Date(
+              b.date
+            ).getTime()
+        );
     }, [plannedExpenses]);
 
   const totalPlanned =
@@ -428,7 +616,7 @@ export default function PlanScreen() {
             {
               upcomingExpenses.length
             }
-            건을 미리 반영해요.
+            건을 생활비에 미리 반영해요.
           </Text>
         </View>
 
@@ -510,74 +698,114 @@ export default function PlanScreen() {
                     expense.id
                   }
                   style={
-                    styles.expenseItem
+                    styles.expenseCard
                   }
                 >
                   <View
                     style={
-                      styles.expenseIcon
+                      styles.expenseTop
                     }
                   >
-                    <Ionicons
-                      name="calendar-outline"
-                      size={21}
-                      color="#3563C9"
-                    />
+                    <View
+                      style={
+                        styles.expenseIcon
+                      }
+                    >
+                      <Ionicons
+                        name="calendar-outline"
+                        size={21}
+                        color="#3563C9"
+                      />
+                    </View>
+
+                    <View
+                      style={
+                        styles.expenseInfo
+                      }
+                    >
+                      <Text
+                        style={
+                          styles.expenseTitle
+                        }
+                      >
+                        {
+                          expense.title
+                        }
+                      </Text>
+
+                      <Text
+                        style={
+                          styles.expenseDate
+                        }
+                      >
+                        {formatDate(
+                          expense.date
+                        )}
+                      </Text>
+                    </View>
+
+                    <Text
+                      style={
+                        styles.expenseAmount
+                      }
+                    >
+                      {formatMoney(
+                        expense.amount
+                      )}
+                      원
+                    </Text>
                   </View>
 
                   <View
                     style={
-                      styles.expenseInfo
+                      styles.actionRow
                     }
                   >
-                    <Text
-                      style={
-                        styles.expenseTitle
-                      }
-                    >
-                      {
-                        expense.title
-                      }
-                    </Text>
+                    <Pressable
+                      style={({ pressed }) => [
+                        styles.completeButton,
 
-                    <Text
-                      style={
-                        styles.expenseDate
+                        pressed &&
+                          styles.completeButtonPressed,
+                      ]}
+                      onPress={() =>
+                        confirmComplete(
+                          expense
+                        )
                       }
                     >
-                      {formatDate(
-                        expense.date
-                      )}
-                    </Text>
+                      <Ionicons
+                        name="checkmark-circle-outline"
+                        size={18}
+                        color="#3563C9"
+                      />
+
+                      <Text
+                        style={
+                          styles.completeButtonText
+                        }
+                      >
+                        지출 완료
+                      </Text>
+                    </Pressable>
+
+                    <Pressable
+                      style={
+                        styles.deleteButton
+                      }
+                      onPress={() =>
+                        confirmDelete(
+                          expense
+                        )
+                      }
+                    >
+                      <Ionicons
+                        name="trash-outline"
+                        size={18}
+                        color="#98A2B3"
+                      />
+                    </Pressable>
                   </View>
-
-                  <Text
-                    style={
-                      styles.expenseAmount
-                    }
-                  >
-                    {formatMoney(
-                      expense.amount
-                    )}
-                    원
-                  </Text>
-
-                  <Pressable
-                    style={
-                      styles.deleteButton
-                    }
-                    onPress={() =>
-                      confirmDelete(
-                        expense
-                      )
-                    }
-                  >
-                    <Ionicons
-                      name="close"
-                      size={19}
-                      color="#98A2B3"
-                    />
-                  </Pressable>
                 </View>
               )
             )
@@ -604,6 +832,7 @@ export default function PlanScreen() {
           <Animated.View
             style={[
               styles.backdrop,
+
               {
                 opacity:
                   backdropOpacity,
@@ -645,7 +874,11 @@ export default function PlanScreen() {
                 styles.sheetHeader
               }
             >
-              <View>
+              <View
+                style={
+                  styles.sheetTitleArea
+                }
+              >
                 <Text
                   style={
                     styles.sheetTitle
@@ -800,67 +1033,93 @@ const styles =
   StyleSheet.create({
     screen: {
       flex: 1,
+
       backgroundColor:
         '#FFFFFF',
     },
 
     container: {
       paddingHorizontal: 24,
+
       paddingTop: 60,
+
       paddingBottom: 120,
     },
 
     title: {
       fontSize: 28,
+
       fontWeight: '800',
+
       color: '#172033',
     },
 
     description: {
       marginTop: 8,
+
       fontSize: 15,
+
       lineHeight: 21,
+
       color: '#8792A2',
     },
 
     summaryCard: {
       marginTop: 28,
+
       backgroundColor:
         '#F1F5FC',
+
       borderRadius: 22,
+
       padding: 20,
     },
 
     summaryLabel: {
       fontSize: 14,
+
       color: '#687386',
     },
 
     summaryAmount: {
       marginTop: 7,
+
       fontSize: 30,
+
       fontWeight: '800',
+
       color: '#3563C9',
     },
 
     summaryDescription: {
       marginTop: 7,
+
       fontSize: 12,
+
       color: '#8792A2',
     },
 
     addButton: {
       marginTop: 14,
+
       flexDirection: 'row',
+
       alignItems: 'center',
+
       justifyContent:
         'center',
+
       gap: 5,
+
       backgroundColor:
         '#F8FAFC',
+
       borderRadius: 16,
+
       paddingVertical: 15,
+
       borderWidth: 1,
+
       borderColor:
         '#E4E9F0',
     },
@@ -872,7 +1131,9 @@ const styles =
 
     addButtonText: {
       fontSize: 15,
+
       fontWeight: '700',
+
       color: '#3563C9',
     },
 
@@ -882,65 +1143,132 @@ const styles =
 
     sectionTitle: {
       fontSize: 18,
+
       fontWeight: '800',
+
       color: '#172033',
+
       marginBottom: 14,
     },
 
-    expenseItem: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      minHeight: 70,
+    expenseCard: {
+      paddingVertical: 16,
+
       borderBottomWidth: 1,
+
       borderBottomColor:
         '#EEF1F5',
     },
 
+    expenseTop: {
+      flexDirection: 'row',
+
+      alignItems: 'center',
+    },
+
     expenseIcon: {
       width: 44,
+
       height: 44,
+
       borderRadius: 14,
+
       backgroundColor:
         '#EEF3FB',
+
       alignItems: 'center',
+
       justifyContent:
         'center',
     },
 
     expenseInfo: {
       flex: 1,
+
       marginLeft: 12,
     },
 
     expenseTitle: {
       fontSize: 15,
+
       fontWeight: '700',
+
       color: '#172033',
     },
 
     expenseDate: {
       marginTop: 4,
+
       fontSize: 12,
+
       color: '#8792A2',
     },
 
     expenseAmount: {
-      fontSize: 14,
-      fontWeight: '700',
+      fontSize: 15,
+
+      fontWeight: '800',
+
       color: '#172033',
     },
 
-    deleteButton: {
-      width: 34,
-      height: 34,
-      marginLeft: 3,
+    actionRow: {
+      flexDirection: 'row',
+
       alignItems: 'center',
+
+      justifyContent:
+        'flex-end',
+
+      marginTop: 12,
+    },
+
+    completeButton: {
+      flexDirection: 'row',
+
+      alignItems: 'center',
+
+      gap: 5,
+
+      backgroundColor:
+        '#EEF3FB',
+
+      borderRadius: 12,
+
+      paddingHorizontal: 13,
+
+      paddingVertical: 9,
+    },
+
+    completeButtonPressed: {
+      backgroundColor:
+        '#E1EAF9',
+    },
+
+    completeButtonText: {
+      fontSize: 13,
+
+      fontWeight: '700',
+
+      color: '#3563C9',
+    },
+
+    deleteButton: {
+      width: 36,
+
+      height: 36,
+
+      marginLeft: 6,
+
+      alignItems: 'center',
+
       justifyContent:
         'center',
     },
 
     empty: {
       alignItems: 'center',
+
       paddingVertical: 60,
     },
 
@@ -950,31 +1278,44 @@ const styles =
 
     emptyTitle: {
       marginTop: 14,
+
       fontSize: 16,
+
       fontWeight: '700',
+
       color: '#172033',
     },
 
     emptyDescription: {
       marginTop: 7,
+
       fontSize: 13,
+
       lineHeight: 20,
+
       color: '#8792A2',
+
       textAlign: 'center',
     },
 
     modalRoot: {
       flex: 1,
+
       justifyContent:
         'flex-end',
     },
 
     backdrop: {
       position: 'absolute',
+
       top: 0,
+
       bottom: 0,
+
       left: 0,
+
       right: 0,
+
       backgroundColor:
         'rgba(23, 32, 51, 0.38)',
     },
@@ -986,10 +1327,15 @@ const styles =
     bottomSheet: {
       backgroundColor:
         '#FFFFFF',
+
       borderTopLeftRadius: 28,
+
       borderTopRightRadius: 28,
+
       paddingHorizontal: 24,
+
       paddingTop: 12,
+
       paddingBottom: 34,
 
       shadowColor:
@@ -997,10 +1343,12 @@ const styles =
 
       shadowOffset: {
         width: 0,
+
         height: -5,
       },
 
       shadowOpacity: 0.1,
+
       shadowRadius: 18,
 
       elevation: 12,
@@ -1008,50 +1356,76 @@ const styles =
 
     sheetHandle: {
       alignSelf: 'center',
+
       width: 44,
+
       height: 5,
+
       borderRadius: 999,
+
       backgroundColor:
         '#D7DDE6',
+
       marginBottom: 22,
     },
 
     sheetHeader: {
       flexDirection: 'row',
+
       justifyContent:
         'space-between',
+
       alignItems:
         'flex-start',
+
       marginBottom: 25,
+    },
+
+    sheetTitleArea: {
+      flex: 1,
+
+      paddingRight: 12,
     },
 
     sheetTitle: {
       fontSize: 22,
+
       fontWeight: '800',
+
       color: '#172033',
     },
 
     sheetDescription: {
       marginTop: 6,
+
       fontSize: 13,
+
       color: '#8792A2',
     },
 
     closeButton: {
       width: 38,
+
       height: 38,
+
       borderRadius: 19,
+
       backgroundColor:
         '#F5F7FA',
+
       alignItems: 'center',
+
       justifyContent:
         'center',
     },
 
     inputLabel: {
       fontSize: 14,
+
       fontWeight: '700',
+
       color: '#172033',
+
       marginBottom: 8,
     },
 
@@ -1062,54 +1436,77 @@ const styles =
     input: {
       backgroundColor:
         '#F5F7FA',
+
       borderRadius: 15,
+
       paddingHorizontal: 16,
+
       paddingVertical: 15,
+
       fontSize: 15,
+
       color: '#172033',
     },
 
     amountInputBox: {
       flexDirection: 'row',
+
       alignItems: 'center',
+
       backgroundColor:
         '#F5F7FA',
+
       borderRadius: 15,
+
       paddingHorizontal: 16,
     },
 
     amountInput: {
       flex: 1,
+
       paddingVertical: 15,
+
       fontSize: 20,
+
       fontWeight: '700',
+
       color: '#3563C9',
     },
 
     unit: {
       fontSize: 14,
+
       fontWeight: '600',
+
       color: '#687386',
     },
 
     dateGuide: {
       marginTop: 6,
+
       fontSize: 11,
+
       color: '#98A2B3',
     },
 
     saveButton: {
       marginTop: 26,
+
       backgroundColor:
         '#3563C9',
+
       borderRadius: 16,
+
       paddingVertical: 17,
+
       alignItems: 'center',
     },
 
     saveButtonText: {
       color: '#FFFFFF',
+
       fontSize: 16,
+
       fontWeight: '700',
     },
   });

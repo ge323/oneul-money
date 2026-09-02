@@ -1,7 +1,15 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { router } from 'expo-router';
-import { useEffect, useRef, useState } from 'react';
+import {
+  router,
+  useLocalSearchParams,
+} from 'expo-router';
+import type { ComponentProps } from 'react';
+import {
+  useEffect,
+  useRef,
+  useState,
+} from 'react';
 import {
   Animated,
   Modal,
@@ -19,6 +27,9 @@ const BUDGET_KEY = 'budget-settings';
 const EXPENSES_KEY = 'expenses';
 const CUSTOM_CATEGORIES_KEY = 'custom-categories';
 
+type IoniconName =
+  ComponentProps<typeof Ionicons>['name'];
+
 type BudgetSettings = {
   monthlyBudget: number;
   fixedExpense: number;
@@ -31,7 +42,7 @@ type BudgetSettings = {
 type Category = {
   id: string;
   label: string;
-  emoji: string;
+  icon: IoniconName;
   custom?: boolean;
 };
 
@@ -47,100 +58,247 @@ const DEFAULT_CATEGORIES: Category[] = [
   {
     id: 'food',
     label: '식비',
-    emoji: '🍚',
+    icon: 'restaurant-outline',
   },
   {
     id: 'cafe',
     label: '카페',
-    emoji: '☕',
+    icon: 'cafe-outline',
   },
   {
     id: 'transport',
     label: '교통',
-    emoji: '🚇',
+    icon: 'subway-outline',
   },
   {
     id: 'shopping',
     label: '쇼핑',
-    emoji: '🛍️',
+    icon: 'bag-handle-outline',
   },
   {
     id: 'leisure',
     label: '여가',
-    emoji: '🎮',
+    icon: 'game-controller-outline',
   },
   {
     id: 'life',
     label: '생활',
-    emoji: '🏠',
+    icon: 'home-outline',
   },
   {
     id: 'etc',
     label: '기타',
-    emoji: '📦',
+    icon: 'ellipsis-horizontal-outline',
   },
 ];
 
+const ICON_OPTIONS: IoniconName[] = [
+  'heart-outline',
+  'paw-outline',
+  'medical-outline',
+  'school-outline',
+  'airplane-outline',
+  'car-outline',
+  'shirt-outline',
+  'gift-outline',
+  'musical-notes-outline',
+  'fitness-outline',
+  'book-outline',
+  'cut-outline',
+  'bed-outline',
+  'fast-food-outline',
+  'wine-outline',
+  'ticket-outline',
+];
+
 export default function ExpenseScreen() {
-  const [title, setTitle] = useState('');
-  const [amount, setAmount] = useState('');
-  const [category, setCategory] = useState('food');
+  const params = useLocalSearchParams<{
+    id?: string;
+  }>();
 
-  const [customCategories, setCustomCategories] =
-    useState<Category[]>([]);
+  const expenseId =
+    typeof params.id === 'string'
+      ? params.id
+      : undefined;
 
-  const [showCategoryModal, setShowCategoryModal] =
-    useState(false);
+  const isEditMode =
+    Boolean(expenseId);
 
-  const [newCategoryName, setNewCategoryName] =
+  const [title, setTitle] =
     useState('');
 
-  const [newCategoryEmoji, setNewCategoryEmoji] =
+  const [amount, setAmount] =
     useState('');
 
-  // Bottom Sheet 위치
+  const [category, setCategory] =
+    useState('food');
+
+  const [
+    originalExpense,
+    setOriginalExpense,
+  ] = useState<Expense | null>(
+    null
+  );
+
+  const [
+    customCategories,
+    setCustomCategories,
+  ] = useState<Category[]>([]);
+
+  const [
+    showCategoryModal,
+    setShowCategoryModal,
+  ] = useState(false);
+
+  const [
+    newCategoryName,
+    setNewCategoryName,
+  ] = useState('');
+
+  const [
+    newCategoryIcon,
+    setNewCategoryIcon,
+  ] = useState<IoniconName>(
+    'heart-outline'
+  );
+
   const slideAnim = useRef(
-    new Animated.Value(420)
+    new Animated.Value(500)
   ).current;
 
-  // 검은 배경 투명도
-  const backdropOpacity = useRef(
-    new Animated.Value(0)
-  ).current;
+  const backdropOpacity =
+    useRef(
+      new Animated.Value(0)
+    ).current;
 
   useEffect(() => {
-    loadCustomCategories();
-  }, []);
+    loadInitialData();
+  }, [expenseId]);
 
-  const loadCustomCategories = async () => {
-    try {
-      const saved = await AsyncStorage.getItem(
-        CUSTOM_CATEGORIES_KEY
-      );
+  const loadInitialData =
+    async () => {
+      await loadCustomCategories();
 
-      if (!saved) {
-        return;
+      if (expenseId) {
+        await loadExpense(
+          expenseId
+        );
       }
+    };
 
-      setCustomCategories(JSON.parse(saved));
-    } catch (error) {
-      console.error(
-        '카테고리 불러오기 실패:',
-        error
-      );
-    }
-  };
+  const loadCustomCategories =
+    async () => {
+      try {
+        const saved =
+          await AsyncStorage.getItem(
+            CUSTOM_CATEGORIES_KEY
+          );
+
+        if (!saved) {
+          return;
+        }
+
+        const parsed =
+          JSON.parse(saved);
+
+        const migrated: Category[] =
+          parsed.map(
+            (item: any) => ({
+              id: item.id,
+              label: item.label,
+              custom: true,
+              icon:
+                item.icon ||
+                'ellipsis-horizontal-outline',
+            })
+          );
+
+        setCustomCategories(
+          migrated
+        );
+
+        await AsyncStorage.setItem(
+          CUSTOM_CATEGORIES_KEY,
+          JSON.stringify(
+            migrated
+          )
+        );
+      } catch (error) {
+        console.error(
+          '카테고리 불러오기 실패:',
+          error
+        );
+      }
+    };
+
+  const loadExpense =
+    async (
+      id: string
+    ) => {
+      try {
+        const saved =
+          await AsyncStorage.getItem(
+            EXPENSES_KEY
+          );
+
+        if (!saved) {
+          return;
+        }
+
+        const expenses: Expense[] =
+          JSON.parse(saved);
+
+        const target =
+          expenses.find(
+            (item) =>
+              item.id === id
+          );
+
+        if (!target) {
+          return;
+        }
+
+        setOriginalExpense(
+          target
+        );
+
+        setTitle(
+          target.title
+        );
+
+        setAmount(
+          Number(
+            target.amount
+          ).toLocaleString(
+            'ko-KR'
+          )
+        );
+
+        setCategory(
+          target.category ||
+            'etc'
+        );
+      } catch (error) {
+        console.error(
+          '지출 불러오기 실패:',
+          error
+        );
+      }
+    };
 
   const allCategories = [
     ...DEFAULT_CATEGORIES,
     ...customCategories,
   ];
 
-  const formatMoneyInput = (text: string) => {
-    const numbersOnly = text.replace(
-      /[^0-9]/g,
-      ''
-    );
+  const formatMoneyInput = (
+    text: string
+  ) => {
+    const numbersOnly =
+      text.replace(
+        /[^0-9]/g,
+        ''
+      );
 
     if (!numbersOnly) {
       return '';
@@ -148,168 +306,197 @@ export default function ExpenseScreen() {
 
     return Number(
       numbersOnly
-    ).toLocaleString('ko-KR');
+    ).toLocaleString(
+      'ko-KR'
+    );
   };
 
-  const parseMoney = (text: string) => {
+  const parseMoney = (
+    text: string
+  ) => {
     return (
       Number(
-        text.replace(/,/g, '')
+        text.replace(
+          /,/g,
+          ''
+        )
       ) || 0
     );
   };
 
-  // =========================
-  // 모달 열기
-  // =========================
-
-  const openCategoryModal = () => {
-    slideAnim.setValue(420);
-    backdropOpacity.setValue(0);
-
-    setShowCategoryModal(true);
-
-    requestAnimationFrame(() => {
-      Animated.parallel([
-        // 하얀 Bottom Sheet
-        Animated.timing(slideAnim, {
-          toValue: 0,
-          duration: 250,
-          useNativeDriver: true,
-        }),
-
-        // 검은 배경
-        Animated.timing(
-          backdropOpacity,
-          {
-            toValue: 1,
-            duration: 100,
-            useNativeDriver: true,
-          }
-        ),
-      ]).start();
-    });
-  };
-
-  // =========================
-  // 모달 닫기
-  // =========================
-
-  const closeCategoryModal = () => {
-    Animated.parallel([
-      // 하얀 Bottom Sheet는 천천히 내려감
-      Animated.timing(slideAnim, {
-        toValue: 420,
-        duration: 200,
-        useNativeDriver: true,
-      }),
-
-      // 검은 배경은 빠르게 사라짐
-      Animated.timing(
-        backdropOpacity,
-        {
-          toValue: 0,
-
-          // ★ 검은 배경 Fade Out 속도
-          duration: 60,
-
-          useNativeDriver: true,
-        }
-      ),
-    ]).start(() => {
-      setShowCategoryModal(false);
-
+  const openCategoryModal =
+    () => {
       setNewCategoryName('');
-      setNewCategoryEmoji('');
-    });
-  };
 
-  // =========================
-  // 사용자 카테고리 추가
-  // =========================
+      setNewCategoryIcon(
+        'heart-outline'
+      );
 
-  const addCustomCategory = async () => {
-    const name = newCategoryName.trim();
-    const emoji = newCategoryEmoji.trim();
+      slideAnim.setValue(500);
 
-    if (!name) {
-      return;
-    }
+      backdropOpacity.setValue(
+        0
+      );
 
-    const newCategory: Category = {
-      id: `custom-${Date.now()}`,
-      label: name,
-      emoji: emoji || '✨',
-      custom: true,
+      setShowCategoryModal(
+        true
+      );
+
+      requestAnimationFrame(
+        () => {
+          Animated.parallel([
+            Animated.timing(
+              slideAnim,
+              {
+                toValue: 0,
+                duration: 250,
+                useNativeDriver:
+                  true,
+              }
+            ),
+
+            Animated.timing(
+              backdropOpacity,
+              {
+                toValue: 1,
+                duration: 100,
+                useNativeDriver:
+                  true,
+              }
+            ),
+          ]).start();
+        }
+      );
     };
 
-    const updatedCategories = [
-      ...customCategories,
-      newCategory,
-    ];
-
-    try {
-      await AsyncStorage.setItem(
-        CUSTOM_CATEGORIES_KEY,
-        JSON.stringify(
-          updatedCategories
-        )
-      );
-
-      setCustomCategories(
-        updatedCategories
-      );
-
-      // 새 카테고리를 바로 선택
-      setCategory(newCategory.id);
-
-      setNewCategoryName('');
-      setNewCategoryEmoji('');
-
-      // 추가 완료 후에도
-      // 동일한 닫기 애니메이션 적용
+  const closeCategoryModal =
+    () => {
       Animated.parallel([
-        Animated.timing(slideAnim, {
-          toValue: 420,
-          duration: 180,
-          useNativeDriver: true,
-        }),
+        Animated.timing(
+          slideAnim,
+          {
+            toValue: 500,
+            duration: 200,
+            useNativeDriver:
+              true,
+          }
+        ),
 
         Animated.timing(
           backdropOpacity,
           {
             toValue: 0,
-            duration: 60,
-            useNativeDriver: true,
+            duration: 100,
+            useNativeDriver:
+              true,
           }
         ),
       ]).start(() => {
-        setShowCategoryModal(false);
+        setShowCategoryModal(
+          false
+        );
+
+        setNewCategoryName('');
+
+        setNewCategoryIcon(
+          'heart-outline'
+        );
       });
-    } catch (error) {
-      console.error(
-        '카테고리 저장 실패:',
-        error
+    };
+
+  const addCustomCategory =
+    async () => {
+      const name =
+        newCategoryName.trim();
+
+      if (!name) {
+        return;
+      }
+
+      const newCategory: Category =
+        {
+          id: `custom-${Date.now()}`,
+          label: name,
+          icon:
+            newCategoryIcon,
+          custom: true,
+        };
+
+      const updatedCategories = [
+        ...customCategories,
+        newCategory,
+      ];
+
+      try {
+        await AsyncStorage.setItem(
+          CUSTOM_CATEGORIES_KEY,
+          JSON.stringify(
+            updatedCategories
+          )
+        );
+
+        setCustomCategories(
+          updatedCategories
+        );
+
+        setCategory(
+          newCategory.id
+        );
+
+        closeCategoryModal();
+      } catch (error) {
+        console.error(
+          '카테고리 저장 실패:',
+          error
+        );
+      }
+    };
+
+  const updateBudgetSpentAmount =
+    async (
+      difference: number
+    ) => {
+      const savedBudget =
+        await AsyncStorage.getItem(
+          BUDGET_KEY
+        );
+
+      if (!savedBudget) {
+        return;
+      }
+
+      const budget: BudgetSettings =
+        JSON.parse(
+          savedBudget
+        );
+
+      const currentSpent =
+        Number(
+          budget.spentAmount
+        ) || 0;
+
+      const updatedBudget = {
+        ...budget,
+
+        spentAmount: Math.max(
+          0,
+          currentSpent +
+            difference
+        ),
+      };
+
+      await AsyncStorage.setItem(
+        BUDGET_KEY,
+        JSON.stringify(
+          updatedBudget
+        )
       );
-    }
-  };
+    };
 
-  // =========================
-  // 지출 저장
-  // =========================
-
-  const saveExpense = async () => {
-    const numericAmount =
-      parseMoney(amount);
-
-    if (
-      !numericAmount ||
-      numericAmount <= 0
-    ) {
-      return;
-    }
-
-    try {
+  const createExpense =
+    async (
+      numericAmount: number
+    ) => {
       const savedExpenses =
         await AsyncStorage.getItem(
           EXPENSES_KEY
@@ -317,22 +504,28 @@ export default function ExpenseScreen() {
 
       const expenses: Expense[] =
         savedExpenses
-          ? JSON.parse(savedExpenses)
+          ? JSON.parse(
+              savedExpenses
+            )
           : [];
 
-      const newExpense: Expense = {
-        id: Date.now().toString(),
+      const newExpense: Expense =
+        {
+          id:
+            Date.now().toString(),
 
-        title:
-          title.trim() || '지출',
+          title:
+            title.trim() ||
+            '지출',
 
-        amount: numericAmount,
+          amount:
+            numericAmount,
 
-        category,
+          category,
 
-        createdAt:
-          new Date().toISOString(),
-      };
+          createdAt:
+            new Date().toISOString(),
+        };
 
       const updatedExpenses = [
         newExpense,
@@ -346,41 +539,109 @@ export default function ExpenseScreen() {
         )
       );
 
-      const savedBudget =
-        await AsyncStorage.getItem(
-          BUDGET_KEY
-        );
+      await updateBudgetSpentAmount(
+        numericAmount
+      );
+    };
 
-      if (savedBudget) {
-        const budget: BudgetSettings =
-          JSON.parse(savedBudget);
-
-        const updatedBudget = {
-          ...budget,
-
-          spentAmount:
-            (Number(
-              budget.spentAmount
-            ) || 0) +
-            numericAmount,
-        };
-
-        await AsyncStorage.setItem(
-          BUDGET_KEY,
-          JSON.stringify(
-            updatedBudget
-          )
-        );
+  const updateExpense =
+    async (
+      numericAmount: number
+    ) => {
+      if (
+        !expenseId ||
+        !originalExpense
+      ) {
+        return;
       }
 
-      router.back();
-    } catch (error) {
-      console.error(
-        '지출 저장 실패:',
-        error
+      const savedExpenses =
+        await AsyncStorage.getItem(
+          EXPENSES_KEY
+        );
+
+      if (!savedExpenses) {
+        return;
+      }
+
+      const expenses: Expense[] =
+        JSON.parse(
+          savedExpenses
+        );
+
+      const updatedExpenses =
+        expenses.map(
+          (expense) => {
+            if (
+              expense.id !==
+              expenseId
+            ) {
+              return expense;
+            }
+
+            return {
+              ...expense,
+
+              title:
+                title.trim() ||
+                '지출',
+
+              amount:
+                numericAmount,
+
+              category,
+            };
+          }
+        );
+
+      await AsyncStorage.setItem(
+        EXPENSES_KEY,
+        JSON.stringify(
+          updatedExpenses
+        )
       );
-    }
-  };
+
+      const difference =
+        numericAmount -
+        originalExpense.amount;
+
+      await updateBudgetSpentAmount(
+        difference
+      );
+    };
+
+  const saveExpense =
+    async () => {
+      const numericAmount =
+        parseMoney(amount);
+
+      if (
+        numericAmount <= 0
+      ) {
+        return;
+      }
+
+      try {
+        if (isEditMode) {
+          await updateExpense(
+            numericAmount
+          );
+        } else {
+          await createExpense(
+            numericAmount
+          );
+        }
+
+        router.back();
+      } catch (error) {
+        console.error(
+          isEditMode
+            ? '지출 수정 실패:'
+            : '지출 저장 실패:',
+          error
+        );
+      }
+    };
 
   return (
     <>
@@ -395,15 +656,27 @@ export default function ExpenseScreen() {
         keyboardShouldPersistTaps="handled"
       >
         <AppHeader
-          title="지출 기록"
-          description="오늘 사용한 금액을 기록해보세요."
+          title={
+            isEditMode
+              ? '지출 수정'
+              : '지출 기록'
+          }
+          description={
+            isEditMode
+              ? '기록한 지출 정보를 수정해보세요.'
+              : '오늘 사용한 금액을 기록해보세요.'
+          }
         />
 
         <View style={styles.form}>
-          {/* 금액 */}
-
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>
+          <View
+            style={
+              styles.inputGroup
+            }
+          >
+            <Text
+              style={styles.label}
+            >
               얼마를 썼나요?
             </Text>
 
@@ -417,7 +690,9 @@ export default function ExpenseScreen() {
                   styles.amountInput
                 }
                 value={amount}
-                onChangeText={(text) =>
+                onChangeText={(
+                  text
+                ) =>
                   setAmount(
                     formatMoneyInput(
                       text
@@ -428,31 +703,43 @@ export default function ExpenseScreen() {
                 keyboardType="numeric"
               />
 
-              <Text style={styles.unit}>
+              <Text
+                style={styles.unit}
+              >
                 원
               </Text>
             </View>
           </View>
 
-          {/* 사용처 */}
-
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>
+          <View
+            style={
+              styles.inputGroup
+            }
+          >
+            <Text
+              style={styles.label}
+            >
               어디에 썼나요?
             </Text>
 
             <TextInput
               style={styles.input}
               value={title}
-              onChangeText={setTitle}
+              onChangeText={
+                setTitle
+              }
               placeholder="예: 점심"
             />
           </View>
 
-          {/* 카테고리 */}
-
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>
+          <View
+            style={
+              styles.inputGroup
+            }
+          >
+            <Text
+              style={styles.label}
+            >
               카테고리
             </Text>
 
@@ -464,7 +751,8 @@ export default function ExpenseScreen() {
               {allCategories.map(
                 (item) => {
                   const isSelected =
-                    category === item.id;
+                    category ===
+                    item.id;
 
                   return (
                     <Pressable
@@ -481,13 +769,17 @@ export default function ExpenseScreen() {
                         )
                       }
                     >
-                      <Text
-                        style={
-                          styles.categoryEmoji
+                      <Ionicons
+                        name={
+                          item.icon
                         }
-                      >
-                        {item.emoji}
-                      </Text>
+                        size={18}
+                        color={
+                          isSelected
+                            ? '#3563C9'
+                            : '#687386'
+                        }
+                      />
 
                       <Text
                         style={[
@@ -497,14 +789,14 @@ export default function ExpenseScreen() {
                             styles.categoryTextSelected,
                         ]}
                       >
-                        {item.label}
+                        {
+                          item.label
+                        }
                       </Text>
                     </Pressable>
                   );
                 }
               )}
-
-              {/* 카테고리 추가 */}
 
               <Pressable
                 style={[
@@ -533,8 +825,6 @@ export default function ExpenseScreen() {
           </View>
         </View>
 
-        {/* 기록 */}
-
         <Pressable
           style={({ pressed }) => [
             styles.saveButton,
@@ -549,36 +839,31 @@ export default function ExpenseScreen() {
               styles.saveButtonText
             }
           >
-            기록하기
+            {isEditMode
+              ? '수정하기'
+              : '기록하기'}
           </Text>
         </Pressable>
       </ScrollView>
 
-      {/* ========================= */}
-      {/* 카테고리 Bottom Sheet */}
-      {/* ========================= */}
-
       <Modal
-        visible={showCategoryModal}
+        visible={
+          showCategoryModal
+        }
         transparent
-
-        // Modal 자체 애니메이션 제거
         animationType="none"
-
         statusBarTranslucent
-
         onRequestClose={
           closeCategoryModal
         }
       >
-        <View style={styles.modalRoot}>
-          {/* ========================= */}
-          {/* 검은 배경 */}
-          {/* ========================= */}
-
+        <View
+          style={styles.modalRoot}
+        >
           <Animated.View
             style={[
               styles.backdrop,
+
               {
                 opacity:
                   backdropOpacity,
@@ -595,13 +880,10 @@ export default function ExpenseScreen() {
             />
           </Animated.View>
 
-          {/* ========================= */}
-          {/* 하얀 Bottom Sheet */}
-          {/* ========================= */}
-
           <Animated.View
             style={[
               styles.bottomSheet,
+
               {
                 transform: [
                   {
@@ -612,15 +894,11 @@ export default function ExpenseScreen() {
               },
             ]}
           >
-            {/* 손잡이 */}
-
             <View
               style={
                 styles.sheetHandle
               }
             />
-
-            {/* 헤더 */}
 
             <View
               style={
@@ -645,7 +923,7 @@ export default function ExpenseScreen() {
                     styles.sheetDescription
                   }
                 >
-                  자주 사용하는 소비 항목을 직접 만들어보세요.
+                  카테고리 이름과 아이콘을 선택해주세요.
                 </Text>
               </View>
 
@@ -656,7 +934,6 @@ export default function ExpenseScreen() {
                 onPress={
                   closeCategoryModal
                 }
-                hitSlop={10}
               >
                 <Ionicons
                   name="close"
@@ -666,57 +943,10 @@ export default function ExpenseScreen() {
               </Pressable>
             </View>
 
-            {/* 아이콘 */}
-
             <Text
               style={
                 styles.sheetLabel
               }
-            >
-              아이콘
-            </Text>
-
-            <View
-              style={
-                styles.emojiRow
-              }
-            >
-              <View
-                style={
-                  styles.modalEmojiInputBox
-                }
-              >
-                <TextInput
-                  style={
-                    styles.modalEmojiInput
-                  }
-                  value={
-                    newCategoryEmoji
-                  }
-                  onChangeText={
-                    setNewCategoryEmoji
-                  }
-                  placeholder="✨"
-                  maxLength={4}
-                />
-              </View>
-
-              <Text
-                style={
-                  styles.emojiDescription
-                }
-              >
-                원하는 이모지를 입력해주세요.
-              </Text>
-            </View>
-
-            {/* 카테고리 이름 */}
-
-            <Text
-              style={[
-                styles.sheetLabel,
-                styles.categoryNameLabel,
-              ]}
             >
               카테고리 이름
             </Text>
@@ -735,7 +965,55 @@ export default function ExpenseScreen() {
               maxLength={10}
             />
 
-            {/* 추가 */}
+            <Text
+              style={[
+                styles.sheetLabel,
+                styles.iconLabel,
+              ]}
+            >
+              아이콘
+            </Text>
+
+            <View
+              style={
+                styles.iconGrid
+              }
+            >
+              {ICON_OPTIONS.map(
+                (icon) => {
+                  const isSelected =
+                    icon ===
+                    newCategoryIcon;
+
+                  return (
+                    <Pressable
+                      key={icon}
+                      style={[
+                        styles.iconOption,
+
+                        isSelected &&
+                          styles.iconOptionSelected,
+                      ]}
+                      onPress={() =>
+                        setNewCategoryIcon(
+                          icon
+                        )
+                      }
+                    >
+                      <Ionicons
+                        name={icon}
+                        size={22}
+                        color={
+                          isSelected
+                            ? '#3563C9'
+                            : '#687386'
+                        }
+                      />
+                    </Pressable>
+                  );
+                }
+              )}
+            </View>
 
             <Pressable
               style={({ pressed }) => [
@@ -763,363 +1041,360 @@ export default function ExpenseScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
-  },
-
-  container: {
-    flexGrow: 1,
-    paddingHorizontal: 24,
-    paddingTop: 32,
-    paddingBottom: 50,
-  },
-
-  form: {
-    gap: 28,
-  },
-
-  inputGroup: {
-    gap: 10,
-  },
-
-  label: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: '#172033',
-  },
-
-  // =========================
-  // 금액 입력
-  // =========================
-
-  amountInputBox: {
-    flexDirection: 'row',
-    alignItems: 'center',
-
-    backgroundColor: '#F1F5FC',
-
-    borderRadius: 16,
-
-    paddingHorizontal: 18,
-  },
-
-  amountInput: {
-    flex: 1,
-
-    paddingVertical: 18,
-
-    fontSize: 28,
-    fontWeight: '800',
-
-    color: '#3563C9',
-  },
-
-  unit: {
-    marginLeft: 8,
-
-    fontSize: 15,
-    fontWeight: '700',
-
-    color: '#687386',
-  },
-
-  input: {
-    backgroundColor: '#F5F7FA',
-
-    borderRadius: 16,
-
-    paddingHorizontal: 16,
-    paddingVertical: 16,
-
-    fontSize: 16,
-
-    color: '#172033',
-  },
-
-  // =========================
-  // 카테고리
-  // =========================
-
-  categoryContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-
-    gap: 10,
-  },
-
-  categoryButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-
-    gap: 6,
-
-    backgroundColor: '#F5F7FA',
-
-    borderRadius: 14,
-
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-  },
-
-  categoryButtonSelected: {
-    backgroundColor: '#E7EEFC',
-  },
-
-  categoryEmoji: {
-    fontSize: 18,
-  },
-
-  categoryText: {
-    fontSize: 14,
-    fontWeight: '600',
-
-    color: '#687386',
-  },
-
-  categoryTextSelected: {
-    color: '#3563C9',
-    fontWeight: '700',
-  },
-
-  addCategoryButton: {
-    borderWidth: 1,
-
-    borderColor: '#DCE5F5',
-
-    backgroundColor: '#FFFFFF',
-  },
-
-  addCategoryText: {
-    fontSize: 14,
-    fontWeight: '700',
-
-    color: '#3563C9',
-  },
-
-  // =========================
-  // 기록 버튼
-  // =========================
-
-  saveButton: {
-    marginTop: 36,
-
-    backgroundColor: '#3563C9',
-
-    borderRadius: 16,
-
-    paddingVertical: 17,
-
-    alignItems: 'center',
-  },
-
-  saveButtonPressed: {
-    backgroundColor: '#294FA5',
-  },
-
-  saveButtonText: {
-    color: '#FFFFFF',
-
-    fontSize: 16,
-    fontWeight: '700',
-  },
-
-  // =========================
-  // Bottom Sheet
-  // =========================
-
-  modalRoot: {
-    flex: 1,
-
-    justifyContent: 'flex-end',
-  },
-
-  // 검은 배경
-  backdrop: {
-    position: 'absolute',
-
-    top: 0,
-    bottom: 0,
-    left: 0,
-    right: 0,
-
-    backgroundColor:
-      'rgba(23, 32, 51, 0.38)',
-  },
-
-  backdropPressArea: {
-    flex: 1,
-  },
-
-  // 하얀 Bottom Sheet
-  bottomSheet: {
-    backgroundColor: '#FFFFFF',
-
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
-
-    paddingHorizontal: 24,
-    paddingTop: 12,
-    paddingBottom: 34,
-
-    shadowColor: '#000000',
-
-    shadowOffset: {
-      width: 0,
-      height: -5,
+const styles =
+  StyleSheet.create({
+    screen: {
+      flex: 1,
+      backgroundColor:
+        '#FFFFFF',
     },
 
-    shadowOpacity: 0.1,
-    shadowRadius: 18,
+    container: {
+      flexGrow: 1,
+      paddingHorizontal: 24,
+      paddingTop: 32,
+      paddingBottom: 50,
+    },
 
-    elevation: 12,
-  },
+    form: {
+      gap: 28,
+    },
 
-  sheetHandle: {
-    alignSelf: 'center',
+    inputGroup: {
+      gap: 10,
+    },
 
-    width: 44,
-    height: 5,
+    label: {
+      fontSize: 15,
+      fontWeight: '700',
+      color: '#172033',
+    },
 
-    borderRadius: 999,
+    amountInputBox: {
+      flexDirection: 'row',
+      alignItems: 'center',
 
-    backgroundColor: '#D7DDE6',
+      backgroundColor:
+        '#F1F5FC',
 
-    marginBottom: 22,
-  },
+      borderRadius: 16,
 
-  sheetHeader: {
-    flexDirection: 'row',
+      paddingHorizontal: 18,
+    },
 
-    justifyContent:
-      'space-between',
+    amountInput: {
+      flex: 1,
 
-    alignItems: 'flex-start',
+      paddingVertical: 18,
 
-    marginBottom: 26,
-  },
+      fontSize: 28,
+      fontWeight: '800',
 
-  sheetTitleArea: {
-    flex: 1,
+      color: '#3563C9',
+    },
 
-    paddingRight: 14,
-  },
+    unit: {
+      marginLeft: 8,
 
-  sheetTitle: {
-    fontSize: 22,
+      fontSize: 15,
+      fontWeight: '700',
 
-    fontWeight: '800',
+      color: '#687386',
+    },
 
-    color: '#172033',
-  },
+    input: {
+      backgroundColor:
+        '#F5F7FA',
 
-  sheetDescription: {
-    marginTop: 7,
+      borderRadius: 16,
 
-    fontSize: 13,
+      paddingHorizontal: 16,
+      paddingVertical: 16,
 
-    lineHeight: 19,
+      fontSize: 16,
 
-    color: '#8792A2',
-  },
+      color: '#172033',
+    },
 
-  closeButton: {
-    width: 38,
-    height: 38,
+    categoryContainer: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
 
-    borderRadius: 19,
+      gap: 10,
+    },
 
-    backgroundColor: '#F5F7FA',
+    categoryButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
 
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
+      gap: 7,
 
-  sheetLabel: {
-    fontSize: 14,
+      backgroundColor:
+        '#F5F7FA',
 
-    fontWeight: '700',
+      borderRadius: 14,
 
-    color: '#172033',
+      paddingHorizontal: 14,
+      paddingVertical: 12,
+    },
 
-    marginBottom: 9,
-  },
+    categoryButtonSelected: {
+      backgroundColor:
+        '#E7EEFC',
+    },
 
-  emojiRow: {
-    flexDirection: 'row',
+    categoryText: {
+      fontSize: 14,
+      fontWeight: '600',
 
-    alignItems: 'center',
-  },
+      color: '#687386',
+    },
 
-  modalEmojiInputBox: {
-    width: 72,
-    height: 60,
+    categoryTextSelected: {
+      color: '#3563C9',
+      fontWeight: '700',
+    },
 
-    borderRadius: 16,
+    addCategoryButton: {
+      borderWidth: 1,
 
-    backgroundColor: '#F5F7FA',
+      borderColor:
+        '#DCE5F5',
 
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
+      backgroundColor:
+        '#FFFFFF',
+    },
 
-  modalEmojiInput: {
-    width: '100%',
+    addCategoryText: {
+      fontSize: 14,
+      fontWeight: '700',
 
-    fontSize: 26,
+      color: '#3563C9',
+    },
 
-    textAlign: 'center',
-  },
+    saveButton: {
+      marginTop: 36,
 
-  emojiDescription: {
-    flex: 1,
+      backgroundColor:
+        '#3563C9',
 
-    marginLeft: 12,
+      borderRadius: 16,
 
-    fontSize: 12,
+      paddingVertical: 17,
 
-    color: '#8792A2',
-  },
+      alignItems: 'center',
+    },
 
-  categoryNameLabel: {
-    marginTop: 24,
-  },
+    saveButtonPressed: {
+      backgroundColor:
+        '#294FA5',
+    },
 
-  modalCategoryNameInput: {
-    backgroundColor: '#F5F7FA',
+    saveButtonText: {
+      color: '#FFFFFF',
 
-    borderRadius: 16,
+      fontSize: 16,
+      fontWeight: '700',
+    },
 
-    paddingHorizontal: 16,
-    paddingVertical: 16,
+    modalRoot: {
+      flex: 1,
 
-    fontSize: 16,
+      justifyContent:
+        'flex-end',
+    },
 
-    color: '#172033',
-  },
+    backdrop: {
+      position: 'absolute',
 
-  categorySaveButton: {
-    marginTop: 28,
+      top: 0,
+      bottom: 0,
+      left: 0,
+      right: 0,
 
-    backgroundColor: '#3563C9',
+      backgroundColor:
+        'rgba(23, 32, 51, 0.38)',
+    },
 
-    borderRadius: 16,
+    backdropPressArea: {
+      flex: 1,
+    },
 
-    paddingVertical: 17,
+    bottomSheet: {
+      backgroundColor:
+        '#FFFFFF',
 
-    alignItems: 'center',
-  },
+      borderTopLeftRadius: 28,
+      borderTopRightRadius: 28,
 
-  categorySaveButtonPressed: {
-    backgroundColor: '#294FA5',
-  },
+      paddingHorizontal: 24,
+      paddingTop: 12,
+      paddingBottom: 34,
 
-  categorySaveButtonText: {
-    color: '#FFFFFF',
+      shadowColor:
+        '#000000',
 
-    fontSize: 16,
+      shadowOffset: {
+        width: 0,
+        height: -5,
+      },
 
-    fontWeight: '700',
-  },
-});
+      shadowOpacity: 0.1,
+      shadowRadius: 18,
+
+      elevation: 12,
+    },
+
+    sheetHandle: {
+      alignSelf: 'center',
+
+      width: 44,
+      height: 5,
+
+      borderRadius: 999,
+
+      backgroundColor:
+        '#D7DDE6',
+
+      marginBottom: 22,
+    },
+
+    sheetHeader: {
+      flexDirection: 'row',
+
+      justifyContent:
+        'space-between',
+
+      alignItems:
+        'flex-start',
+
+      marginBottom: 24,
+    },
+
+    sheetTitleArea: {
+      flex: 1,
+
+      paddingRight: 14,
+    },
+
+    sheetTitle: {
+      fontSize: 22,
+
+      fontWeight: '800',
+
+      color: '#172033',
+    },
+
+    sheetDescription: {
+      marginTop: 7,
+
+      fontSize: 13,
+
+      lineHeight: 19,
+
+      color: '#8792A2',
+    },
+
+    closeButton: {
+      width: 38,
+      height: 38,
+
+      borderRadius: 19,
+
+      backgroundColor:
+        '#F5F7FA',
+
+      alignItems: 'center',
+      justifyContent:
+        'center',
+    },
+
+    sheetLabel: {
+      fontSize: 14,
+
+      fontWeight: '700',
+
+      color: '#172033',
+
+      marginBottom: 9,
+    },
+
+    modalCategoryNameInput: {
+      backgroundColor:
+        '#F5F7FA',
+
+      borderRadius: 16,
+
+      paddingHorizontal: 16,
+      paddingVertical: 16,
+
+      fontSize: 16,
+
+      color: '#172033',
+    },
+
+    iconLabel: {
+      marginTop: 24,
+    },
+
+    iconGrid: {
+      flexDirection: 'row',
+
+      flexWrap: 'wrap',
+
+      gap: 10,
+    },
+
+    iconOption: {
+      width: 48,
+      height: 48,
+
+      borderRadius: 14,
+
+      backgroundColor:
+        '#F5F7FA',
+
+      alignItems: 'center',
+      justifyContent:
+        'center',
+
+      borderWidth: 1,
+
+      borderColor:
+        'transparent',
+    },
+
+    iconOptionSelected: {
+      backgroundColor:
+        '#E7EEFC',
+
+      borderColor:
+        '#3563C9',
+    },
+
+    categorySaveButton: {
+      marginTop: 28,
+
+      backgroundColor:
+        '#3563C9',
+
+      borderRadius: 16,
+
+      paddingVertical: 17,
+
+      alignItems: 'center',
+    },
+
+    categorySaveButtonPressed: {
+      backgroundColor:
+        '#294FA5',
+    },
+
+    categorySaveButtonText: {
+      color: '#FFFFFF',
+
+      fontSize: 16,
+
+      fontWeight: '700',
+    },
+  });
