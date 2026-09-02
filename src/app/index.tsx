@@ -1,4 +1,5 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { router } from 'expo-router';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 export default function HomeScreen() {
   const monthlyBudget = 1000000;
@@ -40,11 +41,16 @@ export default function HomeScreen() {
 
         <View style={styles.infoRow}>
           <Text style={styles.infoLabel}>남은 기간</Text>
-          <Text style={styles.infoValue}>
-            D-{remainingDays}
-          </Text>
+          <Text style={styles.infoValue}>D-{remainingDays}</Text>
         </View>
       </View>
+
+      <Pressable
+        style={styles.settingButton}
+        onPress={() => router.push('/settings')}
+      >
+        <Text style={styles.settingButtonText}>예산 설정하기</Text>
+      </Pressable>
     </View>
   );
 }
@@ -89,7 +95,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#F7F7F7',
     borderRadius: 20,
     padding: 20,
-    marginBottom: 40,
+    marginBottom: 16,
     gap: 18,
   },
 
@@ -105,6 +111,20 @@ const styles = StyleSheet.create({
 
   infoValue: {
     fontSize: 15,
+    fontWeight: '700',
+  },
+
+  settingButton: {
+    backgroundColor: '#111111',
+    paddingVertical: 16,
+    borderRadius: 16,
+    alignItems: 'center',
+    marginBottom: 24,
+  },
+
+  settingButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
     fontWeight: '700',
   },
 });
