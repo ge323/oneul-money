@@ -6,20 +6,18 @@ import {
   useState,
 } from 'react';
 import {
-  Dimensions,
   FlatList,
   Image,
   ImageSourcePropType,
+  NativeScrollEvent,
+  NativeSyntheticEvent,
   Pressable,
   StyleSheet,
   Text,
+  useWindowDimensions,
   View,
-  ViewToken,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-
-const { width: SCREEN_WIDTH } =
-  Dimensions.get('window');
 
 const ONBOARDING_KEY =
   'onboarding-completed';
@@ -66,6 +64,10 @@ const pages: OnboardingPage[] = [
 ];
 
 export default function OnboardingScreen() {
+  const {
+    width: screenWidth,
+  } = useWindowDimensions();
+
   const flatListRef =
     useRef<FlatList<OnboardingPage>>(
       null
@@ -76,32 +78,6 @@ export default function OnboardingScreen() {
     setCurrentIndex,
   ] = useState(0);
 
-  const onViewableItemsChanged =
-    useRef(
-      ({
-        viewableItems,
-      }: {
-        viewableItems: ViewToken[];
-      }) => {
-        if (
-          viewableItems.length >
-            0 &&
-          viewableItems[0]
-            .index !== null
-        ) {
-          setCurrentIndex(
-            viewableItems[0]
-              .index ?? 0
-          );
-        }
-      }
-    ).current;
-
-  const viewabilityConfig =
-    useRef({
-      itemVisiblePercentThreshold: 50,
-    }).current;
-
   const finishOnboarding =
     async () => {
       try {
@@ -110,10 +86,6 @@ export default function OnboardingScreen() {
           'true'
         );
 
-        /*
-         * 온보딩 이후
-         * 처음 예산 설정으로 이동
-         */
         router.replace('/settings');
       } catch (error) {
         console.error(
@@ -124,17 +96,23 @@ export default function OnboardingScreen() {
     };
 
   const goNext = () => {
-    if (
-      currentIndex <
-      pages.length - 1
-    ) {
-      flatListRef.current?.scrollToIndex(
-        {
-          index:
-            currentIndex + 1,
+    const nextIndex =
+      currentIndex + 1;
 
-          animated: true,
-        }
+    if (
+      nextIndex <
+      pages.length
+    ) {
+      flatListRef.current?.scrollToOffset({
+        offset:
+          screenWidth *
+          nextIndex,
+
+        animated: true,
+      });
+
+      setCurrentIndex(
+        nextIndex
       );
 
       return;
@@ -143,62 +121,174 @@ export default function OnboardingScreen() {
     finishOnboarding();
   };
 
+  const goPrevious = () => {
+    const previousIndex =
+      currentIndex - 1;
+
+    if (
+      previousIndex <
+      0
+    ) {
+      return;
+    }
+
+    flatListRef.current?.scrollToOffset({
+      offset:
+        screenWidth *
+        previousIndex,
+
+      animated: true,
+    });
+
+    setCurrentIndex(
+      previousIndex
+    );
+  };
+
+  const handleScrollEnd = (
+    event: NativeSyntheticEvent<NativeScrollEvent>
+  ) => {
+    const offsetX =
+      event.nativeEvent
+        .contentOffset.x;
+
+    const newIndex =
+      Math.round(
+        offsetX /
+          screenWidth
+      );
+
+    setCurrentIndex(
+      newIndex
+    );
+  };
+
   return (
     <SafeAreaView
-      style={styles.container}
+      style={
+        styles.container
+      }
     >
-      {/* 건너뛰기 */}
+      {/* 상단 */}
 
       <View
         style={
           styles.topArea
         }
       >
-        <Pressable
-          style={
-            styles.skipButton
-          }
-          onPress={
-            finishOnboarding
-          }
-        >
-          <Text
+        {/* 이전 */}
+
+        {currentIndex > 0 ? (
+          <Pressable
             style={
-              styles.skipText
+              styles.backButton
+            }
+            onPress={
+              goPrevious
+            }
+            hitSlop={8}
+          >
+            <Ionicons
+              name="chevron-back"
+              size={24}
+              color="#172033"
+            />
+          </Pressable>
+        ) : (
+          <View
+            style={
+              styles.backButtonPlaceholder
+            }
+          />
+        )}
+
+        {/* 첫 페이지만 건너뛰기 */}
+
+        {currentIndex === 0 ? (
+          <Pressable
+            style={
+              styles.skipButton
+            }
+            onPress={
+              finishOnboarding
             }
           >
-            건너뛰기
-          </Text>
-        </Pressable>
+            <Text
+              style={
+                styles.skipText
+              }
+            >
+              건너뛰기
+            </Text>
+          </Pressable>
+        ) : (
+          <View
+            style={
+              styles.skipButtonPlaceholder
+            }
+          />
+        )}
       </View>
 
       {/* 페이지 */}
 
       <FlatList
-        ref={flatListRef}
-        data={pages}
+        ref={
+          flatListRef
+        }
+        data={
+          pages
+        }
         horizontal
         pagingEnabled
-        bounces={false}
+        bounces={
+          false
+        }
         showsHorizontalScrollIndicator={
           false
         }
         keyExtractor={(
           item
-        ) => item.id}
-        onViewableItemsChanged={
-          onViewableItemsChanged
+        ) =>
+          item.id
         }
-        viewabilityConfig={
-          viewabilityConfig
+        onMomentumScrollEnd={
+          handleScrollEnd
         }
+        getItemLayout={(
+          _,
+          index
+        ) => ({
+          length:
+            screenWidth,
+
+          offset:
+            screenWidth *
+            index,
+
+          index,
+        })}
         renderItem={({
           item,
+          index,
         }) => (
-          <View
-            style={
-              styles.page
-            }
+          <Pressable
+            style={[
+              styles.page,
+
+              {
+                width:
+                  screenWidth,
+              },
+            ]}
+            onPress={() => {
+              if (
+                index <
+                pages.length - 1
+              ) {
+                goNext();
+              }
+            }}
           >
             {/* 제목 */}
 
@@ -212,7 +302,9 @@ export default function OnboardingScreen() {
                   styles.title
                 }
               >
-                {item.title}
+                {
+                  item.title
+                }
 
                 <Text
                   style={
@@ -247,13 +339,29 @@ export default function OnboardingScreen() {
                 source={
                   item.image
                 }
-                style={
-                  styles.image
-                }
+                style={[
+                  styles.image,
+
+                  {
+                    width:
+                      Math.min(
+                        screenWidth *
+                          0.78,
+                        360
+                      ),
+
+                    height:
+                      Math.min(
+                        screenWidth *
+                          0.78,
+                        360
+                      ),
+                  },
+                ]}
                 resizeMode="contain"
               />
             </View>
-          </View>
+          </Pressable>
         )}
       />
 
@@ -272,7 +380,10 @@ export default function OnboardingScreen() {
           }
         >
           {pages.map(
-            (_, index) => (
+            (
+              _,
+              index
+            ) => (
               <View
                 key={
                   index
@@ -339,24 +450,57 @@ const styles =
         '#FFFFFF',
     },
 
-    /* 상단 */
+    /* ========================
+       상단
+    ======================== */
 
     topArea: {
       minHeight: 52,
 
-      paddingHorizontal: 22,
+      paddingHorizontal: 18,
 
-      alignItems:
-        'flex-end',
+      flexDirection: 'row',
+
+      alignItems: 'center',
+
+      justifyContent:
+        'space-between',
+    },
+
+    backButton: {
+      width: 40,
+
+      height: 40,
+
+      borderRadius: 20,
+
+      alignItems: 'center',
 
       justifyContent:
         'center',
     },
 
+    backButtonPlaceholder: {
+      width: 40,
+
+      height: 40,
+    },
+
     skipButton: {
+      minWidth: 56,
+
       paddingHorizontal: 5,
 
       paddingVertical: 8,
+
+      alignItems:
+        'flex-end',
+    },
+
+    skipButtonPlaceholder: {
+      width: 56,
+
+      height: 40,
     },
 
     skipText: {
@@ -368,12 +512,11 @@ const styles =
       color: '#8792A2',
     },
 
-    /* 페이지 */
+    /* ========================
+       페이지
+    ======================== */
 
     page: {
-      width:
-        SCREEN_WIDTH,
-
       flex: 1,
 
       paddingHorizontal: 26,
@@ -425,7 +568,9 @@ const styles =
       color: '#7C8798',
     },
 
-    /* 이미지 */
+    /* ========================
+       이미지
+    ======================== */
 
     imageArea: {
       flex: 1,
@@ -440,18 +585,14 @@ const styles =
     },
 
     image: {
-      width:
-        SCREEN_WIDTH *
-        0.78,
-
-      height:
-        SCREEN_WIDTH *
-        0.78,
+      maxWidth: 360,
 
       maxHeight: 360,
     },
 
-    /* 하단 */
+    /* ========================
+       하단
+    ======================== */
 
     bottomArea: {
       paddingHorizontal: 22,
