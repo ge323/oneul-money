@@ -115,6 +115,38 @@ const DEFAULT_CATEGORY_ICONS: Record<
   etc: 'ellipsis-horizontal-outline',
 };
 
+const parseExpenseDate = (value: string) => {
+  const localMatch = value.match(
+    /^(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{1,2}):(\d{2})(?::(\d{2}))?)?$/
+  );
+
+  if (localMatch) {
+    const [, year, month, day, hour = '0', minute = '0', second = '0'] =
+      localMatch;
+
+    return new Date(
+      Number(year),
+      Number(month) - 1,
+      Number(day),
+      Number(hour),
+      Number(minute),
+      Number(second)
+    );
+  }
+
+  return new Date(value);
+};
+
+const getLocalDateKey = (value: Date | string) => {
+  const date = typeof value === 'string' ? parseExpenseDate(value) : value;
+
+  return [
+    date.getFullYear(),
+    String(date.getMonth() + 1).padStart(2, '0'),
+    String(date.getDate()).padStart(2, '0'),
+  ].join('-');
+};
+
 export default function HistoryScreen() {
   const [expenses, setExpenses] =
     useState<Expense[]>([]);
@@ -164,9 +196,9 @@ export default function HistoryScreen() {
               Math.abs(
                 gestureState.dx
               ) >
-                Math.abs(
-                  gestureState.dy
-                )
+              Math.abs(
+                gestureState.dy
+              )
             );
           },
 
@@ -183,7 +215,7 @@ export default function HistoryScreen() {
               Math.max(
                 0,
                 dragStartX.current -
-                  gestureState.dx
+                gestureState.dx
               );
 
             categoryScrollRef.current?.scrollTo(
@@ -340,25 +372,19 @@ export default function HistoryScreen() {
       return expenses
         .filter((expense) => {
           const date =
-            new Date(
-              expense.createdAt
-            );
+            parseExpenseDate(expense.createdAt);
 
           return (
             date.getFullYear() ===
-              selectedYear &&
+            selectedYear &&
             date.getMonth() ===
-              selectedMonthIndex
+            selectedMonthIndex
           );
         })
         .sort(
           (a, b) =>
-            new Date(
-              b.createdAt
-            ).getTime() -
-            new Date(
-              a.createdAt
-            ).getTime()
+            parseExpenseDate(b.createdAt).getTime() -
+            parseExpenseDate(a.createdAt).getTime()
         );
     }, [
       expenses,
@@ -432,10 +458,10 @@ export default function HistoryScreen() {
 
     return (
       DEFAULT_CATEGORY_ICONS[
-        category
+      category
       ] ??
       customCategoryIcons[
-        category
+      category
       ] ??
       'ellipsis-horizontal-outline'
     );
@@ -460,7 +486,7 @@ export default function HistoryScreen() {
 
     return (
       customCategoryLabels[
-        category
+      category
       ] ?? '기타'
     );
   };
@@ -504,116 +530,116 @@ export default function HistoryScreen() {
    */
 
   const normalizeText = (value: string) => {
-  return value
-    .toLowerCase()
-    .replace(/\s+/g, '');
-};
+    return value
+      .toLowerCase()
+      .replace(/\s+/g, '');
+  };
 
-const filteredExpenses =
-  useMemo(() => {
-    const trimmed =
-      searchQuery
-        .trim()
-        .toLowerCase();
+  const filteredExpenses =
+    useMemo(() => {
+      const trimmed =
+        searchQuery
+          .trim()
+          .toLowerCase();
 
-    const normalizedSearch =
-      normalizeText(trimmed);
+      const normalizedSearch =
+        normalizeText(trimmed);
 
-    const numericSearch =
-      trimmed.replace(
-        /[^0-9]/g,
-        ''
-      );
+      const numericSearch =
+        trimmed.replace(
+          /[^0-9]/g,
+          ''
+        );
 
-    return monthExpenses.filter(
-      (expense) => {
-        const categoryMatches =
-          selectedCategory ===
+      return monthExpenses.filter(
+        (expense) => {
+          const categoryMatches =
+            selectedCategory ===
             'all' ||
-          expense.category ===
+            expense.category ===
             selectedCategory;
 
-        if (!categoryMatches) {
-          return false;
-        }
+          if (!categoryMatches) {
+            return false;
+          }
 
-        if (!trimmed) {
-          return true;
-        }
+          if (!trimmed) {
+            return true;
+          }
 
-        const title =
-          expense.title
-            .toLowerCase();
+          const title =
+            expense.title
+              .toLowerCase();
 
-        const categoryLabel =
-          getCategoryLabel(
-            expense.category
-          ).toLowerCase();
+          const categoryLabel =
+            getCategoryLabel(
+              expense.category
+            ).toLowerCase();
 
-        const normalizedTitle =
-          normalizeText(title);
+          const normalizedTitle =
+            normalizeText(title);
 
-        const normalizedCategory =
-          normalizeText(
-            categoryLabel
-          );
+          const normalizedCategory =
+            normalizeText(
+              categoryLabel
+            );
 
-        const rawAmount =
-          String(
-            expense.amount
-          );
+          const rawAmount =
+            String(
+              expense.amount
+            );
 
-        const formattedAmount =
-          formatMoney(
-            expense.amount
-          );
+          const formattedAmount =
+            formatMoney(
+              expense.amount
+            );
 
-        const titleMatches =
-          title.includes(
-            trimmed
-          ) ||
-          normalizedTitle.includes(
-            normalizedSearch
-          );
-
-        const categoryNameMatches =
-          categoryLabel.includes(
-            trimmed
-          ) ||
-          normalizedCategory.includes(
-            normalizedSearch
-          );
-
-        const amountMatches =
-          numericSearch.length >
-            0 &&
-          (
-            rawAmount.includes(
-              numericSearch
+          const titleMatches =
+            title.includes(
+              trimmed
             ) ||
-            formattedAmount
-              .replace(
-                /,/g,
-                ''
-              )
-              .includes(
-                numericSearch
-              )
-          );
+            normalizedTitle.includes(
+              normalizedSearch
+            );
 
-        return (
-          titleMatches ||
-          categoryNameMatches ||
-          amountMatches
-        );
-      }
-    );
-  }, [
-    monthExpenses,
-    searchQuery,
-    selectedCategory,
-    customCategoryLabels,
-  ]);
+          const categoryNameMatches =
+            categoryLabel.includes(
+              trimmed
+            ) ||
+            normalizedCategory.includes(
+              normalizedSearch
+            );
+
+          const amountMatches =
+            numericSearch.length >
+            0 &&
+            (
+              rawAmount.includes(
+                numericSearch
+              ) ||
+              formattedAmount
+                .replace(
+                  /,/g,
+                  ''
+                )
+                .includes(
+                  numericSearch
+                )
+            );
+
+          return (
+            titleMatches ||
+            categoryNameMatches ||
+            amountMatches
+          );
+        }
+      );
+    }, [
+      monthExpenses,
+      searchQuery,
+      selectedCategory,
+      customCategoryLabels,
+    ]);
   /*
    * 검색/필터 결과 총액
    */
@@ -629,7 +655,7 @@ const filteredExpenses =
 
   const isFiltering =
     searchQuery.trim().length >
-      0 ||
+    0 ||
     selectedCategory !== 'all';
 
   /*
@@ -650,16 +676,14 @@ const filteredExpenses =
         filteredExpenses.forEach(
           (expense) => {
             const date =
-              new Date(
-                expense.createdAt
-              );
+              parseExpenseDate(expense.createdAt);
 
             const dateKey = [
               date.getFullYear(),
 
               String(
                 date.getMonth() +
-                  1
+                1
               ).padStart(
                 2,
                 '0'
@@ -741,19 +765,16 @@ const filteredExpenses =
   const formatGroupDate = (
     date: Date
   ) => {
-    return `${
-      date.getMonth() + 1
-    }월 ${date.getDate()}일 ${getWeekday(
-      date
-    )}`;
+    return `${date.getMonth() + 1
+      }월 ${date.getDate()}일 ${getWeekday(
+        date
+      )}`;
   };
 
   const formatTime = (
     value: string
   ) => {
-    return new Date(
-      value
-    ).toLocaleTimeString(
+    return parseExpenseDate(value).toLocaleTimeString(
       'ko-KR',
       {
         hour:
@@ -811,7 +832,7 @@ const filteredExpenses =
                 (Number(
                   budget.spentAmount
                 ) || 0) -
-                  expense.amount
+                expense.amount
               ),
           };
 
@@ -911,9 +932,9 @@ const filteredExpenses =
 
   const isCurrentMonth =
     now.getFullYear() ===
-      selectedYear &&
+    selectedYear &&
     now.getMonth() ===
-      selectedMonthIndex;
+    selectedMonthIndex;
 
   return (
     <ScrollView
@@ -962,11 +983,11 @@ const filteredExpenses =
         style={({
           pressed,
         }) => [
-          styles.reportButton,
+            styles.reportButton,
 
-          pressed &&
+            pressed &&
             styles.reportButtonPressed,
-        ]}
+          ]}
         onPress={() =>
           router.push(
             '/report'
@@ -1180,23 +1201,23 @@ const filteredExpenses =
 
           {searchQuery.length >
             0 && (
-            <Pressable
-              style={
-                styles.searchClearButton
-              }
-              onPress={() =>
-                setSearchQuery(
-                  ''
-                )
-              }
-            >
-              <Ionicons
-                name="close-circle"
-                size={20}
-                color="#A8B0BE"
-              />
-            </Pressable>
-          )}
+              <Pressable
+                style={
+                  styles.searchClearButton
+                }
+                onPress={() =>
+                  setSearchQuery(
+                    ''
+                  )
+                }
+              >
+                <Ionicons
+                  name="close-circle"
+                  size={20}
+                  color="#A8B0BE"
+                />
+              </Pressable>
+            )}
         </View>
 
         {/* =====================
@@ -1225,92 +1246,92 @@ const filteredExpenses =
                 event.nativeEvent.contentOffset.x;
             }}
           >
-          <Pressable
-            style={[
-              styles.filterChip,
+            <Pressable
+              style={[
+                styles.filterChip,
 
-              selectedCategory ===
+                selectedCategory ===
                 'all' &&
                 styles.filterChipSelected,
-            ]}
-            onPress={() => {
-              setSelectedCategory(
-                'all'
-              );
+              ]}
+              onPress={() => {
+                setSelectedCategory(
+                  'all'
+                );
 
-              setOpenedMenuId(
-                null
-              );
-            }}
-          >
-            <Text
-              style={[
-                styles.filterChipText,
+                setOpenedMenuId(
+                  null
+                );
+              }}
+            >
+              <Text
+                style={[
+                  styles.filterChipText,
 
-                selectedCategory ===
+                  selectedCategory ===
                   'all' &&
                   styles.filterChipTextSelected,
-              ]}
-            >
-              전체
-            </Text>
-          </Pressable>
+                ]}
+              >
+                전체
+              </Text>
+            </Pressable>
 
-          {categoryOptions.map(
-            (item) => {
-              const isSelected =
-                selectedCategory ===
-                item.id;
+            {categoryOptions.map(
+              (item) => {
+                const isSelected =
+                  selectedCategory ===
+                  item.id;
 
-              return (
-                <Pressable
-                  key={
-                    item.id
-                  }
-                  style={[
-                    styles.filterChip,
-
-                    isSelected &&
-                      styles.filterChipSelected,
-                  ]}
-                  onPress={() => {
-                    setSelectedCategory(
+                return (
+                  <Pressable
+                    key={
                       item.id
-                    );
-
-                    setOpenedMenuId(
-                      null
-                    );
-                  }}
-                >
-                  <Ionicons
-                    name={
-                      item.icon
                     }
-                    size={15}
-                    color={
-                      isSelected
-                        ? '#3563C9'
-                        : '#687386'
-                    }
-                  />
-
-                  <Text
                     style={[
-                      styles.filterChipText,
+                      styles.filterChip,
 
                       isSelected &&
-                        styles.filterChipTextSelected,
+                      styles.filterChipSelected,
                     ]}
+                    onPress={() => {
+                      setSelectedCategory(
+                        item.id
+                      );
+
+                      setOpenedMenuId(
+                        null
+                      );
+                    }}
                   >
-                    {
-                      item.label
-                    }
-                  </Text>
-                </Pressable>
-              );
-            }
-          )}
+                    <Ionicons
+                      name={
+                        item.icon
+                      }
+                      size={15}
+                      color={
+                        isSelected
+                          ? '#3563C9'
+                          : '#687386'
+                      }
+                    />
+
+                    <Text
+                      style={[
+                        styles.filterChipText,
+
+                        isSelected &&
+                        styles.filterChipTextSelected,
+                      ]}
+                    >
+                      {
+                        item.label
+                      }
+                    </Text>
+                  </Pressable>
+                );
+              }
+            )}
           </ScrollView>
         </View>
 
@@ -1331,11 +1352,11 @@ const filteredExpenses =
                 {searchQuery.trim()
                   ? `'${searchQuery.trim()}' 검색 결과`
                   : selectedCategory ===
-                      'all'
+                    'all'
                     ? '검색 결과'
                     : `${getCategoryLabel(
-                        selectedCategory
-                      )} 지출`}
+                      selectedCategory
+                    )} 지출`}
               </Text>
 
               <Text
@@ -1392,7 +1413,7 @@ const filteredExpenses =
         {/* 월 자체에 데이터가 없음 */}
 
         {monthExpenses.length ===
-        0 ? (
+          0 ? (
           <View
             style={
               styles.empty
@@ -1557,7 +1578,7 @@ const filteredExpenses =
                               styles.expenseWrapper,
 
                               isMenuOpen &&
-                                styles.expenseWrapperOpen,
+                              styles.expenseWrapperOpen,
                             ]}
                           >
                             <View
