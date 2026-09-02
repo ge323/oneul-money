@@ -1,7 +1,11 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useFocusEffect } from 'expo-router';
+import Ionicons from '@expo/vector-icons/Ionicons';
+import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
 import {
+  Alert,
+  Platform,
+  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -11,6 +15,7 @@ import {
 import AppHeader from '../components/AppHeader';
 
 const EXPENSES_KEY = 'expenses';
+const BUDGET_KEY = 'budget-settings';
 
 type Expense = {
   id: string;
@@ -18,6 +23,14 @@ type Expense = {
   amount: number;
   category?: string;
   createdAt: string;
+};
+
+type BudgetSettings = {
+  monthlyBudget: number;
+  fixedExpense: number;
+  savingGoal: number;
+  spentAmount: number;
+  remainingDays: number;
 };
 
 const CATEGORY_EMOJI: Record<string, string> = {
@@ -32,6 +45,7 @@ const CATEGORY_EMOJI: Record<string, string> = {
 
 export default function HistoryScreen() {
   const [expenses, setExpenses] = useState<Expense[]>([]);
+  const [openedMenuId, setOpenedMenuId] = useState<string | null>(null);
 
   useFocusEffect(
     useCallback(() => {
@@ -65,16 +79,105 @@ export default function HistoryScreen() {
     });
   };
 
+  const getCategoryEmoji = (category?: string) => {
+    if (!category) {
+      return '💳';
+    }
+
+    return CATEGORY_EMOJI[category] ?? '💳';
+  };
+
+  // 지출 삭제
+  const deleteExpense = async (expense: Expense) => {
+    try {
+      // 1. 지출 목록에서 제거
+      const updatedExpenses = expenses.filter(
+        (item) => item.id !== expense.id
+      );
+
+      await AsyncStorage.setItem(
+        EXPENSES_KEY,
+        JSON.stringify(updatedExpenses)
+      );
+
+      // 2. 홈 화면의 총 사용 금액도 복구
+      const savedBudget = await AsyncStorage.getItem(BUDGET_KEY);
+
+      if (savedBudget) {
+        const budget: BudgetSettings = JSON.parse(savedBudget);
+
+        const updatedBudget: BudgetSettings = {
+          ...budget,
+          spentAmount: Math.max(
+            0,
+            budget.spentAmount - expense.amount
+          ),
+        };
+
+        await AsyncStorage.setItem(
+          BUDGET_KEY,
+          JSON.stringify(updatedBudget)
+        );
+      }
+
+      // 3. 화면 즉시 갱신
+      setExpenses(updatedExpenses);
+      setOpenedMenuId(null);
+    } catch (error) {
+      console.error('지출 삭제 실패:', error);
+    }
+  };
+
+  // 삭제 확인
+  const confirmDelete = (expense: Expense) => {
+    // Expo Web
+    if (Platform.OS === 'web') {
+      const confirmed = window.confirm(
+        `${expense.title} 지출 내역을 삭제할까요?\n\n${formatMoney(
+          expense.amount
+        )}원`
+      );
+
+      if (confirmed) {
+        deleteExpense(expense);
+      }
+
+      return;
+    }
+
+    // iOS / Android
+    Alert.alert(
+      '지출 삭제',
+      `${expense.title} 지출 내역을 삭제할까요?`,
+      [
+        {
+          text: '취소',
+          style: 'cancel',
+        },
+        {
+          text: '삭제',
+          style: 'destructive',
+          onPress: () => deleteExpense(expense),
+        },
+      ]
+    );
+  };
+
+  const editExpense = (expense: Expense) => {
+    setOpenedMenuId(null);
+
+    router.push({
+      pathname: '/expense',
+      params: {
+        id: expense.id,
+      },
+    });
+  };
+
   const totalExpense = expenses.reduce(
     (sum, expense) => sum + expense.amount,
     0
   );
-
-  const getCategoryEmoji = (category?: string) => {
-    if (!category) return '💳';
-
-    return CATEGORY_EMOJI[category] ?? '💳';
-  };
 
   return (
     <ScrollView
@@ -88,9 +191,7 @@ export default function HistoryScreen() {
       />
 
       <View style={styles.totalBox}>
-        <Text style={styles.totalLabel}>
-          총 지출
-        </Text>
+        <Text style={styles.totalLabel}>총 지출</Text>
 
         <Text style={styles.totalAmount}>
           {formatMoney(totalExpense)}원
@@ -104,9 +205,7 @@ export default function HistoryScreen() {
       <View style={styles.list}>
         {expenses.length === 0 ? (
           <View style={styles.empty}>
-            <Text style={styles.emptyEmoji}>
-              🧾
-            </Text>
+            <Text style={styles.emptyEmoji}>🧾</Text>
 
             <Text style={styles.emptyTitle}>
               아직 지출 내역이 없어요
@@ -117,34 +216,95 @@ export default function HistoryScreen() {
             </Text>
           </View>
         ) : (
-          expenses.map((expense) => (
-            <View
-              key={expense.id}
-              style={styles.expenseItem}
-            >
-              <View style={styles.leftArea}>
-                <View style={styles.categoryIcon}>
-                  <Text style={styles.categoryEmoji}>
-                    {getCategoryEmoji(expense.category)}
-                  </Text>
+          expenses.map((expense) => {
+            const isMenuOpen =
+              openedMenuId === expense.id;
+
+            return (
+              <View
+                key={expense.id}
+                style={styles.expenseWrapper}
+              >
+                <View style={styles.expenseItem}>
+                  <View style={styles.leftArea}>
+                    <View style={styles.categoryIcon}>
+                      <Text style={styles.categoryEmoji}>
+                        {getCategoryEmoji(expense.category)}
+                      </Text>
+                    </View>
+
+                    <View style={styles.expenseInfo}>
+                      <Text style={styles.expenseTitle}>
+                        {expense.title}
+                      </Text>
+
+                      <Text style={styles.expenseDate}>
+                        {formatDate(expense.createdAt)}
+                      </Text>
+                    </View>
+                  </View>
+
+                  <View style={styles.rightArea}>
+                    <Text style={styles.expenseAmount}>
+                      -{formatMoney(expense.amount)}원
+                    </Text>
+
+                    <Pressable
+                      style={styles.menuButton}
+                      onPress={() =>
+                        setOpenedMenuId(
+                          isMenuOpen ? null : expense.id
+                        )
+                      }
+                      hitSlop={10}
+                    >
+                      <Ionicons
+                        name="ellipsis-vertical"
+                        size={20}
+                        color="#687386"
+                      />
+                    </Pressable>
+                  </View>
                 </View>
 
-                <View style={styles.expenseInfo}>
-                  <Text style={styles.expenseTitle}>
-                    {expense.title}
-                  </Text>
+                {isMenuOpen && (
+                  <View style={styles.menu}>
+                    <Pressable
+                      style={styles.menuItem}
+                      onPress={() => editExpense(expense)}
+                    >
+                      <Ionicons
+                        name="pencil-outline"
+                        size={18}
+                        color="#172033"
+                      />
 
-                  <Text style={styles.expenseDate}>
-                    {formatDate(expense.createdAt)}
-                  </Text>
-                </View>
+                      <Text style={styles.menuText}>
+                        수정하기
+                      </Text>
+                    </Pressable>
+
+                    <View style={styles.menuDivider} />
+
+                    <Pressable
+                      style={styles.menuItem}
+                      onPress={() => confirmDelete(expense)}
+                    >
+                      <Ionicons
+                        name="trash-outline"
+                        size={18}
+                        color="#D84B4B"
+                      />
+
+                      <Text style={styles.deleteText}>
+                        삭제하기
+                      </Text>
+                    </Pressable>
+                  </View>
+                )}
               </View>
-
-              <Text style={styles.expenseAmount}>
-                -{formatMoney(expense.amount)}원
-              </Text>
-            </View>
-          ))
+            );
+          })
         )}
       </View>
     </ScrollView>
@@ -189,6 +349,10 @@ const styles = StyleSheet.create({
 
   list: {
     marginTop: 28,
+  },
+
+  expenseWrapper: {
+    position: 'relative',
   },
 
   expenseItem: {
@@ -236,11 +400,67 @@ const styles = StyleSheet.create({
     color: '#8792A2',
   },
 
-  expenseAmount: {
+  rightArea: {
+    flexDirection: 'row',
+    alignItems: 'center',
     marginLeft: 12,
+  },
+
+  expenseAmount: {
     fontSize: 16,
     fontWeight: '700',
     color: '#172033',
+  },
+
+  menuButton: {
+    width: 34,
+    height: 34,
+    marginLeft: 6,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  menu: {
+    alignSelf: 'flex-end',
+    width: 150,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 14,
+    paddingVertical: 6,
+    marginTop: 4,
+
+    shadowColor: '#000000',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+    elevation: 4,
+  },
+
+  menuItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    gap: 8,
+  },
+
+  menuDivider: {
+    height: 1,
+    backgroundColor: '#EEF1F5',
+  },
+
+  menuText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#172033',
+  },
+
+  deleteText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#D84B4B',
   },
 
   empty: {

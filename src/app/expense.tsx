@@ -1,7 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { router } from 'expo-router';
-import { useState } from 'react';
-import AppHeader from '../components/AppHeader';
+import { router, useLocalSearchParams } from 'expo-router';
+import { useEffect, useState } from 'react';
 import {
   Pressable,
   StyleSheet,
@@ -9,6 +8,8 @@ import {
   TextInput,
   View,
 } from 'react-native';
+
+import AppHeader from '../components/AppHeader';
 
 const BUDGET_KEY = 'budget-settings';
 const EXPENSES_KEY = 'expenses';
@@ -74,9 +75,29 @@ const CATEGORIES: Category[] = [
 ];
 
 export default function ExpenseScreen() {
+  const params = useLocalSearchParams<{
+    id?: string;
+  }>();
+
+  const expenseId = params.id;
+
+  const isEditMode = !!expenseId;
+
   const [title, setTitle] = useState('');
   const [amount, setAmount] = useState('');
   const [category, setCategory] = useState('food');
+
+  const [originalAmount, setOriginalAmount] =
+    useState(0);
+
+  const [originalCreatedAt, setOriginalCreatedAt] =
+    useState<string | null>(null);
+
+  useEffect(() => {
+    if (isEditMode) {
+      loadExpense();
+    }
+  }, [expenseId]);
 
   const handleAmountChange = (text: string) => {
     const numbersOnly = text.replace(/[^0-9]/g, '');
@@ -93,6 +114,51 @@ export default function ExpenseScreen() {
     );
   };
 
+  const loadExpense = async () => {
+    try {
+      const saved =
+        await AsyncStorage.getItem(EXPENSES_KEY);
+
+      if (!saved) return;
+
+      const expenses: Expense[] =
+        JSON.parse(saved);
+
+      const targetExpense =
+        expenses.find(
+          (expense) =>
+            expense.id === expenseId
+        );
+
+      if (!targetExpense) return;
+
+      setTitle(targetExpense.title);
+
+      setAmount(
+        targetExpense.amount.toLocaleString(
+          'ko-KR'
+        )
+      );
+
+      setCategory(
+        targetExpense.category || 'food'
+      );
+
+      setOriginalAmount(
+        targetExpense.amount
+      );
+
+      setOriginalCreatedAt(
+        targetExpense.createdAt
+      );
+    } catch (error) {
+      console.error(
+        '지출 정보 불러오기 실패:',
+        error
+      );
+    }
+  };
+
   const saveExpense = async () => {
     const numericAmount = Number(
       amount.replace(/,/g, '')
@@ -106,16 +172,76 @@ export default function ExpenseScreen() {
       const savedExpenses =
         await AsyncStorage.getItem(EXPENSES_KEY);
 
-      const expenses: Expense[] = savedExpenses
-        ? JSON.parse(savedExpenses)
-        : [];
+      const expenses: Expense[] =
+        savedExpenses
+          ? JSON.parse(savedExpenses)
+          : [];
+
+      if (isEditMode) {
+        const updatedExpenses =
+          expenses.map((expense) => {
+            if (
+              expense.id !== expenseId
+            ) {
+              return expense;
+            }
+
+            return {
+              ...expense,
+              title:
+                title.trim() || '지출',
+              amount: numericAmount,
+              category,
+              createdAt:
+                originalCreatedAt ||
+                expense.createdAt,
+            };
+          });
+
+        await AsyncStorage.setItem(
+          EXPENSES_KEY,
+          JSON.stringify(updatedExpenses)
+        );
+
+        const savedBudget =
+          await AsyncStorage.getItem(
+            BUDGET_KEY
+          );
+
+        if (savedBudget) {
+          const budget: BudgetSettings =
+            JSON.parse(savedBudget);
+
+          const amountDifference =
+            numericAmount -
+            originalAmount;
+
+          const updatedBudget = {
+            ...budget,
+            spentAmount: Math.max(
+              0,
+              budget.spentAmount +
+                amountDifference
+            ),
+          };
+
+          await AsyncStorage.setItem(
+            BUDGET_KEY,
+            JSON.stringify(updatedBudget)
+          );
+        }
+
+        router.back();
+        return;
+      }
 
       const newExpense: Expense = {
         id: Date.now().toString(),
         title: title.trim() || '지출',
         amount: numericAmount,
         category,
-        createdAt: new Date().toISOString(),
+        createdAt:
+          new Date().toISOString(),
       };
 
       const updatedExpenses = [
@@ -129,7 +255,9 @@ export default function ExpenseScreen() {
       );
 
       const savedBudget =
-        await AsyncStorage.getItem(BUDGET_KEY);
+        await AsyncStorage.getItem(
+          BUDGET_KEY
+        );
 
       if (savedBudget) {
         const budget: BudgetSettings =
@@ -138,7 +266,8 @@ export default function ExpenseScreen() {
         const updatedBudget = {
           ...budget,
           spentAmount:
-            budget.spentAmount + numericAmount,
+            budget.spentAmount +
+            numericAmount,
         };
 
         await AsyncStorage.setItem(
@@ -149,16 +278,27 @@ export default function ExpenseScreen() {
 
       router.back();
     } catch (error) {
-      console.error('지출 저장 실패:', error);
+      console.error(
+        '지출 저장 실패:',
+        error
+      );
     }
   };
 
   return (
     <View style={styles.container}>
-        <AppHeader
-            title="지출 기록"
-            description="오늘 사용한 금액을 기록해보세요."
-            />
+      <AppHeader
+        title={
+          isEditMode
+            ? '지출 수정'
+            : '지출 기록'
+        }
+        description={
+          isEditMode
+            ? '기록한 지출 정보를 수정해보세요.'
+            : '오늘 사용한 금액을 기록해보세요.'
+        }
+      />
 
       <View style={styles.form}>
         <View style={styles.inputGroup}>
@@ -170,7 +310,9 @@ export default function ExpenseScreen() {
             <TextInput
               style={styles.amountInput}
               value={amount}
-              onChangeText={handleAmountChange}
+              onChangeText={
+                handleAmountChange
+              }
               placeholder="0"
               keyboardType="numeric"
             />
@@ -199,7 +341,11 @@ export default function ExpenseScreen() {
             카테고리
           </Text>
 
-          <View style={styles.categoryContainer}>
+          <View
+            style={
+              styles.categoryContainer
+            }
+          >
             {CATEGORIES.map((item) => {
               const isSelected =
                 category === item.id;
@@ -217,7 +363,9 @@ export default function ExpenseScreen() {
                   }
                 >
                   <Text
-                    style={styles.categoryEmoji}
+                    style={
+                      styles.categoryEmoji
+                    }
                   >
                     {item.emoji}
                   </Text>
@@ -242,8 +390,12 @@ export default function ExpenseScreen() {
         style={styles.saveButton}
         onPress={saveExpense}
       >
-        <Text style={styles.saveButtonText}>
-          기록하기
+        <Text
+          style={styles.saveButtonText}
+        >
+          {isEditMode
+            ? '수정 완료'
+            : '기록하기'}
         </Text>
       </Pressable>
     </View>
@@ -255,23 +407,10 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#FFFFFF',
     paddingHorizontal: 24,
-    paddingTop: 60,
-  },
-
-  title: {
-    fontSize: 28,
-    fontWeight: '800',
-    color: '#172033',
-  },
-
-  description: {
-    marginTop: 8,
-    fontSize: 15,
-    color: '#687386',
+    paddingTop: 32,
   },
 
   form: {
-    marginTop: 36,
     gap: 28,
   },
 
