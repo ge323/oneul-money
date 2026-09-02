@@ -1,7 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { router, useFocusEffect } from 'expo-router';
-import { useCallback, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import {
   Alert,
   Platform,
@@ -12,10 +12,9 @@ import {
   View,
 } from 'react-native';
 
-import AppHeader from '../../components/AppHeader';
-
 const EXPENSES_KEY = 'expenses';
 const BUDGET_KEY = 'budget-settings';
+const CUSTOM_CATEGORIES_KEY = 'custom-categories';
 
 type Expense = {
   id: string;
@@ -30,10 +29,24 @@ type BudgetSettings = {
   fixedExpense: number;
   savingGoal: number;
   spentAmount: number;
-  remainingDays: number;
+  payday?: number;
+  paydayType?: 'date' | 'lastDay';
 };
 
-const CATEGORY_EMOJI: Record<string, string> = {
+type CustomCategory = {
+  id: string;
+  label: string;
+  emoji: string;
+  custom?: boolean;
+};
+
+type ExpenseGroup = {
+  dateKey: string;
+  date: Date;
+  expenses: Expense[];
+};
+
+const DEFAULT_CATEGORY_EMOJI: Record<string, string> = {
   food: '🍚',
   cafe: '☕',
   transport: '🚇',
@@ -45,98 +58,346 @@ const CATEGORY_EMOJI: Record<string, string> = {
 
 export default function HistoryScreen() {
   const [expenses, setExpenses] = useState<Expense[]>([]);
-  const [openedMenuId, setOpenedMenuId] = useState<string | null>(null);
+
+  const [customCategories, setCustomCategories] =
+    useState<CustomCategory[]>([]);
+
+  const [openedMenuId, setOpenedMenuId] =
+    useState<string | null>(null);
+
+  const [selectedMonth, setSelectedMonth] =
+    useState(() => {
+      const today = new Date();
+
+      return new Date(
+        today.getFullYear(),
+        today.getMonth(),
+        1
+      );
+    });
 
   useFocusEffect(
     useCallback(() => {
-      loadExpenses();
+      loadData();
+
+      setOpenedMenuId(null);
     }, [])
   );
 
-  const loadExpenses = async () => {
+  const loadData = async () => {
     try {
-      const saved = await AsyncStorage.getItem(EXPENSES_KEY);
+      const [
+        savedExpenses,
+        savedCustomCategories,
+      ] = await Promise.all([
+        AsyncStorage.getItem(
+          EXPENSES_KEY
+        ),
 
-      if (!saved) {
-        setExpenses([]);
-        return;
-      }
+        AsyncStorage.getItem(
+          CUSTOM_CATEGORIES_KEY
+        ),
+      ]);
 
-      setExpenses(JSON.parse(saved));
+      setExpenses(
+        savedExpenses
+          ? JSON.parse(savedExpenses)
+          : []
+      );
+
+      setCustomCategories(
+        savedCustomCategories
+          ? JSON.parse(
+              savedCustomCategories
+            )
+          : []
+      );
     } catch (error) {
-      console.error('지출 내역 불러오기 실패:', error);
+      console.error(
+        '지출 내역 불러오기 실패:',
+        error
+      );
     }
   };
 
-  const formatMoney = (amount: number) => {
-    return amount.toLocaleString('ko-KR');
+  const formatMoney = (
+    amount: number
+  ) => {
+    return amount.toLocaleString(
+      'ko-KR'
+    );
   };
 
-  const formatDate = (date: string) => {
-    return new Date(date).toLocaleDateString('ko-KR', {
-      month: 'long',
-      day: 'numeric',
-    });
+  const movePreviousMonth = () => {
+    setSelectedMonth(
+      (current) =>
+        new Date(
+          current.getFullYear(),
+          current.getMonth() - 1,
+          1
+        )
+    );
+
+    setOpenedMenuId(null);
   };
 
-  const getCategoryEmoji = (category?: string) => {
+  const moveNextMonth = () => {
+    setSelectedMonth(
+      (current) =>
+        new Date(
+          current.getFullYear(),
+          current.getMonth() + 1,
+          1
+        )
+    );
+
+    setOpenedMenuId(null);
+  };
+
+  const goCurrentMonth = () => {
+    const today = new Date();
+
+    setSelectedMonth(
+      new Date(
+        today.getFullYear(),
+        today.getMonth(),
+        1
+      )
+    );
+
+    setOpenedMenuId(null);
+  };
+
+  const selectedYear =
+    selectedMonth.getFullYear();
+
+  const selectedMonthIndex =
+    selectedMonth.getMonth();
+
+  const monthExpenses = useMemo(() => {
+    return expenses
+      .filter((expense) => {
+        const date = new Date(
+          expense.createdAt
+        );
+
+        return (
+          date.getFullYear() ===
+            selectedYear &&
+          date.getMonth() ===
+            selectedMonthIndex
+        );
+      })
+      .sort(
+        (a, b) =>
+          new Date(
+            b.createdAt
+          ).getTime() -
+          new Date(
+            a.createdAt
+          ).getTime()
+      );
+  }, [
+    expenses,
+    selectedYear,
+    selectedMonthIndex,
+  ]);
+
+  const totalExpense = useMemo(() => {
+    return monthExpenses.reduce(
+      (sum, expense) =>
+        sum + expense.amount,
+      0
+    );
+  }, [monthExpenses]);
+
+  const groupedExpenses =
+    useMemo<ExpenseGroup[]>(() => {
+      const groups =
+        new Map<
+          string,
+          ExpenseGroup
+        >();
+
+      monthExpenses.forEach(
+        (expense) => {
+          const date = new Date(
+            expense.createdAt
+          );
+
+          const dateKey = [
+            date.getFullYear(),
+            String(
+              date.getMonth() + 1
+            ).padStart(2, '0'),
+            String(
+              date.getDate()
+            ).padStart(2, '0'),
+          ].join('-');
+
+          const currentGroup =
+            groups.get(dateKey);
+
+          if (currentGroup) {
+            currentGroup.expenses.push(
+              expense
+            );
+          } else {
+            groups.set(dateKey, {
+              dateKey,
+              date: new Date(
+                date.getFullYear(),
+                date.getMonth(),
+                date.getDate()
+              ),
+              expenses: [expense],
+            });
+          }
+        }
+      );
+
+      return Array.from(
+        groups.values()
+      ).sort(
+        (a, b) =>
+          b.date.getTime() -
+          a.date.getTime()
+      );
+    }, [monthExpenses]);
+
+  const customCategoryEmoji =
+    useMemo(() => {
+      const map: Record<
+        string,
+        string
+      > = {};
+
+      customCategories.forEach(
+        (item) => {
+          map[item.id] =
+            item.emoji || '✨';
+        }
+      );
+
+      return map;
+    }, [customCategories]);
+
+  const getCategoryEmoji = (
+    category?: string
+  ) => {
     if (!category) {
       return '💳';
     }
 
-    return CATEGORY_EMOJI[category] ?? '💳';
+    return (
+      DEFAULT_CATEGORY_EMOJI[
+        category
+      ] ??
+      customCategoryEmoji[
+        category
+      ] ??
+      '💳'
+    );
   };
 
-  // 지출 삭제
-  const deleteExpense = async (expense: Expense) => {
+  const getWeekday = (
+    date: Date
+  ) => {
+    const weekdays = [
+      '일요일',
+      '월요일',
+      '화요일',
+      '수요일',
+      '목요일',
+      '금요일',
+      '토요일',
+    ];
+
+    return weekdays[
+      date.getDay()
+    ];
+  };
+
+  const formatGroupDate = (
+    date: Date
+  ) => {
+    return `${
+      date.getMonth() + 1
+    }월 ${date.getDate()}일 ${getWeekday(
+      date
+    )}`;
+  };
+
+  const deleteExpense = async (
+    expense: Expense
+  ) => {
     try {
-      // 1. 지출 목록에서 제거
-      const updatedExpenses = expenses.filter(
-        (item) => item.id !== expense.id
-      );
+      const updatedExpenses =
+        expenses.filter(
+          (item) =>
+            item.id !== expense.id
+        );
 
       await AsyncStorage.setItem(
         EXPENSES_KEY,
-        JSON.stringify(updatedExpenses)
+        JSON.stringify(
+          updatedExpenses
+        )
       );
 
-      // 2. 홈 화면의 총 사용 금액도 복구
-      const savedBudget = await AsyncStorage.getItem(BUDGET_KEY);
+      const savedBudget =
+        await AsyncStorage.getItem(
+          BUDGET_KEY
+        );
 
       if (savedBudget) {
-        const budget: BudgetSettings = JSON.parse(savedBudget);
+        const budget: BudgetSettings =
+          JSON.parse(savedBudget);
 
-        const updatedBudget: BudgetSettings = {
+        const updatedBudget = {
           ...budget,
+
           spentAmount: Math.max(
             0,
-            budget.spentAmount - expense.amount
+
+            (Number(
+              budget.spentAmount
+            ) || 0) -
+              expense.amount
           ),
         };
 
         await AsyncStorage.setItem(
           BUDGET_KEY,
-          JSON.stringify(updatedBudget)
+          JSON.stringify(
+            updatedBudget
+          )
         );
       }
 
-      // 3. 화면 즉시 갱신
-      setExpenses(updatedExpenses);
+      setExpenses(
+        updatedExpenses
+      );
+
       setOpenedMenuId(null);
     } catch (error) {
-      console.error('지출 삭제 실패:', error);
+      console.error(
+        '지출 삭제 실패:',
+        error
+      );
     }
   };
 
-  // 삭제 확인
-  const confirmDelete = (expense: Expense) => {
-    // Expo Web
+  const confirmDelete = (
+    expense: Expense
+  ) => {
     if (Platform.OS === 'web') {
-      const confirmed = window.confirm(
-        `${expense.title} 지출 내역을 삭제할까요?\n\n${formatMoney(
-          expense.amount
-        )}원`
-      );
+      const confirmed =
+        window.confirm(
+          `${expense.title} 지출 내역을 삭제할까요?\n\n${formatMoney(
+            expense.amount
+          )}원`
+        );
 
       if (confirmed) {
         deleteExpense(expense);
@@ -145,7 +406,6 @@ export default function HistoryScreen() {
       return;
     }
 
-    // iOS / Android
     Alert.alert(
       '지출 삭제',
       `${expense.title} 지출 내역을 삭제할까요?`,
@@ -157,157 +417,463 @@ export default function HistoryScreen() {
         {
           text: '삭제',
           style: 'destructive',
-          onPress: () => deleteExpense(expense),
+
+          onPress: () =>
+            deleteExpense(
+              expense
+            ),
         },
       ]
     );
   };
 
-  const editExpense = (expense: Expense) => {
+  const editExpense = (
+    expense: Expense
+  ) => {
     setOpenedMenuId(null);
 
     router.push({
       pathname: '/expense',
+
       params: {
         id: expense.id,
       },
     });
   };
 
-  const totalExpense = expenses.reduce(
-    (sum, expense) => sum + expense.amount,
-    0
-  );
+  const now = new Date();
+
+  const isCurrentMonth =
+    now.getFullYear() ===
+      selectedYear &&
+    now.getMonth() ===
+      selectedMonthIndex;
 
   return (
     <ScrollView
-      style={styles.container}
-      contentContainerStyle={styles.content}
-      showsVerticalScrollIndicator={false}
+      style={styles.screen}
+      contentContainerStyle={
+        styles.container
+      }
+      showsVerticalScrollIndicator={
+        false
+      }
     >
-      <AppHeader
-        title="지출 내역"
-        description="지금까지 기록한 소비를 확인해보세요."
-      />
+      {/* 상단 */}
 
-      <View style={styles.totalBox}>
-        <Text style={styles.totalLabel}>총 지출</Text>
-
-        <Text style={styles.totalAmount}>
-          {formatMoney(totalExpense)}원
+      <View style={styles.header}>
+        <Text style={styles.title}>
+          지출 내역
         </Text>
 
-        <Text style={styles.totalDescription}>
-          총 {expenses.length}건의 지출을 기록했어요.
+        <Text
+          style={
+            styles.description
+          }
+        >
+          월별 소비 내역을 확인해보세요.
         </Text>
       </View>
 
-      <View style={styles.list}>
-        {expenses.length === 0 ? (
-          <View style={styles.empty}>
-            <Text style={styles.emptyEmoji}>🧾</Text>
+      {/* 월 선택 */}
 
-            <Text style={styles.emptyTitle}>
-              아직 지출 내역이 없어요
+      <View
+        style={styles.monthSelector}
+      >
+        <Pressable
+          style={
+            styles.monthArrowButton
+          }
+          onPress={
+            movePreviousMonth
+          }
+          hitSlop={10}
+        >
+          <Ionicons
+            name="chevron-back"
+            size={22}
+            color="#172033"
+          />
+        </Pressable>
+
+        <Pressable
+          style={styles.monthCenter}
+          onPress={
+            goCurrentMonth
+          }
+        >
+          <Text
+            style={
+              styles.monthTitle
+            }
+          >
+            {selectedYear}년{' '}
+            {selectedMonthIndex +
+              1}
+            월
+          </Text>
+
+          {!isCurrentMonth && (
+            <Text
+              style={
+                styles.currentMonthGuide
+              }
+            >
+              누르면 이번 달로 이동
+            </Text>
+          )}
+        </Pressable>
+
+        <Pressable
+          style={
+            styles.monthArrowButton
+          }
+          onPress={
+            moveNextMonth
+          }
+          hitSlop={10}
+        >
+          <Ionicons
+            name="chevron-forward"
+            size={22}
+            color="#172033"
+          />
+        </Pressable>
+      </View>
+
+      {/* 월 총 지출 */}
+
+      <View style={styles.totalBox}>
+        <Text
+          style={
+            styles.totalLabel
+          }
+        >
+          {selectedMonthIndex + 1}
+          월 총 지출
+        </Text>
+
+        <Text
+          style={
+            styles.totalAmount
+          }
+        >
+          {formatMoney(
+            totalExpense
+          )}
+          원
+        </Text>
+
+        <Text
+          style={
+            styles.totalDescription
+          }
+        >
+          총{' '}
+          {
+            monthExpenses.length
+          }
+          건의 지출을 기록했어요.
+        </Text>
+      </View>
+
+      {/* 내역 */}
+
+      <View style={styles.list}>
+        {groupedExpenses.length ===
+        0 ? (
+          <View
+            style={styles.empty}
+          >
+            <Text
+              style={
+                styles.emptyEmoji
+              }
+            >
+              🧾
             </Text>
 
-            <Text style={styles.emptyText}>
-              지출을 기록하면 이곳에서 확인할 수 있어요.
+            <Text
+              style={
+                styles.emptyTitle
+              }
+            >
+              이 달에는 지출 내역이
+              없어요
+            </Text>
+
+            <Text
+              style={
+                styles.emptyText
+              }
+            >
+              지출을 기록하면 날짜별로
+              정리해서 보여드려요.
             </Text>
           </View>
         ) : (
-          expenses.map((expense) => {
-            const isMenuOpen =
-              openedMenuId === expense.id;
+          groupedExpenses.map(
+            (group) => {
+              const dayTotal =
+                group.expenses.reduce(
+                  (
+                    sum,
+                    expense
+                  ) =>
+                    sum +
+                    expense.amount,
+                  0
+                );
 
-            return (
-             <View
-                  key={expense.id}
-                  style={[
-                    styles.expenseWrapper,
-                    isMenuOpen && styles.expenseWrapperOpen,
-                  ]}
+              return (
+                <View
+                  key={
+                    group.dateKey
+                  }
+                  style={
+                    styles.dateGroup
+                  }
                 >
-                <View style={styles.expenseItem}>
-                  <View style={styles.leftArea}>
-                    <View style={styles.categoryIcon}>
-                      <Text style={styles.categoryEmoji}>
-                        {getCategoryEmoji(expense.category)}
-                      </Text>
-                    </View>
+                  {/* 날짜 */}
 
-                    <View style={styles.expenseInfo}>
-                      <Text style={styles.expenseTitle}>
-                        {expense.title}
-                      </Text>
-
-                      <Text style={styles.expenseDate}>
-                        {formatDate(expense.createdAt)}
-                      </Text>
-                    </View>
-                  </View>
-
-                  <View style={styles.rightArea}>
-                    <Text style={styles.expenseAmount}>
-                      -{formatMoney(expense.amount)}원
+                  <View
+                    style={
+                      styles.dateHeader
+                    }
+                  >
+                    <Text
+                      style={
+                        styles.dateTitle
+                      }
+                    >
+                      {formatGroupDate(
+                        group.date
+                      )}
                     </Text>
 
-                    <Pressable
-                      style={styles.menuButton}
-                      onPress={() =>
-                        setOpenedMenuId(
-                          isMenuOpen ? null : expense.id
-                        )
+                    <Text
+                      style={
+                        styles.dayTotal
                       }
-                      hitSlop={10}
                     >
-                      <Ionicons
-                        name="ellipsis-vertical"
-                        size={20}
-                        color="#687386"
-                      />
-                    </Pressable>
+                      -
+                      {formatMoney(
+                        dayTotal
+                      )}
+                      원
+                    </Text>
+                  </View>
+
+                  {/* 해당 날짜 지출 */}
+
+                  <View
+                    style={
+                      styles.dayList
+                    }
+                  >
+                    {group.expenses.map(
+                      (expense) => {
+                        const isMenuOpen =
+                          openedMenuId ===
+                          expense.id;
+
+                        return (
+                          <View
+                            key={
+                              expense.id
+                            }
+                            style={[
+                              styles.expenseWrapper,
+
+                              isMenuOpen &&
+                                styles.expenseWrapperOpen,
+                            ]}
+                          >
+                            <View
+                              style={
+                                styles.expenseItem
+                              }
+                            >
+                              <View
+                                style={
+                                  styles.leftArea
+                                }
+                              >
+                                <View
+                                  style={
+                                    styles.categoryIcon
+                                  }
+                                >
+                                  <Text
+                                    style={
+                                      styles.categoryEmoji
+                                    }
+                                  >
+                                    {getCategoryEmoji(
+                                      expense.category
+                                    )}
+                                  </Text>
+                                </View>
+
+                                <View
+                                  style={
+                                    styles.expenseInfo
+                                  }
+                                >
+                                  <Text
+                                    style={
+                                      styles.expenseTitle
+                                    }
+                                    numberOfLines={
+                                      1
+                                    }
+                                  >
+                                    {
+                                      expense.title
+                                    }
+                                  </Text>
+
+                                  <Text
+                                    style={
+                                      styles.expenseTime
+                                    }
+                                  >
+                                    {new Date(
+                                      expense.createdAt
+                                    ).toLocaleTimeString(
+                                      'ko-KR',
+                                      {
+                                        hour:
+                                          '2-digit',
+                                        minute:
+                                          '2-digit',
+                                      }
+                                    )}
+                                  </Text>
+                                </View>
+                              </View>
+
+                              <View
+                                style={
+                                  styles.rightArea
+                                }
+                              >
+                                <Text
+                                  style={
+                                    styles.expenseAmount
+                                  }
+                                >
+                                  -
+                                  {formatMoney(
+                                    expense.amount
+                                  )}
+                                  원
+                                </Text>
+
+                                <Pressable
+                                  style={
+                                    styles.menuButton
+                                  }
+                                  onPress={() =>
+                                    setOpenedMenuId(
+                                      isMenuOpen
+                                        ? null
+                                        : expense.id
+                                    )
+                                  }
+                                  hitSlop={
+                                    10
+                                  }
+                                >
+                                  <Ionicons
+                                    name="ellipsis-vertical"
+                                    size={
+                                      20
+                                    }
+                                    color="#687386"
+                                  />
+                                </Pressable>
+                              </View>
+                            </View>
+
+                            {/* 수정 / 삭제 메뉴 */}
+
+                            {isMenuOpen && (
+                              <View
+                                style={
+                                  styles.menu
+                                }
+                              >
+                                <Pressable
+                                  style={
+                                    styles.menuItem
+                                  }
+                                  onPress={() =>
+                                    editExpense(
+                                      expense
+                                    )
+                                  }
+                                >
+                                  <Ionicons
+                                    name="pencil-outline"
+                                    size={
+                                      18
+                                    }
+                                    color="#172033"
+                                  />
+
+                                  <Text
+                                    style={
+                                      styles.menuText
+                                    }
+                                  >
+                                    수정하기
+                                  </Text>
+                                </Pressable>
+
+                                <View
+                                  style={
+                                    styles.menuDivider
+                                  }
+                                />
+
+                                <Pressable
+                                  style={
+                                    styles.menuItem
+                                  }
+                                  onPress={() =>
+                                    confirmDelete(
+                                      expense
+                                    )
+                                  }
+                                >
+                                  <Ionicons
+                                    name="trash-outline"
+                                    size={
+                                      18
+                                    }
+                                    color="#D84B4B"
+                                  />
+
+                                  <Text
+                                    style={
+                                      styles.deleteText
+                                    }
+                                  >
+                                    삭제하기
+                                  </Text>
+                                </Pressable>
+                              </View>
+                            )}
+                          </View>
+                        );
+                      }
+                    )}
                   </View>
                 </View>
-
-                {isMenuOpen && (
-                  <View style={styles.menu}>
-                    <Pressable
-                      style={styles.menuItem}
-                      onPress={() => editExpense(expense)}
-                    >
-                      <Ionicons
-                        name="pencil-outline"
-                        size={18}
-                        color="#172033"
-                      />
-
-                      <Text style={styles.menuText}>
-                        수정하기
-                      </Text>
-                    </Pressable>
-
-                    <View style={styles.menuDivider} />
-
-                    <Pressable
-                      style={styles.menuItem}
-                      onPress={() => confirmDelete(expense)}
-                    >
-                      <Ionicons
-                        name="trash-outline"
-                        size={18}
-                        color="#D84B4B"
-                      />
-
-                      <Text style={styles.deleteText}>
-                        삭제하기
-                      </Text>
-                    </Pressable>
-                  </View>
-                )}
-              </View>
-            );
-          })
+              );
+            }
+          )
         )}
       </View>
     </ScrollView>
@@ -315,71 +881,216 @@ export default function HistoryScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
+  screen: {
     flex: 1,
     backgroundColor: '#FFFFFF',
   },
 
-  content: {
+  container: {
     paddingHorizontal: 24,
-    paddingTop: 32,
-    paddingBottom: 40,
+    paddingTop: 60,
+    paddingBottom: 120,
   },
+
+  header: {
+    marginBottom: 26,
+  },
+
+  title: {
+    fontSize: 28,
+    fontWeight: '800',
+    color: '#172033',
+  },
+
+  description: {
+    marginTop: 8,
+    fontSize: 15,
+    color: '#8792A2',
+  },
+
+  // =========================
+  // 월 선택
+  // =========================
+
+  monthSelector: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent:
+      'space-between',
+
+    backgroundColor: '#F8FAFC',
+
+    borderRadius: 18,
+
+    paddingHorizontal: 10,
+    paddingVertical: 10,
+
+    marginBottom: 14,
+  },
+
+  monthArrowButton: {
+    width: 42,
+    height: 42,
+
+    borderRadius: 14,
+
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  monthCenter: {
+    flex: 1,
+
+    minHeight: 44,
+
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  monthTitle: {
+    fontSize: 17,
+    fontWeight: '800',
+    color: '#172033',
+  },
+
+  currentMonthGuide: {
+    marginTop: 3,
+
+    fontSize: 10,
+
+    color: '#98A2B3',
+  },
+
+  // =========================
+  // 총 지출
+  // =========================
 
   totalBox: {
     backgroundColor: '#F1F5FC',
+
     borderRadius: 20,
+
     padding: 20,
   },
 
   totalLabel: {
     fontSize: 14,
+
     color: '#687386',
   },
 
   totalAmount: {
     marginTop: 8,
+
     fontSize: 30,
     fontWeight: '800',
+
     color: '#3563C9',
   },
 
   totalDescription: {
     marginTop: 8,
+
     fontSize: 13,
+
     color: '#8792A2',
   },
 
+  // =========================
+  // 날짜별 목록
+  // =========================
+
   list: {
-    marginTop: 28,
+    marginTop: 30,
   },
 
-expenseWrapper: {
-  position: 'relative',
-  zIndex: 1,
-},
+  dateGroup: {
+    marginBottom: 30,
+  },
+
+  dateHeader: {
+    flexDirection: 'row',
+
+    alignItems: 'center',
+
+    justifyContent:
+      'space-between',
+
+    marginBottom: 8,
+  },
+
+  dateTitle: {
+    fontSize: 15,
+
+    fontWeight: '800',
+
+    color: '#172033',
+  },
+
+  dayTotal: {
+    fontSize: 13,
+
+    fontWeight: '600',
+
+    color: '#8792A2',
+  },
+
+  dayList: {
+    backgroundColor: '#FFFFFF',
+  },
+
+  // =========================
+  // 지출 한 건
+  // =========================
+
+  expenseWrapper: {
+    position: 'relative',
+
+    zIndex: 1,
+  },
+
+  expenseWrapperOpen: {
+    zIndex: 100,
+  },
+
   expenseItem: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+
+    justifyContent:
+      'space-between',
+
     alignItems: 'center',
-    paddingVertical: 16,
+
+    minHeight: 72,
+
     borderBottomWidth: 1,
-    borderBottomColor: '#EEF1F5',
+
+    borderBottomColor:
+      '#EEF1F5',
   },
 
   leftArea: {
-    flexDirection: 'row',
-    alignItems: 'center',
     flex: 1,
+
+    flexDirection: 'row',
+
+    alignItems: 'center',
+
+    paddingRight: 8,
   },
 
   categoryIcon: {
     width: 46,
     height: 46,
+
     borderRadius: 15,
+
     backgroundColor: '#F5F7FA',
+
     alignItems: 'center',
+
     justifyContent: 'center',
+
     marginRight: 12,
   },
 
@@ -393,89 +1104,123 @@ expenseWrapper: {
 
   expenseTitle: {
     fontSize: 16,
+
     fontWeight: '700',
+
     color: '#172033',
   },
 
-  expenseDate: {
+  expenseTime: {
     marginTop: 5,
-    fontSize: 13,
-    color: '#8792A2',
+
+    fontSize: 12,
+
+    color: '#98A2B3',
   },
 
   rightArea: {
     flexDirection: 'row',
+
     alignItems: 'center',
-    marginLeft: 12,
+
+    marginLeft: 10,
   },
 
   expenseAmount: {
-    fontSize: 16,
+    fontSize: 15,
+
     fontWeight: '700',
+
     color: '#172033',
   },
 
   menuButton: {
     width: 34,
     height: 34,
-    marginLeft: 6,
+
+    marginLeft: 5,
+
     alignItems: 'center',
+
     justifyContent: 'center',
   },
 
-menu: {
-  position: 'absolute',
+  // =========================
+  // 수정 / 삭제 팝업
+  // =========================
 
-  top: 58,
-  right: 0,
+  menu: {
+    position: 'absolute',
 
-  width: 150,
+    top: 58,
 
-  backgroundColor: '#FFFFFF',
+    right: 0,
 
-  borderRadius: 14,
-  paddingVertical: 6,
+    width: 150,
 
-  zIndex: 100,
+    backgroundColor: '#FFFFFF',
 
-  shadowColor: '#000000',
-  shadowOffset: {
-    width: 0,
-    height: 4,
+    borderRadius: 14,
+
+    paddingVertical: 6,
+
+    zIndex: 200,
+
+    shadowColor: '#000000',
+
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+
+    shadowOpacity: 0.12,
+
+    shadowRadius: 10,
+
+    elevation: 8,
   },
-  shadowOpacity: 0.12,
-  shadowRadius: 10,
-
-  elevation: 8,
-},
 
   menuItem: {
     flexDirection: 'row',
+
     alignItems: 'center',
-    paddingHorizontal: 14,
-    paddingVertical: 12,
+
     gap: 8,
+
+    paddingHorizontal: 14,
+
+    paddingVertical: 12,
   },
 
   menuDivider: {
     height: 1,
+
     backgroundColor: '#EEF1F5',
   },
 
   menuText: {
     fontSize: 14,
+
     fontWeight: '600',
+
     color: '#172033',
   },
 
   deleteText: {
     fontSize: 14,
+
     fontWeight: '600',
+
     color: '#D84B4B',
   },
 
+  // =========================
+  // 빈 화면
+  // =========================
+
   empty: {
     alignItems: 'center',
+
     paddingVertical: 70,
   },
 
@@ -485,18 +1230,23 @@ menu: {
 
   emptyTitle: {
     marginTop: 16,
+
     fontSize: 16,
+
     fontWeight: '700',
+
     color: '#172033',
   },
 
   emptyText: {
     marginTop: 7,
-    fontSize: 14,
+
+    fontSize: 13,
+
+    lineHeight: 20,
+
     color: '#8792A2',
+
     textAlign: 'center',
-  },
-  expenseWrapperOpen: {
-    zIndex: 100,
   },
 });

@@ -11,13 +11,14 @@ export default function TabLayout() {
     <Tabs
       screenOptions={{
         headerShown: false,
-
-        tabBarActiveTintColor: '#3563C9',
-        tabBarInactiveTintColor: '#98A2B3',
-
-        tabBarStyle: styles.tabBar,
-
-        tabBarLabelStyle: styles.tabLabel,
+        tabBarActiveTintColor:
+          '#3563C9',
+        tabBarInactiveTintColor:
+          '#98A2B3',
+        tabBarStyle:
+          styles.tabBar,
+        tabBarLabelStyle:
+          styles.tabLabel,
       }}
     >
       <Tabs.Screen
@@ -72,15 +73,19 @@ export default function TabLayout() {
           title: '',
 
           tabBarButton: () => (
-            <View style={styles.centerButtonWrapper}>
+            <View
+              style={
+                styles.centerButtonWrapper
+              }
+            >
               <Pressable
-                style={({ pressed }) => [
-                  styles.centerButton,
-                  pressed &&
-                    styles.centerButtonPressed,
-                ]}
+                style={
+                  styles.centerButton
+                }
                 onPress={() =>
-                  router.push('/expense')
+                  router.push(
+                    '/expense'
+                  )
                 }
               >
                 <Ionicons
@@ -95,9 +100,9 @@ export default function TabLayout() {
       />
 
       <Tabs.Screen
-        name="stats"
+        name="plan"
         options={{
-          title: '통계',
+          title: '계획',
 
           tabBarIcon: ({
             color,
@@ -107,8 +112,8 @@ export default function TabLayout() {
             <Ionicons
               name={
                 focused
-                  ? 'bar-chart'
-                  : 'bar-chart-outline'
+                  ? 'calendar'
+                  : 'calendar-outline'
               }
               size={size}
               color={color}
@@ -118,83 +123,69 @@ export default function TabLayout() {
       />
 
       <Tabs.Screen
-        name="settings-tab"
-        options={{
-          title: '설정',
-
-          tabBarIcon: ({
-            color,
-            size,
-            focused,
-          }) => (
-            <Ionicons
-              name={
-                focused
-                  ? 'settings'
-                  : 'settings-outline'
-              }
-              size={size}
-              color={color}
-            />
-          ),
-        }}
-      />
+          name="setting-tab"
+          options={{
+            title: '설정',
+            tabBarIcon: ({ color, size, focused }) => (
+              <Ionicons
+                name={focused ? 'settings' : 'settings-outline'}
+                size={size}
+                color={color}
+              />
+            ),
+          }}
+        />
     </Tabs>
   );
 }
 
-const styles = StyleSheet.create({
-  tabBar: {
-    height: 78,
-
-    paddingTop: 8,
-    paddingBottom: 10,
-
-    backgroundColor: '#FFFFFF',
-
-    borderTopWidth: 1,
-    borderTopColor: '#EEF1F5',
-  },
-
-  tabLabel: {
-    fontSize: 11,
-    fontWeight: '600',
-  },
-
-  centerButtonWrapper: {
-    flex: 1,
-
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-
-  centerButton: {
-    width: 58,
-    height: 58,
-
-    borderRadius: 29,
-
-    backgroundColor: '#3563C9',
-
-    alignItems: 'center',
-    justifyContent: 'center',
-
-    marginTop: -24,
-
-    shadowColor: '#000000',
-
-    shadowOffset: {
-      width: 0,
-      height: 5,
+const styles =
+  StyleSheet.create({
+    tabBar: {
+      height: 78,
+      paddingTop: 8,
+      paddingBottom: 10,
+      backgroundColor:
+        '#FFFFFF',
+      borderTopWidth: 1,
+      borderTopColor:
+        '#EEF1F5',
     },
 
-    shadowOpacity: 0.16,
-    shadowRadius: 8,
+    tabLabel: {
+      fontSize: 11,
+      fontWeight: '600',
+    },
 
-    elevation: 6,
-  },
+    centerButtonWrapper: {
+      flex: 1,
+      alignItems: 'center',
+      justifyContent:
+        'center',
+    },
 
-  centerButtonPressed: {
-    backgroundColor: '#294FA5',
-  },
-});
+    centerButton: {
+      width: 58,
+      height: 58,
+      borderRadius: 29,
+      backgroundColor:
+        '#3563C9',
+      alignItems: 'center',
+      justifyContent:
+        'center',
+      marginTop: -24,
+
+      shadowColor:
+        '#000000',
+
+      shadowOffset: {
+        width: 0,
+        height: 5,
+      },
+
+      shadowOpacity: 0.16,
+      shadowRadius: 8,
+
+      elevation: 6,
+    },
+  });
