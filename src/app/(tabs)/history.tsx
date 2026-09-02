@@ -1,7 +1,12 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { router, useFocusEffect } from 'expo-router';
-import { useCallback, useMemo, useState } from 'react';
+import type { ComponentProps } from 'react';
+import {
+  useCallback,
+  useMemo,
+  useState,
+} from 'react';
 import {
   Alert,
   Platform,
@@ -15,6 +20,9 @@ import {
 const EXPENSES_KEY = 'expenses';
 const BUDGET_KEY = 'budget-settings';
 const CUSTOM_CATEGORIES_KEY = 'custom-categories';
+
+type IoniconName =
+  ComponentProps<typeof Ionicons>['name'];
 
 type Expense = {
   id: string;
@@ -36,7 +44,8 @@ type BudgetSettings = {
 type CustomCategory = {
   id: string;
   label: string;
-  emoji: string;
+  icon?: IoniconName;
+  emoji?: string;
   custom?: boolean;
 };
 
@@ -46,35 +55,45 @@ type ExpenseGroup = {
   expenses: Expense[];
 };
 
-const DEFAULT_CATEGORY_EMOJI: Record<string, string> = {
-  food: '🍚',
-  cafe: '☕',
-  transport: '🚇',
-  shopping: '🛍️',
-  leisure: '🎮',
-  life: '🏠',
-  etc: '📦',
+const DEFAULT_CATEGORY_ICONS: Record<
+  string,
+  IoniconName
+> = {
+  food: 'restaurant-outline',
+  cafe: 'cafe-outline',
+  transport: 'subway-outline',
+  shopping: 'bag-handle-outline',
+  leisure: 'game-controller-outline',
+  life: 'home-outline',
+  etc: 'ellipsis-horizontal-outline',
 };
 
 export default function HistoryScreen() {
-  const [expenses, setExpenses] = useState<Expense[]>([]);
+  const [expenses, setExpenses] =
+    useState<Expense[]>([]);
 
-  const [customCategories, setCustomCategories] =
-    useState<CustomCategory[]>([]);
+  const [
+    customCategories,
+    setCustomCategories,
+  ] = useState<CustomCategory[]>([]);
 
-  const [openedMenuId, setOpenedMenuId] =
-    useState<string | null>(null);
+  const [
+    openedMenuId,
+    setOpenedMenuId,
+  ] = useState<string | null>(null);
 
-  const [selectedMonth, setSelectedMonth] =
-    useState(() => {
-      const today = new Date();
+  const [
+    selectedMonth,
+    setSelectedMonth,
+  ] = useState(() => {
+    const today = new Date();
 
-      return new Date(
-        today.getFullYear(),
-        today.getMonth(),
-        1
-      );
-    });
+    return new Date(
+      today.getFullYear(),
+      today.getMonth(),
+      1
+    );
+  });
 
   useFocusEffect(
     useCallback(() => {
@@ -105,13 +124,37 @@ export default function HistoryScreen() {
           : []
       );
 
-      setCustomCategories(
+      if (
         savedCustomCategories
-          ? JSON.parse(
-              savedCustomCategories
-            )
-          : []
-      );
+      ) {
+        const parsed:
+          CustomCategory[] =
+          JSON.parse(
+            savedCustomCategories
+          );
+
+        const migrated =
+          parsed.map((item) => ({
+            ...item,
+
+            icon:
+              item.icon ||
+              'ellipsis-horizontal-outline',
+          }));
+
+        setCustomCategories(
+          migrated
+        );
+
+        await AsyncStorage.setItem(
+          CUSTOM_CATEGORIES_KEY,
+          JSON.stringify(
+            migrated
+          )
+        );
+      } else {
+        setCustomCategories([]);
+      }
     } catch (error) {
       console.error(
         '지출 내역 불러오기 실패:',
@@ -174,129 +217,152 @@ export default function HistoryScreen() {
   const selectedMonthIndex =
     selectedMonth.getMonth();
 
-  const monthExpenses = useMemo(() => {
-    return expenses
-      .filter((expense) => {
-        const date = new Date(
-          expense.createdAt
-        );
-
-        return (
-          date.getFullYear() ===
-            selectedYear &&
-          date.getMonth() ===
-            selectedMonthIndex
-        );
-      })
-      .sort(
-        (a, b) =>
-          new Date(
-            b.createdAt
-          ).getTime() -
-          new Date(
-            a.createdAt
-          ).getTime()
-      );
-  }, [
-    expenses,
-    selectedYear,
-    selectedMonthIndex,
-  ]);
-
-  const totalExpense = useMemo(() => {
-    return monthExpenses.reduce(
-      (sum, expense) =>
-        sum + expense.amount,
-      0
-    );
-  }, [monthExpenses]);
-
-  const groupedExpenses =
-    useMemo<ExpenseGroup[]>(() => {
-      const groups =
-        new Map<
-          string,
-          ExpenseGroup
-        >();
-
-      monthExpenses.forEach(
-        (expense) => {
-          const date = new Date(
-            expense.createdAt
-          );
-
-          const dateKey = [
-            date.getFullYear(),
-            String(
-              date.getMonth() + 1
-            ).padStart(2, '0'),
-            String(
-              date.getDate()
-            ).padStart(2, '0'),
-          ].join('-');
-
-          const currentGroup =
-            groups.get(dateKey);
-
-          if (currentGroup) {
-            currentGroup.expenses.push(
-              expense
+  const monthExpenses =
+    useMemo(() => {
+      return expenses
+        .filter((expense) => {
+          const date =
+            new Date(
+              expense.createdAt
             );
-          } else {
-            groups.set(dateKey, {
-              dateKey,
-              date: new Date(
-                date.getFullYear(),
-                date.getMonth(),
-                date.getDate()
-              ),
-              expenses: [expense],
-            });
-          }
-        }
-      );
 
-      return Array.from(
-        groups.values()
-      ).sort(
-        (a, b) =>
-          b.date.getTime() -
-          a.date.getTime()
+          return (
+            date.getFullYear() ===
+              selectedYear &&
+            date.getMonth() ===
+              selectedMonthIndex
+          );
+        })
+        .sort(
+          (a, b) =>
+            new Date(
+              b.createdAt
+            ).getTime() -
+            new Date(
+              a.createdAt
+            ).getTime()
+        );
+    }, [
+      expenses,
+      selectedYear,
+      selectedMonthIndex,
+    ]);
+
+  const totalExpense =
+    useMemo(() => {
+      return monthExpenses.reduce(
+        (sum, expense) =>
+          sum + expense.amount,
+        0
       );
     }, [monthExpenses]);
 
-  const customCategoryEmoji =
+  const groupedExpenses =
+    useMemo<ExpenseGroup[]>(
+      () => {
+        const groups =
+          new Map<
+            string,
+            ExpenseGroup
+          >();
+
+        monthExpenses.forEach(
+          (expense) => {
+            const date =
+              new Date(
+                expense.createdAt
+              );
+
+            const dateKey = [
+              date.getFullYear(),
+
+              String(
+                date.getMonth() + 1
+              ).padStart(
+                2,
+                '0'
+              ),
+
+              String(
+                date.getDate()
+              ).padStart(
+                2,
+                '0'
+              ),
+            ].join('-');
+
+            const currentGroup =
+              groups.get(dateKey);
+
+            if (currentGroup) {
+              currentGroup.expenses.push(
+                expense
+              );
+            } else {
+              groups.set(
+                dateKey,
+                {
+                  dateKey,
+
+                  date: new Date(
+                    date.getFullYear(),
+                    date.getMonth(),
+                    date.getDate()
+                  ),
+
+                  expenses: [
+                    expense,
+                  ],
+                }
+              );
+            }
+          }
+        );
+
+        return Array.from(
+          groups.values()
+        ).sort(
+          (a, b) =>
+            b.date.getTime() -
+            a.date.getTime()
+        );
+      },
+      [monthExpenses]
+    );
+
+  const customCategoryIcons =
     useMemo(() => {
       const map: Record<
         string,
-        string
+        IoniconName
       > = {};
 
       customCategories.forEach(
         (item) => {
           map[item.id] =
-            item.emoji || '✨';
+            item.icon ||
+            'ellipsis-horizontal-outline';
         }
       );
 
       return map;
     }, [customCategories]);
 
-  const getCategoryEmoji = (
+  const getCategoryIcon = (
     category?: string
-  ) => {
+  ): IoniconName => {
     if (!category) {
-      return '💳';
+      return 'card-outline';
     }
 
     return (
-      DEFAULT_CATEGORY_EMOJI[
+      DEFAULT_CATEGORY_ICONS[
         category
       ] ??
-      customCategoryEmoji[
+      customCategoryIcons[
         category
       ] ??
-      '💳'
+      'ellipsis-horizontal-outline'
     );
   };
 
@@ -328,70 +394,96 @@ export default function HistoryScreen() {
     )}`;
   };
 
-  const deleteExpense = async (
-    expense: Expense
+  const formatTime = (
+    value: string
   ) => {
-    try {
-      const updatedExpenses =
-        expenses.filter(
-          (item) =>
-            item.id !== expense.id
-        );
+    return new Date(
+      value
+    ).toLocaleTimeString(
+      'ko-KR',
+      {
+        hour:
+          '2-digit',
+        minute:
+          '2-digit',
+      }
+    );
+  };
 
-      await AsyncStorage.setItem(
-        EXPENSES_KEY,
-        JSON.stringify(
-          updatedExpenses
-        )
-      );
-
-      const savedBudget =
-        await AsyncStorage.getItem(
-          BUDGET_KEY
-        );
-
-      if (savedBudget) {
-        const budget: BudgetSettings =
-          JSON.parse(savedBudget);
-
-        const updatedBudget = {
-          ...budget,
-
-          spentAmount: Math.max(
-            0,
-
-            (Number(
-              budget.spentAmount
-            ) || 0) -
-              expense.amount
-          ),
-        };
+  const deleteExpense =
+    async (
+      expense: Expense
+    ) => {
+      try {
+        const updatedExpenses =
+          expenses.filter(
+            (item) =>
+              item.id !==
+              expense.id
+          );
 
         await AsyncStorage.setItem(
-          BUDGET_KEY,
+          EXPENSES_KEY,
           JSON.stringify(
-            updatedBudget
+            updatedExpenses
           )
         );
+
+        const savedBudget =
+          await AsyncStorage.getItem(
+            BUDGET_KEY
+          );
+
+        if (savedBudget) {
+          const budget:
+            BudgetSettings =
+            JSON.parse(
+              savedBudget
+            );
+
+          const updatedBudget = {
+            ...budget,
+
+            spentAmount:
+              Math.max(
+                0,
+
+                (Number(
+                  budget.spentAmount
+                ) || 0) -
+                  expense.amount
+              ),
+          };
+
+          await AsyncStorage.setItem(
+            BUDGET_KEY,
+            JSON.stringify(
+              updatedBudget
+            )
+          );
+        }
+
+        setExpenses(
+          updatedExpenses
+        );
+
+        setOpenedMenuId(
+          null
+        );
+      } catch (error) {
+        console.error(
+          '지출 삭제 실패:',
+          error
+        );
       }
-
-      setExpenses(
-        updatedExpenses
-      );
-
-      setOpenedMenuId(null);
-    } catch (error) {
-      console.error(
-        '지출 삭제 실패:',
-        error
-      );
-    }
-  };
+    };
 
   const confirmDelete = (
     expense: Expense
   ) => {
-    if (Platform.OS === 'web') {
+    if (
+      Platform.OS === 'web'
+    ) {
       const confirmed =
         window.confirm(
           `${expense.title} 지출 내역을 삭제할까요?\n\n${formatMoney(
@@ -400,7 +492,9 @@ export default function HistoryScreen() {
         );
 
       if (confirmed) {
-        deleteExpense(expense);
+        deleteExpense(
+          expense
+        );
       }
 
       return;
@@ -408,12 +502,15 @@ export default function HistoryScreen() {
 
     Alert.alert(
       '지출 삭제',
+
       `${expense.title} 지출 내역을 삭제할까요?`,
+
       [
         {
           text: '취소',
           style: 'cancel',
         },
+
         {
           text: '삭제',
           style: 'destructive',
@@ -430,7 +527,9 @@ export default function HistoryScreen() {
   const editExpense = (
     expense: Expense
   ) => {
-    setOpenedMenuId(null);
+    setOpenedMenuId(
+      null
+    );
 
     router.push({
       pathname: '/expense',
@@ -461,8 +560,14 @@ export default function HistoryScreen() {
     >
       {/* 상단 */}
 
-      <View style={styles.header}>
-        <Text style={styles.title}>
+      <View
+        style={
+          styles.header
+        }
+      >
+        <Text
+          style={styles.title}
+        >
           지출 내역
         </Text>
 
@@ -478,7 +583,9 @@ export default function HistoryScreen() {
       {/* 월 선택 */}
 
       <View
-        style={styles.monthSelector}
+        style={
+          styles.monthSelector
+        }
       >
         <Pressable
           style={
@@ -497,7 +604,9 @@ export default function HistoryScreen() {
         </Pressable>
 
         <Pressable
-          style={styles.monthCenter}
+          style={
+            styles.monthCenter
+          }
           onPress={
             goCurrentMonth
           }
@@ -543,13 +652,18 @@ export default function HistoryScreen() {
 
       {/* 월 총 지출 */}
 
-      <View style={styles.totalBox}>
+      <View
+        style={
+          styles.totalBox
+        }
+      >
         <Text
           style={
             styles.totalLabel
           }
         >
-          {selectedMonthIndex + 1}
+          {selectedMonthIndex +
+            1}
           월 총 지출
         </Text>
 
@@ -579,27 +693,32 @@ export default function HistoryScreen() {
 
       {/* 내역 */}
 
-      <View style={styles.list}>
+      <View
+        style={styles.list}
+      >
         {groupedExpenses.length ===
         0 ? (
           <View
             style={styles.empty}
           >
-            <Text
+            <View
               style={
-                styles.emptyEmoji
+                styles.emptyIcon
               }
             >
-              🧾
-            </Text>
+              <Ionicons
+                name="receipt-outline"
+                size={30}
+                color="#98A2B3"
+              />
+            </View>
 
             <Text
               style={
                 styles.emptyTitle
               }
             >
-              이 달에는 지출 내역이
-              없어요
+              이 달에는 지출 내역이 없어요
             </Text>
 
             <Text
@@ -607,8 +726,7 @@ export default function HistoryScreen() {
                 styles.emptyText
               }
             >
-              지출을 기록하면 날짜별로
-              정리해서 보여드려요.
+              지출을 기록하면 날짜별로 정리해서 보여드려요.
             </Text>
           </View>
         ) : (
@@ -664,7 +782,7 @@ export default function HistoryScreen() {
                     </Text>
                   </View>
 
-                  {/* 해당 날짜 지출 */}
+                  {/* 하루 지출 */}
 
                   <View
                     style={
@@ -694,6 +812,8 @@ export default function HistoryScreen() {
                                 styles.expenseItem
                               }
                             >
+                              {/* 왼쪽 */}
+
                               <View
                                 style={
                                   styles.leftArea
@@ -704,15 +824,15 @@ export default function HistoryScreen() {
                                     styles.categoryIcon
                                   }
                                 >
-                                  <Text
-                                    style={
-                                      styles.categoryEmoji
-                                    }
-                                  >
-                                    {getCategoryEmoji(
+                                  <Ionicons
+                                    name={getCategoryIcon(
                                       expense.category
                                     )}
-                                  </Text>
+                                    size={
+                                      21
+                                    }
+                                    color="#5F6F86"
+                                  />
                                 </View>
 
                                 <View
@@ -738,20 +858,14 @@ export default function HistoryScreen() {
                                       styles.expenseTime
                                     }
                                   >
-                                    {new Date(
+                                    {formatTime(
                                       expense.createdAt
-                                    ).toLocaleTimeString(
-                                      'ko-KR',
-                                      {
-                                        hour:
-                                          '2-digit',
-                                        minute:
-                                          '2-digit',
-                                      }
                                     )}
                                   </Text>
                                 </View>
                               </View>
+
+                              {/* 오른쪽 */}
 
                               <View
                                 style={
@@ -796,7 +910,7 @@ export default function HistoryScreen() {
                               </View>
                             </View>
 
-                            {/* 수정 / 삭제 메뉴 */}
+                            {/* 수정 / 삭제 */}
 
                             {isMenuOpen && (
                               <View
@@ -880,373 +994,397 @@ export default function HistoryScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
-  },
-
-  container: {
-    paddingHorizontal: 24,
-    paddingTop: 60,
-    paddingBottom: 120,
-  },
-
-  header: {
-    marginBottom: 26,
-  },
-
-  title: {
-    fontSize: 28,
-    fontWeight: '800',
-    color: '#172033',
-  },
-
-  description: {
-    marginTop: 8,
-    fontSize: 15,
-    color: '#8792A2',
-  },
-
-  // =========================
-  // 월 선택
-  // =========================
-
-  monthSelector: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent:
-      'space-between',
-
-    backgroundColor: '#F8FAFC',
-
-    borderRadius: 18,
-
-    paddingHorizontal: 10,
-    paddingVertical: 10,
-
-    marginBottom: 14,
-  },
-
-  monthArrowButton: {
-    width: 42,
-    height: 42,
-
-    borderRadius: 14,
-
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-
-  monthCenter: {
-    flex: 1,
-
-    minHeight: 44,
-
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-
-  monthTitle: {
-    fontSize: 17,
-    fontWeight: '800',
-    color: '#172033',
-  },
-
-  currentMonthGuide: {
-    marginTop: 3,
-
-    fontSize: 10,
-
-    color: '#98A2B3',
-  },
-
-  // =========================
-  // 총 지출
-  // =========================
-
-  totalBox: {
-    backgroundColor: '#F1F5FC',
-
-    borderRadius: 20,
-
-    padding: 20,
-  },
-
-  totalLabel: {
-    fontSize: 14,
-
-    color: '#687386',
-  },
-
-  totalAmount: {
-    marginTop: 8,
-
-    fontSize: 30,
-    fontWeight: '800',
-
-    color: '#3563C9',
-  },
-
-  totalDescription: {
-    marginTop: 8,
-
-    fontSize: 13,
-
-    color: '#8792A2',
-  },
-
-  // =========================
-  // 날짜별 목록
-  // =========================
-
-  list: {
-    marginTop: 30,
-  },
-
-  dateGroup: {
-    marginBottom: 30,
-  },
-
-  dateHeader: {
-    flexDirection: 'row',
-
-    alignItems: 'center',
-
-    justifyContent:
-      'space-between',
-
-    marginBottom: 8,
-  },
-
-  dateTitle: {
-    fontSize: 15,
-
-    fontWeight: '800',
-
-    color: '#172033',
-  },
-
-  dayTotal: {
-    fontSize: 13,
-
-    fontWeight: '600',
-
-    color: '#8792A2',
-  },
-
-  dayList: {
-    backgroundColor: '#FFFFFF',
-  },
-
-  // =========================
-  // 지출 한 건
-  // =========================
-
-  expenseWrapper: {
-    position: 'relative',
-
-    zIndex: 1,
-  },
-
-  expenseWrapperOpen: {
-    zIndex: 100,
-  },
-
-  expenseItem: {
-    flexDirection: 'row',
-
-    justifyContent:
-      'space-between',
-
-    alignItems: 'center',
-
-    minHeight: 72,
-
-    borderBottomWidth: 1,
-
-    borderBottomColor:
-      '#EEF1F5',
-  },
-
-  leftArea: {
-    flex: 1,
-
-    flexDirection: 'row',
-
-    alignItems: 'center',
-
-    paddingRight: 8,
-  },
-
-  categoryIcon: {
-    width: 46,
-    height: 46,
-
-    borderRadius: 15,
-
-    backgroundColor: '#F5F7FA',
-
-    alignItems: 'center',
-
-    justifyContent: 'center',
-
-    marginRight: 12,
-  },
-
-  categoryEmoji: {
-    fontSize: 21,
-  },
-
-  expenseInfo: {
-    flex: 1,
-  },
-
-  expenseTitle: {
-    fontSize: 16,
-
-    fontWeight: '700',
-
-    color: '#172033',
-  },
-
-  expenseTime: {
-    marginTop: 5,
-
-    fontSize: 12,
-
-    color: '#98A2B3',
-  },
-
-  rightArea: {
-    flexDirection: 'row',
-
-    alignItems: 'center',
-
-    marginLeft: 10,
-  },
-
-  expenseAmount: {
-    fontSize: 15,
-
-    fontWeight: '700',
-
-    color: '#172033',
-  },
-
-  menuButton: {
-    width: 34,
-    height: 34,
-
-    marginLeft: 5,
-
-    alignItems: 'center',
-
-    justifyContent: 'center',
-  },
-
-  // =========================
-  // 수정 / 삭제 팝업
-  // =========================
-
-  menu: {
-    position: 'absolute',
-
-    top: 58,
-
-    right: 0,
-
-    width: 150,
-
-    backgroundColor: '#FFFFFF',
-
-    borderRadius: 14,
-
-    paddingVertical: 6,
-
-    zIndex: 200,
-
-    shadowColor: '#000000',
-
-    shadowOffset: {
-      width: 0,
-      height: 4,
+const styles =
+  StyleSheet.create({
+    screen: {
+      flex: 1,
+      backgroundColor:
+        '#FFFFFF',
     },
 
-    shadowOpacity: 0.12,
+    container: {
+      paddingHorizontal: 24,
+      paddingTop: 60,
+      paddingBottom: 120,
+    },
 
-    shadowRadius: 10,
+    header: {
+      marginBottom: 26,
+    },
 
-    elevation: 8,
-  },
+    title: {
+      fontSize: 28,
+      fontWeight: '800',
+      color: '#172033',
+    },
 
-  menuItem: {
-    flexDirection: 'row',
+    description: {
+      marginTop: 8,
+      fontSize: 15,
+      color: '#8792A2',
+    },
 
-    alignItems: 'center',
+    // ========================
+    // 월 선택
+    // ========================
 
-    gap: 8,
+    monthSelector: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent:
+        'space-between',
 
-    paddingHorizontal: 14,
+      backgroundColor:
+        '#F8FAFC',
 
-    paddingVertical: 12,
-  },
+      borderRadius: 18,
 
-  menuDivider: {
-    height: 1,
+      paddingHorizontal: 10,
+      paddingVertical: 10,
 
-    backgroundColor: '#EEF1F5',
-  },
+      marginBottom: 14,
+    },
 
-  menuText: {
-    fontSize: 14,
+    monthArrowButton: {
+      width: 42,
+      height: 42,
 
-    fontWeight: '600',
+      borderRadius: 14,
 
-    color: '#172033',
-  },
+      alignItems: 'center',
+      justifyContent:
+        'center',
+    },
 
-  deleteText: {
-    fontSize: 14,
+    monthCenter: {
+      flex: 1,
 
-    fontWeight: '600',
+      minHeight: 44,
 
-    color: '#D84B4B',
-  },
+      alignItems: 'center',
+      justifyContent:
+        'center',
+    },
 
-  // =========================
-  // 빈 화면
-  // =========================
+    monthTitle: {
+      fontSize: 17,
+      fontWeight: '800',
+      color: '#172033',
+    },
 
-  empty: {
-    alignItems: 'center',
+    currentMonthGuide: {
+      marginTop: 3,
 
-    paddingVertical: 70,
-  },
+      fontSize: 10,
 
-  emptyEmoji: {
-    fontSize: 36,
-  },
+      color: '#98A2B3',
+    },
 
-  emptyTitle: {
-    marginTop: 16,
+    // ========================
+    // 총 지출
+    // ========================
 
-    fontSize: 16,
+    totalBox: {
+      backgroundColor:
+        '#F1F5FC',
 
-    fontWeight: '700',
+      borderRadius: 20,
 
-    color: '#172033',
-  },
+      padding: 20,
+    },
 
-  emptyText: {
-    marginTop: 7,
+    totalLabel: {
+      fontSize: 14,
 
-    fontSize: 13,
+      color: '#687386',
+    },
 
-    lineHeight: 20,
+    totalAmount: {
+      marginTop: 8,
 
-    color: '#8792A2',
+      fontSize: 30,
 
-    textAlign: 'center',
-  },
-});
+      fontWeight: '800',
+
+      color: '#3563C9',
+    },
+
+    totalDescription: {
+      marginTop: 8,
+
+      fontSize: 13,
+
+      color: '#8792A2',
+    },
+
+    // ========================
+    // 날짜별 목록
+    // ========================
+
+    list: {
+      marginTop: 30,
+    },
+
+    dateGroup: {
+      marginBottom: 30,
+    },
+
+    dateHeader: {
+      flexDirection: 'row',
+
+      alignItems: 'center',
+
+      justifyContent:
+        'space-between',
+
+      marginBottom: 8,
+    },
+
+    dateTitle: {
+      fontSize: 15,
+
+      fontWeight: '800',
+
+      color: '#172033',
+    },
+
+    dayTotal: {
+      fontSize: 13,
+
+      fontWeight: '600',
+
+      color: '#8792A2',
+    },
+
+    dayList: {
+      backgroundColor:
+        '#FFFFFF',
+    },
+
+    // ========================
+    // 지출
+    // ========================
+
+    expenseWrapper: {
+      position: 'relative',
+
+      zIndex: 1,
+    },
+
+    expenseWrapperOpen: {
+      zIndex: 100,
+    },
+
+    expenseItem: {
+      flexDirection: 'row',
+
+      justifyContent:
+        'space-between',
+
+      alignItems: 'center',
+
+      minHeight: 72,
+
+      borderBottomWidth: 1,
+
+      borderBottomColor:
+        '#EEF1F5',
+    },
+
+    leftArea: {
+      flex: 1,
+
+      flexDirection: 'row',
+
+      alignItems: 'center',
+
+      paddingRight: 8,
+    },
+
+    categoryIcon: {
+      width: 46,
+
+      height: 46,
+
+      borderRadius: 15,
+
+      backgroundColor:
+        '#F5F7FA',
+
+      alignItems: 'center',
+
+      justifyContent:
+        'center',
+
+      marginRight: 12,
+    },
+
+    expenseInfo: {
+      flex: 1,
+    },
+
+    expenseTitle: {
+      fontSize: 16,
+
+      fontWeight: '700',
+
+      color: '#172033',
+    },
+
+    expenseTime: {
+      marginTop: 5,
+
+      fontSize: 12,
+
+      color: '#98A2B3',
+    },
+
+    rightArea: {
+      flexDirection: 'row',
+
+      alignItems: 'center',
+
+      marginLeft: 10,
+    },
+
+    expenseAmount: {
+      fontSize: 15,
+
+      fontWeight: '700',
+
+      color: '#172033',
+    },
+
+    menuButton: {
+      width: 34,
+
+      height: 34,
+
+      marginLeft: 5,
+
+      alignItems: 'center',
+
+      justifyContent:
+        'center',
+    },
+
+    // ========================
+    // 수정/삭제 팝업
+    // ========================
+
+    menu: {
+      position: 'absolute',
+
+      top: 58,
+
+      right: 0,
+
+      width: 150,
+
+      backgroundColor:
+        '#FFFFFF',
+
+      borderRadius: 14,
+
+      paddingVertical: 6,
+
+      zIndex: 200,
+
+      shadowColor:
+        '#000000',
+
+      shadowOffset: {
+        width: 0,
+        height: 4,
+      },
+
+      shadowOpacity: 0.12,
+
+      shadowRadius: 10,
+
+      elevation: 8,
+    },
+
+    menuItem: {
+      flexDirection: 'row',
+
+      alignItems: 'center',
+
+      gap: 8,
+
+      paddingHorizontal: 14,
+
+      paddingVertical: 12,
+    },
+
+    menuDivider: {
+      height: 1,
+
+      backgroundColor:
+        '#EEF1F5',
+    },
+
+    menuText: {
+      fontSize: 14,
+
+      fontWeight: '600',
+
+      color: '#172033',
+    },
+
+    deleteText: {
+      fontSize: 14,
+
+      fontWeight: '600',
+
+      color: '#D84B4B',
+    },
+
+    // ========================
+    // 빈 화면
+    // ========================
+
+    empty: {
+      alignItems: 'center',
+
+      paddingVertical: 70,
+    },
+
+    emptyIcon: {
+      width: 58,
+
+      height: 58,
+
+      borderRadius: 18,
+
+      backgroundColor:
+        '#F5F7FA',
+
+      alignItems: 'center',
+
+      justifyContent:
+        'center',
+    },
+
+    emptyTitle: {
+      marginTop: 16,
+
+      fontSize: 16,
+
+      fontWeight: '700',
+
+      color: '#172033',
+    },
+
+    emptyText: {
+      marginTop: 7,
+
+      fontSize: 13,
+
+      lineHeight: 20,
+
+      color: '#8792A2',
+
+      textAlign: 'center',
+    },
+  });
