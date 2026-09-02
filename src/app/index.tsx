@@ -110,6 +110,15 @@ export default function HomeScreen() {
       </View>
 
       <Pressable
+        style={styles.expenseButton}
+        onPress={() => router.push('./expense')}
+      >
+        <Text style={styles.expenseButtonText}>
+          + 지출 기록하기
+        </Text>
+      </Pressable>
+
+      <Pressable
         style={styles.settingButton}
         onPress={() => router.push('/settings')}
       >
@@ -177,6 +186,20 @@ const styles = StyleSheet.create({
 
   infoValue: {
     fontSize: 15,
+    fontWeight: '700',
+  },
+
+  expenseButton: {
+    backgroundColor: '#F2F2F2',
+    paddingVertical: 16,
+    borderRadius: 16,
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+
+  expenseButtonText: {
+    color: '#111111',
+    fontSize: 16,
     fontWeight: '700',
   },
 
