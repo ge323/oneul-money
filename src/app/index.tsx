@@ -117,6 +117,15 @@ export default function HomeScreen() {
           + 지출 기록하기
         </Text>
       </Pressable>
+      
+      <Pressable
+      style={styles.historyButton}
+      onPress={() => router.push('/history')}
+    >
+      <Text style={styles.historyButtonText}>
+        지출 내역 보기
+      </Text>
+    </Pressable>
 
       <Pressable
         style={styles.settingButton}
@@ -215,5 +224,16 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '700',
+  },
+  historyButton: {
+  paddingVertical: 14,
+  alignItems: 'center',
+  marginBottom: 10,
+  },
+
+  historyButtonText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#555555',
   },
 });
