@@ -1,6 +1,11 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { router } from 'expo-router';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import {
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 
 type AppHeaderProps = {
   title: string;
@@ -13,12 +18,20 @@ export default function AppHeader({
   description,
   showBack = true,
 }: AppHeaderProps) {
+  const handleBack = () => {
+    if (router.canGoBack()) {
+      router.back();
+    } else {
+      router.replace('/');
+    }
+  };
+
   return (
     <View style={styles.container}>
       {showBack && (
         <Pressable
           style={styles.backButton}
-          onPress={() => router.back()}
+          onPress={handleBack}
           hitSlop={12}
         >
           <Ionicons
@@ -29,7 +42,9 @@ export default function AppHeader({
         </Pressable>
       )}
 
-      <Text style={styles.title}>{title}</Text>
+      <Text style={styles.title}>
+        {title}
+      </Text>
 
       {description ? (
         <Text style={styles.description}>
