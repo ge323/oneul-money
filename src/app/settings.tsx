@@ -24,11 +24,13 @@ type FixedExpense = {
 export default function SettingsScreen() {
   const [monthlyBudget, setMonthlyBudget] = useState('');
   const [savingGoal, setSavingGoal] = useState('');
+  const [investmentAmount, setInvestmentAmount] = useState('');
 
   const [fixedExpenses, setFixedExpenses] = useState<FixedExpense[]>([]);
 
   const [fixedTitle, setFixedTitle] = useState('');
   const [fixedAmount, setFixedAmount] = useState('');
+  const [showFixedForm, setShowFixedForm] = useState(false);
 
   const [originalData, setOriginalData] = useState<Record<string, any>>({});
 
@@ -78,6 +80,12 @@ export default function SettingsScreen() {
           : ''
       );
 
+      setInvestmentAmount(
+        data.investmentAmount
+          ? Number(data.investmentAmount).toLocaleString('ko-KR')
+          : ''
+      );
+
       // 새 구조의 고정지출 목록이 있으면 그대로 사용
       if (
         Array.isArray(data.fixedExpenses) &&
@@ -109,6 +117,25 @@ export default function SettingsScreen() {
     );
   }, [fixedExpenses]);
 
+  const availableMonthlyAmount = parseMoney(monthlyBudget);
+  const savingGoalAmount = parseMoney(savingGoal);
+  const investmentAmountValue = parseMoney(investmentAmount);
+
+  const livingBudget = Math.max(
+    0,
+    availableMonthlyAmount -
+      savingGoalAmount -
+      investmentAmountValue -
+      totalFixedExpense
+  );
+
+  const isBudgetOverAllocated =
+    availableMonthlyAmount > 0 &&
+    savingGoalAmount +
+      investmentAmountValue +
+      totalFixedExpense >
+      availableMonthlyAmount;
+
   const addFixedExpense = () => {
     const title = fixedTitle.trim();
     const amount = parseMoney(fixedAmount);
@@ -130,6 +157,7 @@ export default function SettingsScreen() {
 
     setFixedTitle('');
     setFixedAmount('');
+    setShowFixedForm(false);
   };
 
   const deleteFixedExpense = (id: string) => {
@@ -146,6 +174,7 @@ export default function SettingsScreen() {
 
       monthlyBudget: parseMoney(monthlyBudget),
       savingGoal: parseMoney(savingGoal),
+      investmentAmount: parseMoney(investmentAmount),
 
       // 상세 데이터
       fixedExpenses,
@@ -174,13 +203,14 @@ export default function SettingsScreen() {
     >
       <AppHeader
         title="예산 설정"
-        description="한 달 동안 사용할 예산을 관리해보세요."
+        description="이번 달에 실제로 사용할 돈을 기준으로 생활비를 계산해보세요."
       />
 
       <View style={styles.form}>
-        {/* 월 예산 */}
+        {/* 이번 달 사용 가능 금액 */}
         <MoneyInput
-          label="월 예산"
+          label="이번 달 사용 가능 금액"
+          description="생활비, 고정지출, 저축에 사용할 수 있는 전체 금액이에요."
           value={monthlyBudget}
           onChangeText={(text) =>
             setMonthlyBudget(formatMoneyInput(text))
@@ -188,14 +218,40 @@ export default function SettingsScreen() {
           placeholder="1,920,000"
         />
 
+        <View style={styles.helperBox}>
+          <Ionicons
+            name="information-circle-outline"
+            size={17}
+            color="#687386"
+          />
+
+          <Text style={styles.helperText}>
+            월급과 꼭 같을 필요는 없어요. 이번 달에 실제로 관리할 금액만 입력하면 돼요.
+          </Text>
+        </View>
+
         {/* 저축 목표 */}
         <MoneyInput
           label="저축 목표"
+          optional
+          description="이번 달 사용하지 않고 따로 모아둘 금액이에요."
           value={savingGoal}
           onChangeText={(text) =>
             setSavingGoal(formatMoneyInput(text))
           }
-          placeholder="300,000"
+          placeholder="0"
+        />
+
+        {/* 투자 금액 */}
+        <MoneyInput
+          label="투자 금액"
+          optional
+          description="이번 달 투자에 사용할 금액이에요."
+          value={investmentAmount}
+          onChangeText={(text) =>
+            setInvestmentAmount(formatMoneyInput(text))
+          }
+          placeholder="0"
         />
 
         {/* 고정지출 */}
@@ -207,7 +263,7 @@ export default function SettingsScreen() {
               </Text>
 
               <Text style={styles.sectionDescription}>
-                매달 정기적으로 나가는 비용을 등록해보세요.
+                월세, 통신비처럼 꼭 나가는 비용만 등록하면 돼요. 등록하지 않아도 괜찮아요.
               </Text>
             </View>
           </View>
@@ -266,56 +322,97 @@ export default function SettingsScreen() {
             </View>
           )}
 
-          {/* 고정지출 추가 */}
-          <View style={styles.addBox}>
-            <Text style={styles.addTitle}>
-              고정지출 추가
-            </Text>
-
-            <TextInput
-              style={styles.titleInput}
-              value={fixedTitle}
-              onChangeText={setFixedTitle}
-              placeholder="예: 월세, 통신비, 보험료"
-            />
-
-            <View style={styles.amountInputBox}>
-              <TextInput
-                style={styles.amountInput}
-                value={fixedAmount}
-                onChangeText={(text) =>
-                  setFixedAmount(formatMoneyInput(text))
-                }
-                placeholder="0"
-                keyboardType="numeric"
-              />
-
-              <Text style={styles.unitText}>
-                원
-              </Text>
-            </View>
-
+          {/* 고정지출 추가 버튼 */}
+          {!showFixedForm && (
             <Pressable
               style={({ pressed }) => [
-                styles.addButton,
-                pressed && styles.addButtonPressed,
+                styles.openAddFixedButton,
+                pressed && styles.openAddFixedButtonPressed,
               ]}
-              onPress={addFixedExpense}
+              onPress={() => setShowFixedForm(true)}
             >
               <Ionicons
                 name="add"
-                size={20}
+                size={18}
                 color="#3563C9"
               />
 
-              <Text style={styles.addButtonText}>
-                추가하기
+              <Text style={styles.openAddFixedButtonText}>
+                고정지출 추가
               </Text>
             </Pressable>
-          </View>
+          )}
+
+          {/* 고정지출 추가 폼 */}
+          {showFixedForm && (
+            <View style={styles.addBox}>
+              <View style={styles.addBoxHeader}>
+                <Text style={styles.addTitle}>
+                  고정지출 추가
+                </Text>
+
+                <Pressable
+                  style={styles.addBoxCloseButton}
+                  onPress={() => {
+                    setShowFixedForm(false);
+                    setFixedTitle('');
+                    setFixedAmount('');
+                  }}
+                  hitSlop={8}
+                >
+                  <Ionicons
+                    name="close"
+                    size={19}
+                    color="#98A2B3"
+                  />
+                </Pressable>
+              </View>
+
+              <TextInput
+                style={styles.titleInput}
+                value={fixedTitle}
+                onChangeText={setFixedTitle}
+                placeholder="예: 월세, 통신비, 보험료"
+              />
+
+              <View style={styles.amountInputBox}>
+                <TextInput
+                  style={styles.amountInput}
+                  value={fixedAmount}
+                  onChangeText={(text) =>
+                    setFixedAmount(formatMoneyInput(text))
+                  }
+                  placeholder="0"
+                  keyboardType="numeric"
+                />
+
+                <Text style={styles.unitText}>
+                  원
+                </Text>
+              </View>
+
+              <Pressable
+                style={({ pressed }) => [
+                  styles.addButton,
+                  pressed && styles.addButtonPressed,
+                ]}
+                onPress={addFixedExpense}
+              >
+                <Ionicons
+                  name="add"
+                  size={20}
+                  color="#3563C9"
+                />
+
+                <Text style={styles.addButtonText}>
+                  추가하기
+                </Text>
+              </Pressable>
+            </View>
+          )}
 
           {/* 총 고정지출 */}
-          <View style={styles.totalFixedBox}>
+          <View style={styles.totalFixedRow}>
             <Text style={styles.totalFixedLabel}>
               총 고정지출
             </Text>
@@ -327,12 +424,97 @@ export default function SettingsScreen() {
         </View>
       </View>
 
+      {/* 이번 달 생활비 */}
+      <View style={styles.livingBudgetCard}>
+        <View style={styles.livingBudgetHeader}>
+          <View>
+            <Text style={styles.livingBudgetLabel}>
+              이번 달 생활비
+            </Text>
+
+            <Text style={styles.livingBudgetDescription}>
+              사용 가능 금액에서 저축과 고정지출을 제외한 금액이에요.
+            </Text>
+          </View>
+
+          <View style={styles.livingBudgetIcon}>
+            <Ionicons
+              name="wallet-outline"
+              size={20}
+              color="#3563C9"
+            />
+          </View>
+        </View>
+
+        <Text
+          style={[
+            styles.livingBudgetAmount,
+            isBudgetOverAllocated &&
+              styles.livingBudgetAmountDanger,
+          ]}
+        >
+          {formatMoney(livingBudget)}원
+        </Text>
+
+        <View style={styles.calculationBox}>
+          <CalculationRow
+            label="사용 가능 금액"
+            value={availableMonthlyAmount}
+            formatMoney={formatMoney}
+          />
+
+          <CalculationRow
+            label="저축 목표"
+            value={savingGoalAmount}
+            formatMoney={formatMoney}
+            minus
+          />
+
+          <CalculationRow
+            label="투자 금액"
+            value={investmentAmountValue}
+            formatMoney={formatMoney}
+            minus
+          />
+
+          <CalculationRow
+            label="고정지출"
+            value={totalFixedExpense}
+            formatMoney={formatMoney}
+            minus
+          />
+        </View>
+
+        {isBudgetOverAllocated && (
+          <View style={styles.warningBox}>
+            <Ionicons
+              name="alert-circle-outline"
+              size={17}
+              color="#C94A4A"
+            />
+
+            <Text style={styles.warningText}>
+              저축 목표, 투자 금액, 고정지출의 합이 사용 가능 금액보다 커요. 금액을 다시 확인해주세요.
+            </Text>
+          </View>
+        )}
+      </View>
+
       <Pressable
         style={({ pressed }) => [
           styles.saveButton,
-          pressed && styles.saveButtonPressed,
+          isBudgetOverAllocated &&
+            styles.saveButtonDisabled,
+          pressed &&
+            !isBudgetOverAllocated &&
+            styles.saveButtonPressed,
         ]}
-        onPress={saveSettings}
+        onPress={
+          isBudgetOverAllocated
+            ? undefined
+            : saveSettings
+        }
+        disabled={isBudgetOverAllocated}
       >
         <Text style={styles.saveButtonText}>
           저장하기
@@ -344,6 +526,8 @@ export default function SettingsScreen() {
 
 type MoneyInputProps = {
   label: string;
+  description?: string;
+  optional?: boolean;
   value: string;
   onChangeText: (text: string) => void;
   placeholder: string;
@@ -351,15 +535,31 @@ type MoneyInputProps = {
 
 function MoneyInput({
   label,
+  description,
+  optional = false,
   value,
   onChangeText,
   placeholder,
 }: MoneyInputProps) {
   return (
     <View style={styles.inputGroup}>
-      <Text style={styles.label}>
-        {label}
-      </Text>
+      <View style={styles.labelRow}>
+        <Text style={styles.label}>
+          {label}
+        </Text>
+
+        {optional && (
+          <Text style={styles.optionalText}>
+            선택
+          </Text>
+        )}
+      </View>
+
+      {description && (
+        <Text style={styles.inputDescription}>
+          {description}
+        </Text>
+      )}
 
       <View style={styles.moneyInputBox}>
         <TextInput
@@ -374,6 +574,30 @@ function MoneyInput({
           원
         </Text>
       </View>
+    </View>
+  );
+}
+
+function CalculationRow({
+  label,
+  value,
+  formatMoney,
+  minus = false,
+}: {
+  label: string;
+  value: number;
+  formatMoney: (amount: number) => string;
+  minus?: boolean;
+}) {
+  return (
+    <View style={styles.calculationRow}>
+      <Text style={styles.calculationLabel}>
+        {minus ? `- ${label}` : label}
+      </Text>
+
+      <Text style={styles.calculationValue}>
+        {formatMoney(value)}원
+      </Text>
     </View>
   );
 }
@@ -395,13 +619,49 @@ const styles = StyleSheet.create({
   },
 
   inputGroup: {
-    gap: 9,
+    gap: 8,
+  },
+
+  labelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
 
   label: {
     fontSize: 15,
     fontWeight: '700',
     color: '#172033',
+  },
+
+  optionalText: {
+    marginLeft: 7,
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#98A2B3',
+  },
+
+  inputDescription: {
+    fontSize: 12,
+    lineHeight: 18,
+    color: '#8792A2',
+  },
+
+  helperBox: {
+    marginTop: -12,
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    backgroundColor: '#F8FAFC',
+    borderRadius: 14,
+    paddingHorizontal: 13,
+    paddingVertical: 11,
+  },
+
+  helperText: {
+    flex: 1,
+    marginLeft: 7,
+    fontSize: 11,
+    lineHeight: 17,
+    color: '#687386',
   },
 
   moneyInputBox: {
@@ -432,7 +692,12 @@ const styles = StyleSheet.create({
   },
 
   fixedHeader: {
-    marginBottom: 16,
+    marginBottom: 14,
+  },
+
+  sectionTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
 
   sectionTitle: {
@@ -517,12 +782,48 @@ const styles = StyleSheet.create({
     color: '#98A2B3',
   },
 
+  openAddFixedButton: {
+    marginTop: 12,
+    minHeight: 46,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 5,
+    borderRadius: 14,
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#E7ECF3',
+  },
+
+  openAddFixedButtonPressed: {
+    backgroundColor: '#F1F5FC',
+  },
+
+  openAddFixedButtonText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#3563C9',
+  },
+
   addBox: {
-    marginTop: 14,
+    marginTop: 12,
     backgroundColor: '#F1F5FC',
     borderRadius: 18,
     padding: 16,
     gap: 10,
+  },
+
+  addBoxHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+
+  addBoxCloseButton: {
+    width: 30,
+    height: 30,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 
   addTitle: {
@@ -578,27 +879,118 @@ const styles = StyleSheet.create({
     color: '#3563C9',
   },
 
-  totalFixedBox: {
-    marginTop: 14,
+  totalFixedRow: {
+    marginTop: 13,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: '#F1F5FC',
-    borderRadius: 16,
-    paddingHorizontal: 18,
-    paddingVertical: 17,
+    paddingHorizontal: 4,
+    paddingVertical: 8,
   },
 
   totalFixedLabel: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '600',
     color: '#687386',
   },
 
   totalFixedAmount: {
-    fontSize: 18,
+    fontSize: 15,
     fontWeight: '800',
     color: '#3563C9',
+  },
+
+  livingBudgetCard: {
+    marginTop: 28,
+    backgroundColor: '#F8FAFC',
+    borderRadius: 20,
+    padding: 18,
+    borderWidth: 1,
+    borderColor: '#EDF0F4',
+  },
+
+  livingBudgetHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+  },
+
+  livingBudgetLabel: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#172033',
+  },
+
+  livingBudgetDescription: {
+    maxWidth: 300,
+    marginTop: 5,
+    fontSize: 12,
+    lineHeight: 18,
+    color: '#8792A2',
+  },
+
+  livingBudgetIcon: {
+    width: 38,
+    height: 38,
+    marginLeft: 12,
+    borderRadius: 12,
+    backgroundColor: '#EAF0FB',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  livingBudgetAmount: {
+    marginTop: 18,
+    fontSize: 28,
+    fontWeight: '800',
+    color: '#3563C9',
+  },
+
+  livingBudgetAmountDanger: {
+    color: '#C94A4A',
+  },
+
+  calculationBox: {
+    marginTop: 16,
+    paddingTop: 14,
+    borderTopWidth: 1,
+    borderTopColor: '#E9EDF3',
+    gap: 9,
+  },
+
+  calculationRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+
+  calculationLabel: {
+    fontSize: 12,
+    color: '#8792A2',
+  },
+
+  calculationValue: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#687386',
+  },
+
+  warningBox: {
+    marginTop: 14,
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    backgroundColor: '#FFF3F3',
+    borderRadius: 13,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+
+  warningText: {
+    flex: 1,
+    marginLeft: 7,
+    fontSize: 11,
+    lineHeight: 17,
+    color: '#B64545',
   },
 
   saveButton: {
@@ -611,6 +1003,10 @@ const styles = StyleSheet.create({
 
   saveButtonPressed: {
     backgroundColor: '#294FA5',
+  },
+
+  saveButtonDisabled: {
+    backgroundColor: '#B8C5DE',
   },
 
   saveButtonText: {

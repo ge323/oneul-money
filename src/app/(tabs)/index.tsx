@@ -17,6 +17,15 @@ import {
 } from 'react-native';
 
 const BUDGET_KEY = 'budget-settings';
+const EXPENSES_KEY = 'expenses';
+
+type Expense = {
+  id: string;
+  title: string;
+  amount: number;
+  category?: string;
+  createdAt: string;
+};
 
 type BudgetSettings = {
   monthlyBudget: number;
@@ -42,74 +51,143 @@ export default function HomeScreen() {
       DEFAULT_SETTINGS
     );
 
-  const [showSimulator, setShowSimulator] =
-    useState(false);
+  const [
+    showSimulator,
+    setShowSimulator,
+  ] = useState(false);
 
-  const [purchaseAmount, setPurchaseAmount] =
-    useState('');
+  const [
+    purchaseAmount,
+    setPurchaseAmount,
+  ] = useState('');
+
+  const [
+    todaySpent,
+    setTodaySpent,
+  ] = useState(0);
 
   const slideAnim = useRef(
     new Animated.Value(500)
   ).current;
 
-  const backdropOpacity = useRef(
-    new Animated.Value(0)
-  ).current;
+  const backdropOpacity =
+    useRef(
+      new Animated.Value(0)
+    ).current;
 
   useFocusEffect(
     useCallback(() => {
-      loadSettings();
+      loadHomeData();
     }, [])
   );
 
-  const loadSettings = async () => {
-    try {
-      const saved =
-        await AsyncStorage.getItem(
-          BUDGET_KEY
+  const loadHomeData =
+    async () => {
+      try {
+        const [
+          savedBudget,
+          savedExpenses,
+        ] = await Promise.all([
+          AsyncStorage.getItem(
+            BUDGET_KEY
+          ),
+          AsyncStorage.getItem(
+            EXPENSES_KEY
+          ),
+        ]);
+
+        if (savedBudget) {
+          const data =
+            JSON.parse(
+              savedBudget
+            );
+
+          setSettings({
+            monthlyBudget:
+              Number(
+                data.monthlyBudget
+              ) || 0,
+
+            fixedExpense:
+              Number(
+                data.fixedExpense
+              ) || 0,
+
+            savingGoal:
+              Number(
+                data.savingGoal
+              ) || 0,
+
+            spentAmount:
+              Number(
+                data.spentAmount
+              ) || 0,
+
+            payday:
+              Number(
+                data.payday
+              ) || 25,
+
+            paydayType:
+              data.paydayType ||
+              'date',
+          });
+        }
+
+        const parsedExpenses:
+          Expense[] =
+          savedExpenses
+            ? JSON.parse(
+                savedExpenses
+              )
+            : [];
+
+        const today =
+          new Date();
+
+        const todayTotal =
+          parsedExpenses.reduce(
+            (
+              sum,
+              expense
+            ) => {
+              const expenseDate =
+                new Date(
+                  expense.createdAt
+                );
+
+              const isToday =
+                expenseDate.getFullYear() ===
+                  today.getFullYear() &&
+                expenseDate.getMonth() ===
+                  today.getMonth() &&
+                expenseDate.getDate() ===
+                  today.getDate();
+
+              if (!isToday) {
+                return sum;
+              }
+
+              return (
+                sum +
+                (Number(
+                  expense.amount
+                ) || 0)
+              );
+            },
+            0
+          );
+
+        setTodaySpent(
+          todayTotal
         );
-
-      if (!saved) return;
-
-      const data = JSON.parse(saved);
-
-      setSettings({
-        monthlyBudget:
-          Number(
-            data.monthlyBudget
-          ) || 0,
-
-        fixedExpense:
-          Number(
-            data.fixedExpense
-          ) || 0,
-
-        savingGoal:
-          Number(
-            data.savingGoal
-          ) || 0,
-
-        spentAmount:
-          Number(
-            data.spentAmount
-          ) || 0,
-
-        payday:
-          Number(
-            data.payday
-          ) || 25,
-
-        paydayType:
-          data.paydayType ||
-          'date',
-      });
-    } catch (error) {
-      console.error(
-        '예산 불러오기 실패:',
-        error
-      );
-    }
-  };
+      } catch (error) {
+        console.error(
+          '홈 데이터 불러오기 실패:',
+          error
+        );
+      }
+    };
 
   const getLastDay = (
     year: number,
@@ -122,120 +200,122 @@ export default function HomeScreen() {
     ).getDate();
   };
 
-  const getRemainingDays = () => {
-    const today = new Date();
+  const getRemainingDays =
+    () => {
+      const today =
+        new Date();
 
-    const year =
-      today.getFullYear();
+      const year =
+        today.getFullYear();
 
-    const month =
-      today.getMonth();
+      const month =
+        today.getMonth();
 
-    const todayDate =
-      today.getDate();
+      const todayDate =
+        today.getDate();
 
-    let targetDate: Date;
-
-    if (
-      settings.paydayType ===
-      'lastDay'
-    ) {
-      const thisMonthLastDay =
-        getLastDay(
-          year,
-          month
-        );
+      let targetDate: Date;
 
       if (
-        todayDate <
-        thisMonthLastDay
+        settings.paydayType ===
+        'lastDay'
       ) {
-        targetDate =
-          new Date(
-            year,
-            month,
-            thisMonthLastDay
-          );
-      } else {
-        const nextMonthLastDay =
-          getLastDay(
-            year,
-            month + 1
-          );
-
-        targetDate =
-          new Date(
-            year,
-            month + 1,
-            nextMonthLastDay
-          );
-      }
-    } else {
-      const thisMonthPayday =
-        Math.min(
-          settings.payday,
+        const thisMonthLastDay =
           getLastDay(
             year,
             month
-          )
-        );
-
-      if (
-        todayDate <
-        thisMonthPayday
-      ) {
-        targetDate =
-          new Date(
-            year,
-            month,
-            thisMonthPayday
           );
+
+        if (
+          todayDate <
+          thisMonthLastDay
+        ) {
+          targetDate =
+            new Date(
+              year,
+              month,
+              thisMonthLastDay
+            );
+        } else {
+          const nextMonthLastDay =
+            getLastDay(
+              year,
+              month + 1
+            );
+
+          targetDate =
+            new Date(
+              year,
+              month + 1,
+              nextMonthLastDay
+            );
+        }
       } else {
-        const nextMonthPayday =
+        const thisMonthPayday =
           Math.min(
             settings.payday,
             getLastDay(
               year,
-              month + 1
+              month
             )
           );
 
-        targetDate =
-          new Date(
-            year,
-            month + 1,
-            nextMonthPayday
-          );
+        if (
+          todayDate <
+          thisMonthPayday
+        ) {
+          targetDate =
+            new Date(
+              year,
+              month,
+              thisMonthPayday
+            );
+        } else {
+          const nextMonthPayday =
+            Math.min(
+              settings.payday,
+              getLastDay(
+                year,
+                month + 1
+              )
+            );
+
+          targetDate =
+            new Date(
+              year,
+              month + 1,
+              nextMonthPayday
+            );
+        }
       }
-    }
 
-    const todayStart =
-      new Date(
-        year,
-        month,
-        todayDate
+      const todayStart =
+        new Date(
+          year,
+          month,
+          todayDate
+        );
+
+      const difference =
+        targetDate.getTime() -
+        todayStart.getTime();
+
+      const days =
+        Math.ceil(
+          difference /
+            (
+              1000 *
+              60 *
+              60 *
+              24
+            )
+        );
+
+      return Math.max(
+        days,
+        1
       );
-
-    const difference =
-      targetDate.getTime() -
-      todayStart.getTime();
-
-    const days =
-      Math.ceil(
-        difference /
-          (
-            1000 *
-            60 *
-            60 *
-            24
-          )
-      );
-
-    return Math.max(
-      days,
-      1
-    );
-  };
+    };
 
   const remainingDays =
     getRemainingDays();
@@ -243,6 +323,7 @@ export default function HomeScreen() {
   const remainingBudget =
     Math.max(
       0,
+
       settings.monthlyBudget -
         settings.fixedExpense -
         settings.savingGoal -
@@ -256,6 +337,28 @@ export default function HomeScreen() {
             remainingDays
         )
       : 0;
+
+  const todayRemaining =
+    Math.max(
+      0,
+      dailyBudget -
+        todaySpent
+    );
+
+  const todayOverAmount =
+    Math.max(
+      0,
+      todaySpent -
+        dailyBudget
+    );
+
+  const todayUsageRatio =
+    dailyBudget > 0
+      ? todaySpent /
+        dailyBudget
+      : todaySpent > 0
+        ? Infinity
+        : 0;
 
   const formatMoney = (
     amount: number
@@ -298,64 +401,178 @@ export default function HomeScreen() {
     );
   };
 
-  const openSimulator = () => {
-    slideAnim.setValue(500);
-    backdropOpacity.setValue(0);
+  const getTodayStatus =
+    () => {
+      if (todaySpent <= 0) {
+        return {
+          type: 'empty' as const,
 
-    setShowSimulator(true);
+          icon:
+            'time-outline' as const,
 
-    requestAnimationFrame(
-      () => {
-        Animated.parallel([
-          Animated.timing(
-            slideAnim,
-            {
-              toValue: 0,
-              duration: 250,
-              useNativeDriver: true,
-            }
-          ),
+          title:
+            '아직 오늘 기록한 지출이 없어요',
 
-          Animated.timing(
-            backdropOpacity,
-            {
-              toValue: 1,
-              duration: 100,
-              useNativeDriver: true,
-            }
-          ),
-        ]).start();
+          message:
+            '지출을 기록하면 오늘 소비 상태를 알려드려요.',
+        };
       }
-    );
-  };
 
-  const closeSimulator = () => {
-    Animated.parallel([
-      Animated.timing(
-        slideAnim,
-        {
-          toValue: 500,
-          duration: 200,
-          useNativeDriver: true,
-        }
-      ),
+      if (
+        dailyBudget <= 0
+      ) {
+        return {
+          type: 'danger' as const,
 
-      Animated.timing(
-        backdropOpacity,
-        {
-          toValue: 0,
-          duration: 60,
-          useNativeDriver: true,
-        }
-      ),
-    ]).start(() => {
-      setShowSimulator(
-        false
+          icon:
+            'alert-circle-outline' as const,
+
+          title:
+            '오늘 사용할 수 있는 예산이 없어요',
+
+          message: `오늘 ${formatMoney(
+            todaySpent
+          )}원을 사용했어요.`,
+        };
+      }
+
+      if (
+        todaySpent >
+        dailyBudget
+      ) {
+        return {
+          type: 'danger' as const,
+
+          icon:
+            'alert-circle-outline' as const,
+
+          title: `오늘은 ${formatMoney(
+            todayOverAmount
+          )}원 초과했어요`,
+
+          message: `오늘 ${formatMoney(
+            todaySpent
+          )}원을 사용했어요.`,
+        };
+      }
+
+      if (
+        todayUsageRatio >=
+        0.8
+      ) {
+        return {
+          type: 'warning' as const,
+
+          icon:
+            'wallet-outline' as const,
+
+          title: `오늘 예산이 ${formatMoney(
+            todayRemaining
+          )}원 남았어요`,
+
+          message: `오늘 ${formatMoney(
+            todaySpent
+          )}원을 사용했어요.`,
+        };
+      }
+
+      return {
+        type: 'safe' as const,
+
+        icon:
+          'checkmark-circle-outline' as const,
+
+        title:
+          '오늘 소비는 적정해요',
+
+        message: `오늘 ${formatMoney(
+          todaySpent
+        )}원 사용 · ${formatMoney(
+          todayRemaining
+        )}원 여유`,
+      };
+    };
+
+  const todayStatus =
+    getTodayStatus();
+
+  /* =========================
+     이거 사도 돼?
+  ========================= */
+
+  const openSimulator =
+    () => {
+      slideAnim.setValue(
+        500
       );
 
-      setPurchaseAmount('');
-    });
-  };
+      backdropOpacity.setValue(
+        0
+      );
+
+      setShowSimulator(
+        true
+      );
+
+      requestAnimationFrame(
+        () => {
+          Animated.parallel([
+            Animated.timing(
+              slideAnim,
+              {
+                toValue: 0,
+                duration: 250,
+                useNativeDriver:
+                  true,
+              }
+            ),
+
+            Animated.timing(
+              backdropOpacity,
+              {
+                toValue: 1,
+                duration: 100,
+                useNativeDriver:
+                  true,
+              }
+            ),
+          ]).start();
+        }
+      );
+    };
+
+  const closeSimulator =
+    () => {
+      Animated.parallel([
+        Animated.timing(
+          slideAnim,
+          {
+            toValue: 500,
+            duration: 200,
+            useNativeDriver:
+              true,
+          }
+        ),
+
+        Animated.timing(
+          backdropOpacity,
+          {
+            toValue: 0,
+            duration: 60,
+            useNativeDriver:
+              true,
+          }
+        ),
+      ]).start(() => {
+        setShowSimulator(
+          false
+        );
+
+        setPurchaseAmount(
+          ''
+        );
+      });
+    };
 
   const purchase =
     parseMoney(
@@ -388,50 +605,60 @@ export default function HomeScreen() {
     purchase >
     remainingBudget;
 
-  const getSimulationStatus = () => {
-    if (
-      purchase <= 0
-    ) {
-      return null;
-    }
+  const getSimulationStatus =
+    () => {
+      if (
+        purchase <= 0
+      ) {
+        return null;
+      }
 
-    if (isOverBudget) {
+      if (isOverBudget) {
+        return {
+          type: 'danger',
+
+          icon:
+            'alert-circle' as const,
+
+          title:
+            '지금 구매하면 부담돼요',
+
+          message:
+            '현재 남은 생활비보다 큰 금액이에요.',
+        };
+      }
+
+      if (
+        dailyBudgetAfterPurchase <
+        dailyBudget * 0.5
+      ) {
+        return {
+          type: 'warning',
+
+          icon:
+            'warning' as const,
+
+          title:
+            '조금 고민해보는 게 좋아요',
+
+          message:
+            '구매 후 하루 사용 가능 금액이 크게 줄어요.',
+        };
+      }
+
       return {
-        type: 'danger',
-        icon:
-          'alert-circle' as const,
-        title:
-          '지금 구매하면 부담돼요',
-        message:
-          '현재 남은 생활비보다 큰 금액이에요.',
-      };
-    }
+        type: 'safe',
 
-    if (
-      dailyBudgetAfterPurchase <
-      dailyBudget * 0.5
-    ) {
-      return {
-        type: 'warning',
         icon:
-          'warning' as const,
-        title:
-          '조금 고민해보는 게 좋아요',
-        message:
-          '구매 후 하루 사용 가능 금액이 크게 줄어요.',
-      };
-    }
+          'checkmark-circle' as const,
 
-    return {
-      type: 'safe',
-      icon:
-        'checkmark-circle' as const,
-      title:
-        '생활비 안에서는 가능해요',
-      message:
-        '구매 후에도 월급일까지 사용할 생활비가 남아 있어요.',
+        title:
+          '생활비 안에서는 가능해요',
+
+        message:
+          '구매 후에도 월급일까지 사용할 생활비가 남아 있어요.',
+      };
     };
-  };
 
   const simulationStatus =
     getSimulationStatus();
@@ -443,6 +670,10 @@ export default function HomeScreen() {
           styles.container
         }
       >
+        {/* =====================
+            타이틀
+        ===================== */}
+
         <Text
           style={
             styles.title
@@ -451,12 +682,18 @@ export default function HomeScreen() {
           오늘 얼마 써도 돼?
         </Text>
 
+        {/* =====================
+            오늘 사용 가능 카드
+        ===================== */}
+
         <View
-          style={styles.main}
+          style={
+            styles.dailyCard
+          }
         >
           <Text
             style={
-              styles.label
+              styles.dailyLabel
             }
           >
             오늘은
@@ -464,7 +701,7 @@ export default function HomeScreen() {
 
           <Text
             style={
-              styles.amount
+              styles.dailyAmount
             }
           >
             {formatMoney(
@@ -475,72 +712,124 @@ export default function HomeScreen() {
 
           <Text
             style={
-              styles.description
+              styles.dailyMessage
             }
           >
-            써도 괜찮아요
+            까지 써도 괜찮아요
           </Text>
+
+          <View
+            style={
+              styles.dailyDivider
+            }
+          />
+
+          <View
+            style={
+              styles.dailyBottomRow
+            }
+          >
+            <View>
+              <Text
+                style={
+                  styles.monthSpentLabel
+                }
+              >
+                이번 달 사용
+              </Text>
+
+              <Text
+                style={
+                  styles.monthSpentAmount
+                }
+              >
+                {formatMoney(
+                  settings.spentAmount
+                )}
+                원
+              </Text>
+            </View>
+
+            <View
+              style={
+                styles.dDayBadge
+              }
+            >
+              <Ionicons
+                name="calendar-outline"
+                size={14}
+                color="#3563C9"
+              />
+
+              <Text
+                style={
+                  styles.dDayText
+                }
+              >
+                D-
+                {
+                  remainingDays
+                }
+              </Text>
+            </View>
+          </View>
         </View>
+
+        {/* =====================
+            남은 생활비
+        ===================== */}
 
         <View
           style={
-            styles.infoBox
+            styles.remainingRow
           }
         >
           <View
             style={
-              styles.infoRow
+              styles.remainingLeft
             }
           >
+            <View
+              style={
+                styles.remainingIcon
+              }
+            >
+              <Ionicons
+                name="wallet-outline"
+                size={17}
+                color="#687386"
+              />
+            </View>
+
             <Text
               style={
-                styles.infoLabel
+                styles.remainingLabel
               }
             >
               남은 생활비
             </Text>
-
-            <Text
-              style={
-                styles.infoValue
-              }
-            >
-              {formatMoney(
-                remainingBudget
-              )}
-              원
-            </Text>
           </View>
 
-          <View
+          <Text
             style={
-              styles.infoRow
+              styles.remainingAmount
             }
           >
-            <Text
-              style={
-                styles.infoLabel
-              }
-            >
-              다음 월급일까지
-            </Text>
-
-            <Text
-              style={
-                styles.infoValue
-              }
-            >
-              D-
-              {
-                remainingDays
-              }
-            </Text>
-          </View>
+            {formatMoney(
+              remainingBudget
+            )}
+            원
+          </Text>
         </View>
 
-        {/* 이거 사도 돼 */}
+        {/* =====================
+            이거 사도 돼?
+        ===================== */}
+
         <Pressable
-          style={({ pressed }) => [
+          style={({
+            pressed,
+          }) => [
             styles.simulatorButton,
 
             pressed &&
@@ -557,7 +846,7 @@ export default function HomeScreen() {
           >
             <Ionicons
               name="bag-handle-outline"
-              size={20}
+              size={19}
               color="#3563C9"
             />
           </View>
@@ -580,21 +869,25 @@ export default function HomeScreen() {
                 styles.simulatorDescription
               }
             >
-              사고 싶은 금액이 생활비에
-              미치는 영향을 확인해보세요.
+              구매 후 하루 예산이 얼마나 달라지는지 확인해보세요.
             </Text>
           </View>
 
           <Ionicons
             name="chevron-forward"
-            size={20}
+            size={19}
             color="#98A2B3"
           />
         </Pressable>
 
-        {/* 지출 기록 */}
+        {/* =====================
+            지출 기록
+        ===================== */}
+
         <Pressable
-          style={({ pressed }) => [
+          style={({
+            pressed,
+          }) => [
             styles.expenseButton,
 
             pressed &&
@@ -606,29 +899,110 @@ export default function HomeScreen() {
             )
           }
         >
+          <Ionicons
+            name="add"
+            size={21}
+            color="#FFFFFF"
+          />
+
           <Text
             style={
               styles.expenseButtonText
             }
           >
-            + 지출 기록하기
+            지출 기록하기
           </Text>
         </Pressable>
 
-        <Text
-          style={
-            styles.guide
-          }
+        {/* =====================
+            오늘 소비 상태
+        ===================== */}
+
+        <View
+          style={[
+            styles.todayStatusBox,
+
+            todayStatus.type ===
+              'safe' &&
+              styles.todayStatusSafe,
+
+            todayStatus.type ===
+              'warning' &&
+              styles.todayStatusWarning,
+
+            todayStatus.type ===
+              'danger' &&
+              styles.todayStatusDanger,
+          ]}
         >
-          지출을 기록하면 오늘 쓸 수
-          있는 금액이 자동으로 다시
-          계산돼요.
-        </Text>
+          <View
+            style={[
+              styles.todayStatusIcon,
+
+              todayStatus.type ===
+                'safe' &&
+                styles.todayStatusIconSafe,
+
+              todayStatus.type ===
+                'warning' &&
+                styles.todayStatusIconWarning,
+
+              todayStatus.type ===
+                'danger' &&
+                styles.todayStatusIconDanger,
+            ]}
+          >
+            <Ionicons
+              name={
+                todayStatus.icon
+              }
+              size={17}
+              color={
+                todayStatus.type ===
+                'safe'
+                  ? '#2F7D5A'
+                  : todayStatus.type ===
+                      'warning'
+                    ? '#9A6818'
+                    : todayStatus.type ===
+                        'danger'
+                      ? '#D05B5B'
+                      : '#7C8798'
+              }
+            />
+          </View>
+
+          <View
+            style={
+              styles.todayStatusTextArea
+            }
+          >
+            <Text
+              style={
+                styles.todayStatusTitle
+              }
+            >
+              {
+                todayStatus.title
+              }
+            </Text>
+
+            <Text
+              style={
+                styles.todayStatusMessage
+              }
+            >
+              {
+                todayStatus.message
+              }
+            </Text>
+          </View>
+        </View>
       </View>
 
-      {/* ====================== */}
-      {/* 이거 사도 돼 Bottom Sheet */}
-      {/* ====================== */}
+      {/* =========================
+          Bottom Sheet
+      ========================= */}
 
       <Modal
         visible={
@@ -646,10 +1020,10 @@ export default function HomeScreen() {
             styles.modalRoot
           }
         >
-          {/* 검은 배경 */}
           <Animated.View
             style={[
               styles.backdrop,
+
               {
                 opacity:
                   backdropOpacity,
@@ -666,7 +1040,6 @@ export default function HomeScreen() {
             />
           </Animated.View>
 
-          {/* Bottom Sheet */}
           <Animated.View
             style={[
               styles.bottomSheet,
@@ -710,8 +1083,7 @@ export default function HomeScreen() {
                     styles.sheetDescription
                   }
                 >
-                  사고 싶은 금액을 입력하면
-                  구매 후 생활비를 계산해드려요.
+                  사고 싶은 금액을 입력하면 구매 후 하루 예산을 계산해드려요.
                 </Text>
               </View>
 
@@ -730,8 +1102,6 @@ export default function HomeScreen() {
                 />
               </Pressable>
             </View>
-
-            {/* 구매 금액 */}
 
             <Text
               style={
@@ -893,13 +1263,10 @@ export default function HomeScreen() {
                           )}
                           원
                         </Text>
-                        씩 덜 사용할 수
-                        있어요.
+                        씩 덜 사용할 수 있어요.
                       </Text>
                     </View>
                   )}
-
-                {/* 상태 */}
 
                 {simulationStatus && (
                   <View
@@ -963,8 +1330,6 @@ export default function HomeScreen() {
                   </View>
                 )}
 
-                {/* 남은 생활비 */}
-
                 <View
                   style={
                     styles.remainingAfterBox
@@ -1002,134 +1367,246 @@ export default function HomeScreen() {
 
 const styles =
   StyleSheet.create({
+    /* ========================
+       Home
+    ======================== */
+
     container: {
       flex: 1,
 
       backgroundColor:
         '#FFFFFF',
 
-      paddingHorizontal: 24,
+      paddingHorizontal: 20,
 
-      paddingTop: 60,
+      paddingTop: 70,
 
-      paddingBottom: 100,
+      paddingBottom: 96,
     },
 
     title: {
-      fontSize: 22,
+      fontSize: 21,
 
       fontWeight: '800',
 
       color: '#172033',
+
+      marginBottom: 26,
     },
 
-    main: {
-      flex: 1,
+    /* ========================
+       Daily card
+    ======================== */
+
+    dailyCard: {
+      backgroundColor:
+        '#F3F6FC',
+
+      borderRadius: 24,
+
+      paddingHorizontal: 20,
+
+      paddingTop: 22,
+
+      paddingBottom: 15,
+
+      marginBottom: 14,
+    },
+
+    dailyLabel: {
+      textAlign: 'center',
+
+      fontSize: 14,
+
+      fontWeight: '500',
+
+      color: '#7C8798',
+    },
+
+    dailyAmount: {
+      marginTop: 3,
+
+      textAlign: 'center',
+
+      fontSize: 46,
+
+      lineHeight: 54,
+
+      letterSpacing: -1.3,
+
+      fontWeight: '800',
+
+      color: '#3563C9',
+    },
+
+    dailyMessage: {
+      marginTop: 0,
+
+      textAlign: 'center',
+
+      fontSize: 14,
+
+      color: '#687386',
+    },
+
+    dailyDivider: {
+      height: 1,
+
+      backgroundColor:
+        '#E2E8F2',
+
+      marginTop: 19,
+
+      marginBottom: 13,
+    },
+
+    dailyBottomRow: {
+      flexDirection: 'row',
+
+      alignItems: 'center',
+
+      justifyContent:
+        'space-between',
+    },
+
+    monthSpentLabel: {
+      fontSize: 11,
+
+      color: '#98A2B3',
+    },
+
+    monthSpentAmount: {
+      marginTop: 3,
+
+      fontSize: 13,
+
+      fontWeight: '700',
+
+      color: '#687386',
+    },
+
+    dDayBadge: {
+      flexDirection: 'row',
+
+      alignItems: 'center',
+
+      gap: 5,
+
+      backgroundColor:
+        '#E4ECFC',
+
+      paddingHorizontal: 11,
+
+      paddingVertical: 7,
+
+      borderRadius: 999,
+    },
+
+    dDayText: {
+      fontSize: 12,
+
+      fontWeight: '800',
+
+      color: '#3563C9',
+    },
+
+    /* ========================
+       Remaining
+    ======================== */
+
+    remainingRow: {
+      minHeight: 58,
+
+      flexDirection: 'row',
+
+      alignItems: 'center',
+
+      justifyContent:
+        'space-between',
+
+      paddingHorizontal: 5,
+
+      marginBottom: 10,
+    },
+
+    remainingLeft: {
+      flexDirection: 'row',
+
+      alignItems: 'center',
+    },
+
+    remainingIcon: {
+      width: 34,
+
+      height: 34,
+
+      borderRadius: 11,
+
+      backgroundColor:
+        '#F5F7FA',
 
       alignItems: 'center',
 
       justifyContent:
         'center',
+
+      marginRight: 9,
     },
 
-    label: {
-      fontSize: 18,
+    remainingLabel: {
+      fontSize: 13,
 
       color: '#687386',
-
-      marginBottom: 12,
     },
 
-    amount: {
-      fontSize: 48,
+    remainingAmount: {
+      fontSize: 15,
 
       fontWeight: '800',
-
-      marginBottom: 12,
-
-      color: '#3563C9',
-    },
-
-    description: {
-      fontSize: 18,
-
-      color: '#687386',
-    },
-
-    infoBox: {
-      backgroundColor:
-        '#F1F5FC',
-
-      borderRadius: 20,
-
-      padding: 20,
-
-      marginBottom: 14,
-
-      gap: 18,
-    },
-
-    infoRow: {
-      flexDirection: 'row',
-
-      justifyContent:
-        'space-between',
-
-      alignItems: 'center',
-    },
-
-    infoLabel: {
-      fontSize: 15,
-
-      color: '#687386',
-    },
-
-    infoValue: {
-      fontSize: 15,
-
-      fontWeight: '700',
 
       color: '#172033',
     },
 
-    // 이거 사도 돼?
+    /* ========================
+       Simulator
+    ======================== */
 
     simulatorButton: {
+      minHeight: 66,
+
       flexDirection: 'row',
 
       alignItems: 'center',
 
       backgroundColor:
-        '#F8FAFC',
+        '#FFFFFF',
 
       borderRadius: 18,
 
-      paddingHorizontal: 16,
-
-      paddingVertical: 15,
-
-      marginBottom: 10,
+      paddingHorizontal: 14,
 
       borderWidth: 1,
 
       borderColor:
-        '#EEF1F5',
+        '#E5EAF1',
+
+      marginBottom: 10,
     },
 
     simulatorButtonPressed: {
       backgroundColor:
-        '#F1F5FC',
+        '#F8FAFC',
     },
 
     simulatorIcon: {
-      width: 42,
+      width: 40,
 
-      height: 42,
+      height: 40,
 
-      borderRadius: 14,
+      borderRadius: 13,
 
       backgroundColor:
-        '#EAF0FB',
+        '#EDF3FD',
 
       alignItems: 'center',
 
@@ -1140,13 +1617,13 @@ const styles =
     simulatorTextArea: {
       flex: 1,
 
-      marginLeft: 12,
+      marginLeft: 11,
 
       marginRight: 8,
     },
 
     simulatorTitle: {
-      fontSize: 15,
+      fontSize: 14,
 
       fontWeight: '800',
 
@@ -1154,56 +1631,166 @@ const styles =
     },
 
     simulatorDescription: {
-      marginTop: 4,
+      marginTop: 3,
 
-      fontSize: 12,
+      fontSize: 11,
 
-      lineHeight: 17,
+      lineHeight: 16,
 
       color: '#8792A2',
     },
 
-    // 지출 기록
+    /* ========================
+       Expense button
+    ======================== */
 
     expenseButton: {
+      minHeight: 56,
+
+      flexDirection: 'row',
+
+      alignItems: 'center',
+
+      justifyContent:
+        'center',
+
+      gap: 4,
+
       backgroundColor:
         '#3563C9',
 
-      paddingVertical: 16,
-
-      borderRadius: 16,
-
-      alignItems: 'center',
+      borderRadius: 17,
     },
 
     expenseButtonPressed: {
       backgroundColor:
         '#294FA5',
+
+      transform: [
+        {
+          scale: 0.99,
+        },
+      ],
     },
 
     expenseButtonText: {
       color: '#FFFFFF',
 
-      fontSize: 16,
+      fontSize: 15,
 
-      fontWeight: '700',
+      fontWeight: '800',
     },
 
-    guide: {
+    /* ========================
+       Today status
+    ======================== */
+
+    todayStatusBox: {
       marginTop: 12,
 
-      fontSize: 12,
+      minHeight: 54,
 
-      lineHeight: 18,
+      flexDirection: 'row',
 
-      color: '#98A2B3',
+      alignItems: 'center',
 
-      textAlign: 'center',
+      backgroundColor:
+        '#F8FAFC',
+
+      borderRadius: 15,
+
+      paddingHorizontal: 12,
+
+      paddingVertical: 9,
+
+      borderWidth: 1,
+
+      borderColor:
+        '#F0F2F5',
     },
 
-    // ========================
-    // Modal
-    // ========================
+    todayStatusSafe: {
+      backgroundColor:
+        '#F7FAF8',
+
+      borderColor:
+        '#EDF5F0',
+    },
+
+    todayStatusWarning: {
+      backgroundColor:
+        '#FFFBF4',
+
+      borderColor:
+        '#F8F0DF',
+    },
+
+    todayStatusDanger: {
+      backgroundColor:
+        '#FFF8F8',
+
+      borderColor:
+        '#F8EAEA',
+    },
+
+    todayStatusIcon: {
+      width: 32,
+
+      height: 32,
+
+      borderRadius: 10,
+
+      alignItems: 'center',
+
+      justifyContent:
+        'center',
+
+      backgroundColor:
+        '#EEF1F5',
+    },
+
+    todayStatusIconSafe: {
+      backgroundColor:
+        '#ECF6F0',
+    },
+
+    todayStatusIconWarning: {
+      backgroundColor:
+        '#FFF1D9',
+    },
+
+    todayStatusIconDanger: {
+      backgroundColor:
+        '#FCEAEA',
+    },
+
+    todayStatusTextArea: {
+      flex: 1,
+
+      marginLeft: 9,
+    },
+
+    todayStatusTitle: {
+      fontSize: 12,
+
+      fontWeight: '700',
+
+      color: '#172033',
+    },
+
+    todayStatusMessage: {
+      marginTop: 2,
+
+      fontSize: 10,
+
+      lineHeight: 13,
+
+      color: '#8792A2',
+    },
+
+    /* ========================
+       Modal
+    ======================== */
 
     modalRoot: {
       flex: 1,
@@ -1216,11 +1803,8 @@ const styles =
       position: 'absolute',
 
       top: 0,
-
       bottom: 0,
-
       left: 0,
-
       right: 0,
 
       backgroundColor:
@@ -1250,7 +1834,6 @@ const styles =
 
       shadowOffset: {
         width: 0,
-
         height: -5,
       },
 
@@ -1373,8 +1956,6 @@ const styles =
       color: '#687386',
     },
 
-    // 비교
-
     comparisonBox: {
       marginTop: 24,
 
@@ -1460,8 +2041,6 @@ const styles =
 
       color: '#172033',
     },
-
-    // 상태
 
     statusBox: {
       marginTop: 20,
