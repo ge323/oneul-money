@@ -1789,7 +1789,7 @@ const styles =
 
     title: {
       fontSize: 28,
-      fontWeight: '800',
+      fontFamily: 'Pretendard-ExtraBold',
       color: '#172033',
     },
 
@@ -1868,7 +1868,7 @@ const styles =
     reportButtonTitle: {
       fontSize: 14,
 
-      fontWeight: '800',
+      fontFamily: 'Pretendard-ExtraBold',
 
       color: '#172033',
     },
@@ -1927,7 +1927,7 @@ const styles =
 
     monthTitle: {
       fontSize: 17,
-      fontWeight: '800',
+      fontFamily: 'Pretendard-ExtraBold',
       color: '#172033',
     },
 
@@ -1963,7 +1963,7 @@ const styles =
 
       fontSize: 30,
 
-      fontWeight: '800',
+      fontFamily: 'Pretendard-ExtraBold',
 
       color: '#3563C9',
     },
@@ -2078,13 +2078,13 @@ const styles =
     filterChipText: {
       fontSize: 12,
 
-      fontWeight: '600',
+      fontFamily: 'Pretendard-SemiBold',
 
       color: '#687386',
     },
 
     filterChipTextSelected: {
-      fontWeight: '700',
+      fontFamily: 'Pretendard-Bold',
 
       color: '#3563C9',
     },
@@ -2116,7 +2116,7 @@ const styles =
     searchResultTitle: {
       fontSize: 12,
 
-      fontWeight: '700',
+      fontFamily: 'Pretendard-Bold',
 
       color: '#172033',
     },
@@ -2149,7 +2149,7 @@ const styles =
     resetButtonText: {
       fontSize: 11,
 
-      fontWeight: '600',
+      fontFamily: 'Pretendard-SemiBold',
 
       color: '#687386',
     },
@@ -2180,7 +2180,7 @@ const styles =
     dateTitle: {
       fontSize: 15,
 
-      fontWeight: '800',
+      fontFamily: 'Pretendard-ExtraBold',
 
       color: '#172033',
     },
@@ -2188,7 +2188,7 @@ const styles =
     dayTotal: {
       fontSize: 13,
 
-      fontWeight: '600',
+      fontFamily: 'Pretendard-SemiBold',
 
       color: '#8792A2',
     },
@@ -2263,7 +2263,7 @@ const styles =
     expenseTitle: {
       fontSize: 16,
 
-      fontWeight: '700',
+      fontFamily: 'Pretendard-Bold',
 
       color: '#172033',
     },
@@ -2312,7 +2312,7 @@ const styles =
     expenseAmount: {
       fontSize: 15,
 
-      fontWeight: '700',
+      fontFamily: 'Pretendard-Bold',
 
       color: '#172033',
     },
@@ -2389,7 +2389,7 @@ const styles =
     menuText: {
       fontSize: 14,
 
-      fontWeight: '600',
+      fontFamily: 'Pretendard-SemiBold',
 
       color: '#172033',
     },
@@ -2397,7 +2397,7 @@ const styles =
     deleteText: {
       fontSize: 14,
 
-      fontWeight: '600',
+      fontFamily: 'Pretendard-SemiBold',
 
       color: '#D84B4B',
     },
@@ -2433,7 +2433,7 @@ const styles =
 
       fontSize: 16,
 
-      fontWeight: '700',
+      fontFamily: 'Pretendard-Bold',
 
       color: '#172033',
     },
@@ -2466,7 +2466,7 @@ const styles =
     emptyResetButtonText: {
       fontSize: 13,
 
-      fontWeight: '700',
+      fontFamily: 'Pretendard-Bold',
 
       color: '#3563C9',
     },

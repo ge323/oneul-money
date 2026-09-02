@@ -288,7 +288,7 @@ const styles = StyleSheet.create({
 
   sectionTitle: {
     fontSize: 15,
-    fontWeight: '700',
+    fontFamily: 'Pretendard-Bold',
     color: '#172033',
     marginBottom: 12,
   },
@@ -340,7 +340,7 @@ const styles = StyleSheet.create({
 
   optionTitle: {
     fontSize: 16,
-    fontWeight: '700',
+    fontFamily: 'Pretendard-Bold',
     color: '#172033',
   },
 
@@ -359,7 +359,7 @@ const styles = StyleSheet.create({
 
   dateLabel: {
     fontSize: 15,
-    fontWeight: '700',
+    fontFamily: 'Pretendard-Bold',
     color: '#172033',
   },
 
@@ -376,14 +376,14 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingVertical: 16,
     fontSize: 22,
-    fontWeight: '800',
+    fontFamily: 'Pretendard-ExtraBold',
     color: '#3563C9',
   },
 
   unit: {
     marginLeft: 8,
     fontSize: 16,
-    fontWeight: '700',
+    fontFamily: 'Pretendard-Bold',
     color: '#687386',
   },
 
@@ -403,7 +403,7 @@ const styles = StyleSheet.create({
 
   infoTitle: {
     fontSize: 15,
-    fontWeight: '700',
+    fontFamily: 'Pretendard-Bold',
     color: '#172033',
   },
 
@@ -429,6 +429,6 @@ const styles = StyleSheet.create({
   saveButtonText: {
     color: '#FFFFFF',
     fontSize: 16,
-    fontWeight: '700',
+    fontFamily: 'Pretendard-Bold',
   },
 });

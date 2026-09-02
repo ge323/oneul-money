@@ -154,7 +154,7 @@ const styles =
 
     tabLabel: {
       fontSize: 11,
-      fontWeight: '600',
+      fontFamily: 'Pretendard-SemiBold',
     },
 
     centerButtonWrapper: {

@@ -629,14 +629,14 @@ const styles = StyleSheet.create({
 
   label: {
     fontSize: 15,
-    fontWeight: '700',
+    fontFamily: 'Pretendard-Bold',
     color: '#172033',
   },
 
   optionalText: {
     marginLeft: 7,
     fontSize: 11,
-    fontWeight: '600',
+    fontFamily: 'Pretendard-SemiBold',
     color: '#98A2B3',
   },
 
@@ -676,14 +676,14 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingVertical: 17,
     fontSize: 17,
-    fontWeight: '600',
+    fontFamily: 'Pretendard-SemiBold',
     color: '#172033',
   },
 
   unitText: {
     marginLeft: 8,
     fontSize: 15,
-    fontWeight: '600',
+    fontFamily: 'Pretendard-SemiBold',
     color: '#687386',
   },
 
@@ -702,7 +702,7 @@ const styles = StyleSheet.create({
 
   sectionTitle: {
     fontSize: 17,
-    fontWeight: '800',
+    fontFamily: 'Pretendard-ExtraBold',
     color: '#172033',
   },
 
@@ -746,7 +746,7 @@ const styles = StyleSheet.create({
   fixedItemTitle: {
     flex: 1,
     fontSize: 15,
-    fontWeight: '600',
+    fontFamily: 'Pretendard-SemiBold',
     color: '#172033',
   },
 
@@ -758,7 +758,7 @@ const styles = StyleSheet.create({
 
   fixedItemAmount: {
     fontSize: 14,
-    fontWeight: '700',
+    fontFamily: 'Pretendard-Bold',
     color: '#172033',
   },
 
@@ -801,7 +801,7 @@ const styles = StyleSheet.create({
 
   openAddFixedButtonText: {
     fontSize: 14,
-    fontWeight: '700',
+    fontFamily: 'Pretendard-Bold',
     color: '#3563C9',
   },
 
@@ -828,7 +828,7 @@ const styles = StyleSheet.create({
 
   addTitle: {
     fontSize: 14,
-    fontWeight: '700',
+    fontFamily: 'Pretendard-Bold',
     color: '#172033',
     marginBottom: 2,
   },
@@ -854,7 +854,7 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingVertical: 15,
     fontSize: 16,
-    fontWeight: '600',
+    fontFamily: 'Pretendard-SemiBold',
     color: '#172033',
   },
 
@@ -875,7 +875,7 @@ const styles = StyleSheet.create({
 
   addButtonText: {
     fontSize: 14,
-    fontWeight: '700',
+    fontFamily: 'Pretendard-Bold',
     color: '#3563C9',
   },
 
@@ -890,13 +890,13 @@ const styles = StyleSheet.create({
 
   totalFixedLabel: {
     fontSize: 13,
-    fontWeight: '600',
+    fontFamily: 'Pretendard-SemiBold',
     color: '#687386',
   },
 
   totalFixedAmount: {
     fontSize: 15,
-    fontWeight: '800',
+    fontFamily: 'Pretendard-ExtraBold',
     color: '#3563C9',
   },
 
@@ -917,7 +917,7 @@ const styles = StyleSheet.create({
 
   livingBudgetLabel: {
     fontSize: 16,
-    fontWeight: '800',
+    fontFamily: 'Pretendard-ExtraBold',
     color: '#172033',
   },
 
@@ -942,7 +942,7 @@ const styles = StyleSheet.create({
   livingBudgetAmount: {
     marginTop: 18,
     fontSize: 28,
-    fontWeight: '800',
+    fontFamily: 'Pretendard-ExtraBold',
     color: '#3563C9',
   },
 
@@ -971,7 +971,7 @@ const styles = StyleSheet.create({
 
   calculationValue: {
     fontSize: 12,
-    fontWeight: '700',
+    fontFamily: 'Pretendard-Bold',
     color: '#687386',
   },
 
@@ -1012,6 +1012,6 @@ const styles = StyleSheet.create({
   saveButtonText: {
     color: '#FFFFFF',
     fontSize: 16,
-    fontWeight: '700',
+    fontFamily: 'Pretendard-Bold',
   },
 });

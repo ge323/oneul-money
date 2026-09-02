@@ -91,7 +91,7 @@ const styles = StyleSheet.create({
 
   title: {
     fontSize: 28,
-    fontWeight: '800',
+    fontFamily: 'Pretendard-ExtraBold',
     color: '#172033',
   },
 
@@ -131,7 +131,7 @@ const styles = StyleSheet.create({
 
   menuTitle: {
     fontSize: 16,
-    fontWeight: '700',
+    fontFamily: 'Pretendard-Bold',
     color: '#172033',
   },
 

@@ -1066,7 +1066,7 @@ const styles =
 
     label: {
       fontSize: 15,
-      fontWeight: '700',
+      fontFamily: 'Pretendard-Bold',
       color: '#172033',
     },
 
@@ -1088,7 +1088,7 @@ const styles =
       paddingVertical: 18,
 
       fontSize: 28,
-      fontWeight: '800',
+      fontFamily: 'Pretendard-ExtraBold',
 
       color: '#3563C9',
     },
@@ -1097,7 +1097,7 @@ const styles =
       marginLeft: 8,
 
       fontSize: 15,
-      fontWeight: '700',
+      fontFamily: 'Pretendard-Bold',
 
       color: '#687386',
     },
@@ -1145,14 +1145,14 @@ const styles =
 
     categoryText: {
       fontSize: 14,
-      fontWeight: '600',
+      fontFamily: 'Pretendard-SemiBold',
 
       color: '#687386',
     },
 
     categoryTextSelected: {
       color: '#3563C9',
-      fontWeight: '700',
+      fontFamily: 'Pretendard-Bold',
     },
 
     addCategoryButton: {
@@ -1167,7 +1167,7 @@ const styles =
 
     addCategoryText: {
       fontSize: 14,
-      fontWeight: '700',
+      fontFamily: 'Pretendard-Bold',
 
       color: '#3563C9',
     },
@@ -1194,7 +1194,7 @@ const styles =
       color: '#FFFFFF',
 
       fontSize: 16,
-      fontWeight: '700',
+      fontFamily: 'Pretendard-Bold',
     },
 
     modalRoot: {
@@ -1280,7 +1280,7 @@ const styles =
     sheetTitle: {
       fontSize: 22,
 
-      fontWeight: '800',
+      fontFamily: 'Pretendard-ExtraBold',
 
       color: '#172033',
     },
@@ -1312,7 +1312,7 @@ const styles =
     sheetLabel: {
       fontSize: 14,
 
-      fontWeight: '700',
+      fontFamily: 'Pretendard-Bold',
 
       color: '#172033',
 
@@ -1395,6 +1395,6 @@ const styles =
 
       fontSize: 16,
 
-      fontWeight: '700',
+      fontFamily: 'Pretendard-Bold',
     },
   });

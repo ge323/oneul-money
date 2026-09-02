@@ -674,7 +674,7 @@ const styles = StyleSheet.create({
 
   title: {
     fontSize: 26,
-    fontWeight: '800',
+    fontFamily: 'Pretendard-ExtraBold',
     color: '#172033',
   },
 
@@ -716,12 +716,12 @@ const styles = StyleSheet.create({
 
   periodButtonText: {
     fontSize: 13,
-    fontWeight: '600',
+    fontFamily: 'Pretendard-SemiBold',
     color: '#8792A2',
   },
 
   periodButtonTextActive: {
-    fontWeight: '800',
+    fontFamily: 'Pretendard-ExtraBold',
     color: '#3563C9',
   },
 
@@ -742,7 +742,7 @@ const styles = StyleSheet.create({
   summaryAmount: {
     marginTop: 7,
     fontSize: 30,
-    fontWeight: '800',
+    fontFamily: 'Pretendard-ExtraBold',
     color: '#3563C9',
   },
 
@@ -771,7 +771,7 @@ const styles = StyleSheet.create({
 
   cardTitle: {
     fontSize: 17,
-    fontWeight: '800',
+    fontFamily: 'Pretendard-ExtraBold',
     color: '#172033',
   },
 
@@ -857,7 +857,7 @@ const styles = StyleSheet.create({
 
   categoryName: {
     fontSize: 14,
-    fontWeight: '600',
+    fontFamily: 'Pretendard-SemiBold',
     color: '#172033',
   },
 
@@ -868,7 +868,7 @@ const styles = StyleSheet.create({
 
   categoryAmount: {
     fontSize: 13,
-    fontWeight: '700',
+    fontFamily: 'Pretendard-Bold',
     color: '#172033',
   },
 
@@ -891,7 +891,7 @@ const styles = StyleSheet.create({
   emptyChartTitle: {
     marginTop: 12,
     fontSize: 14,
-    fontWeight: '700',
+    fontFamily: 'Pretendard-Bold',
     color: '#687386',
   },
 

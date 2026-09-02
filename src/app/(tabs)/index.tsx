@@ -1387,7 +1387,7 @@ const styles =
     title: {
       fontSize: 21,
 
-      fontWeight: '800',
+      fontFamily: 'Pretendard-ExtraBold',
 
       color: '#172033',
 
@@ -1418,7 +1418,7 @@ const styles =
 
       fontSize: 14,
 
-      fontWeight: '500',
+     fontFamily: 'Pretendard-Medium',
 
       color: '#7C8798',
     },
@@ -1434,7 +1434,7 @@ const styles =
 
       letterSpacing: -1.3,
 
-      fontWeight: '800',
+      fontFamily: 'Pretendard-ExtraBold',
 
       color: '#3563C9',
     },
@@ -1480,7 +1480,7 @@ const styles =
 
       fontSize: 13,
 
-      fontWeight: '700',
+      fontFamily: 'Pretendard-Bold',
 
       color: '#687386',
     },
@@ -1505,7 +1505,7 @@ const styles =
     dDayText: {
       fontSize: 12,
 
-      fontWeight: '800',
+      fontFamily: 'Pretendard-ExtraBold',
 
       color: '#3563C9',
     },
@@ -1562,7 +1562,7 @@ const styles =
     remainingAmount: {
       fontSize: 15,
 
-      fontWeight: '800',
+      fontFamily: 'Pretendard-ExtraBold',
 
       color: '#172033',
     },
@@ -1625,7 +1625,7 @@ const styles =
     simulatorTitle: {
       fontSize: 14,
 
-      fontWeight: '800',
+      fontFamily: 'Pretendard-ExtraBold',
 
       color: '#172033',
     },
@@ -1678,7 +1678,7 @@ const styles =
 
       fontSize: 15,
 
-      fontWeight: '800',
+      fontFamily: 'Pretendard-ExtraBold',
     },
 
     /* ========================
@@ -1773,7 +1773,7 @@ const styles =
     todayStatusTitle: {
       fontSize: 12,
 
-      fontWeight: '700',
+      fontFamily: 'Pretendard-Bold',
 
       color: '#172033',
     },
@@ -1880,7 +1880,7 @@ const styles =
     sheetTitle: {
       fontSize: 22,
 
-      fontWeight: '800',
+      fontFamily: 'Pretendard-ExtraBold',
 
       color: '#172033',
     },
@@ -1914,7 +1914,7 @@ const styles =
     sheetLabel: {
       fontSize: 14,
 
-      fontWeight: '700',
+      fontFamily: 'Pretendard-Bold',
 
       color: '#172033',
 
@@ -1941,7 +1941,7 @@ const styles =
 
       fontSize: 26,
 
-      fontWeight: '800',
+      fontFamily: 'Pretendard-ExtraBold',
 
       color: '#3563C9',
     },
@@ -1951,7 +1951,7 @@ const styles =
 
       fontSize: 16,
 
-      fontWeight: '700',
+      fontFamily: 'Pretendard-Bold',
 
       color: '#687386',
     },
@@ -1988,7 +1988,7 @@ const styles =
 
       fontSize: 18,
 
-      fontWeight: '800',
+      fontFamily: 'Pretendard-ExtraBold',
 
       color: '#172033',
     },
@@ -1998,7 +1998,7 @@ const styles =
 
       fontSize: 18,
 
-      fontWeight: '800',
+      fontFamily: 'Pretendard-ExtraBold',
 
       color: '#3563C9',
     },
@@ -2037,7 +2037,7 @@ const styles =
     },
 
     differenceStrong: {
-      fontWeight: '800',
+      fontFamily: 'Pretendard-ExtraBold',
 
       color: '#172033',
     },
@@ -2079,7 +2079,7 @@ const styles =
     statusTitle: {
       fontSize: 14,
 
-      fontWeight: '800',
+      fontFamily: 'Pretendard-ExtraBold',
 
       color: '#172033',
     },
@@ -2121,7 +2121,7 @@ const styles =
     remainingAfterAmount: {
       fontSize: 17,
 
-      fontWeight: '800',
+      fontFamily: 'Pretendard-ExtraBold',
 
       color: '#172033',
     },

@@ -2194,7 +2194,7 @@ const styles =
 
     title: {
       fontSize: 28,
-      fontWeight: '800',
+      fontFamily: 'Pretendard-ExtraBold',
       color: '#172033',
     },
 
@@ -2227,7 +2227,7 @@ const styles =
 
       fontSize: 30,
 
-      fontWeight: '800',
+      fontFamily: 'Pretendard-ExtraBold',
 
       color: '#3563C9',
     },
@@ -2273,7 +2273,7 @@ const styles =
     addButtonText: {
       fontSize: 15,
 
-      fontWeight: '700',
+      fontFamily: 'Pretendard-Bold',
 
       color: '#3563C9',
     },
@@ -2285,7 +2285,7 @@ const styles =
     sectionTitle: {
       fontSize: 18,
 
-      fontWeight: '800',
+      fontFamily: 'Pretendard-ExtraBold',
 
       color: '#172033',
 
@@ -2342,7 +2342,7 @@ const styles =
     expenseTitle: {
       fontSize: 15,
 
-      fontWeight: '700',
+      fontFamily: 'Pretendard-Bold',
 
       color: '#172033',
     },
@@ -2358,7 +2358,7 @@ const styles =
     expenseAmount: {
       fontSize: 15,
 
-      fontWeight: '800',
+      fontFamily: 'Pretendard-ExtraBold',
 
       color: '#172033',
     },
@@ -2431,7 +2431,7 @@ const styles =
     completeMenuText: {
       fontSize: 14,
 
-      fontWeight: '700',
+      fontFamily: 'Pretendard-Bold',
 
       color: '#3563C9',
     },
@@ -2439,7 +2439,7 @@ const styles =
     menuText: {
       fontSize: 14,
 
-      fontWeight: '600',
+      fontFamily: 'Pretendard-SemiBold',
 
       color: '#172033',
     },
@@ -2447,7 +2447,7 @@ const styles =
     deleteText: {
       fontSize: 14,
 
-      fontWeight: '600',
+      fontFamily: 'Pretendard-SemiBold',
 
       color: '#D84B4B',
     },
@@ -2481,7 +2481,7 @@ const styles =
 
       fontSize: 16,
 
-      fontWeight: '700',
+      fontFamily: 'Pretendard-Bold',
 
       color: '#172033',
     },
@@ -2587,7 +2587,7 @@ const styles =
     sheetTitle: {
       fontSize: 22,
 
-      fontWeight: '800',
+      fontFamily: 'Pretendard-ExtraBold',
 
       color: '#172033',
     },
@@ -2621,7 +2621,7 @@ const styles =
     inputLabel: {
       fontSize: 14,
 
-      fontWeight: '700',
+      fontFamily: 'Pretendard-Bold',
 
       color: '#172033',
 
@@ -2667,7 +2667,7 @@ const styles =
 
       fontSize: 20,
 
-      fontWeight: '700',
+      fontFamily: 'Pretendard-Bold',
 
       color: '#3563C9',
     },
@@ -2675,7 +2675,7 @@ const styles =
     unit: {
       fontSize: 14,
 
-      fontWeight: '600',
+      fontFamily: 'Pretendard-SemiBold',
 
       color: '#687386',
     },
@@ -2698,7 +2698,7 @@ const styles =
 
       fontSize: 16,
 
-      fontWeight: '700',
+      fontFamily: 'Pretendard-Bold',
     },
 
     /* 날짜 */
@@ -2757,7 +2757,7 @@ const styles =
 
       fontSize: 14,
 
-      fontWeight: '600',
+      fontFamily: 'Pretendard-SemiBold',
 
       color: '#172033',
     },
@@ -2789,7 +2789,7 @@ const styles =
     quickDateText: {
       fontSize: 12,
 
-      fontWeight: '600',
+      fontFamily: 'Pretendard-SemiBold',
 
       color: '#687386',
     },
@@ -2865,7 +2865,7 @@ const styles =
     calendarTitle: {
       fontSize: 20,
 
-      fontWeight: '800',
+      fontFamily: 'Pretendard-ExtraBold',
 
       color: '#172033',
     },
@@ -2919,7 +2919,7 @@ const styles =
     selectedDateText: {
       fontSize: 14,
 
-      fontWeight: '700',
+      fontFamily: 'Pretendard-Bold',
 
       color: '#3563C9',
     },
@@ -2945,7 +2945,7 @@ const styles =
     completeTitle: {
       fontSize: 16,
 
-      fontWeight: '700',
+      fontFamily: 'Pretendard-Bold',
 
       color: '#172033',
     },
@@ -2976,7 +2976,7 @@ const styles =
 
       fontSize: 15,
 
-      fontWeight: '700',
+      fontFamily: 'Pretendard-Bold',
 
       color: '#687386',
     },
@@ -3005,7 +3005,7 @@ const styles =
 
       fontSize: 24,
 
-      fontWeight: '800',
+      fontFamily: 'Pretendard-ExtraBold',
 
       color: '#3563C9',
     },
@@ -3041,7 +3041,7 @@ const styles =
     },
 
     differenceStrong: {
-      fontWeight: '800',
+      fontFamily: 'Pretendard-ExtraBold',
     },
 
     completeGuide: {
