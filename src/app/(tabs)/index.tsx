@@ -32,6 +32,7 @@ type BudgetSettings = {
   monthlyBudget: number;
   fixedExpense: number;
   savingGoal: number;
+  investmentAmount: number;
   spentAmount: number;
   payday: number;
   paydayType?: 'date' | 'lastDay';
@@ -41,6 +42,7 @@ const DEFAULT_SETTINGS: BudgetSettings = {
   monthlyBudget: 1000000,
   fixedExpense: 400000,
   savingGoal: 200000,
+  investmentAmount: 0,
   spentAmount: 100000,
   payday: 25,
   paydayType: 'date',
@@ -157,6 +159,11 @@ export default function HomeScreen() {
             savingGoal:
               Number(
                 data.savingGoal
+              ) || 0,
+
+            investmentAmount:
+              Number(
+                data.investmentAmount
               ) || 0,
 
             spentAmount:
@@ -368,6 +375,7 @@ export default function HomeScreen() {
       settings.monthlyBudget -
         settings.fixedExpense -
         settings.savingGoal -
+        settings.investmentAmount -
         settings.spentAmount
     );
 
@@ -963,17 +971,11 @@ export default function HomeScreen() {
             openSimulator
           }
         >
-          <View
-            style={
-              styles.simulatorIcon
-            }
-          >
-            <Ionicons
-              name="bag-handle-outline"
-              size={19}
-              color="#3563C9"
-            />
-          </View>
+          <Ionicons
+            name="bag-handle-outline"
+            size={18}
+            color="#3563C9"
+          />
 
           <View
             style={
@@ -993,14 +995,14 @@ export default function HomeScreen() {
                 styles.simulatorDescription
               }
             >
-              구매 후 하루 예산이 얼마나 달라지는지 확인해보세요.
+              구매 후 예산을 미리 확인해보세요.
             </Text>
           </View>
 
           <Ionicons
             name="chevron-forward"
-            size={19}
-            color="#98A2B3"
+            size={18}
+            color="#A3ADBC"
           />
         </Pressable>
 
@@ -1043,58 +1045,28 @@ export default function HomeScreen() {
         ===================== */}
 
         <View
-          style={[
-            styles.todayStatusBox,
-
-            todayStatus.type ===
-              'safe' &&
-              styles.todayStatusSafe,
-
-            todayStatus.type ===
-              'warning' &&
-              styles.todayStatusWarning,
-
-            todayStatus.type ===
-              'danger' &&
-              styles.todayStatusDanger,
-          ]}
+          style={
+            styles.todayStatusRow
+          }
         >
-          <View
-            style={[
-              styles.todayStatusIcon,
-
+          <Ionicons
+            name={
+              todayStatus.icon
+            }
+            size={17}
+            color={
               todayStatus.type ===
-                'safe' &&
-                styles.todayStatusIconSafe,
-
-              todayStatus.type ===
-                'warning' &&
-                styles.todayStatusIconWarning,
-
-              todayStatus.type ===
-                'danger' &&
-                styles.todayStatusIconDanger,
-            ]}
-          >
-            <Ionicons
-              name={
-                todayStatus.icon
-              }
-              size={17}
-              color={
-                todayStatus.type ===
-                'safe'
-                  ? '#2F7D5A'
+              'safe'
+                ? '#2F7D5A'
+                : todayStatus.type ===
+                    'warning'
+                  ? '#9A6818'
                   : todayStatus.type ===
-                      'warning'
-                    ? '#9A6818'
-                    : todayStatus.type ===
-                        'danger'
-                      ? '#D05B5B'
-                      : '#7C8798'
-              }
-            />
-          </View>
+                      'danger'
+                    ? '#D05B5B'
+                    : '#8792A2'
+            }
+          />
 
           <View
             style={
@@ -1102,9 +1074,21 @@ export default function HomeScreen() {
             }
           >
             <Text
-              style={
-                styles.todayStatusTitle
-              }
+              style={[
+                styles.todayStatusTitle,
+
+                todayStatus.type ===
+                  'safe' &&
+                  styles.todayStatusTitleSafe,
+
+                todayStatus.type ===
+                  'warning' &&
+                  styles.todayStatusTitleWarning,
+
+                todayStatus.type ===
+                  'danger' &&
+                  styles.todayStatusTitleDanger,
+              ]}
             >
               {
                 todayStatus.title
@@ -1696,52 +1680,34 @@ const styles =
     ======================== */
 
     simulatorButton: {
-      minHeight: 66,
+      minHeight: 58,
 
       flexDirection: 'row',
 
       alignItems: 'center',
 
-      backgroundColor:
-        '#FFFFFF',
+      paddingHorizontal: 4,
 
-      borderRadius: 18,
+      paddingVertical: 8,
 
-      paddingHorizontal: 14,
+      borderTopWidth: 1,
 
-      borderWidth: 1,
+      borderBottomWidth: 1,
 
       borderColor:
-        '#E5EAF1',
+        '#EEF1F5',
 
-      marginBottom: 10,
+      marginBottom: 12,
     },
 
     simulatorButtonPressed: {
-      backgroundColor:
-        '#F8FAFC',
-    },
-
-    simulatorIcon: {
-      width: 40,
-
-      height: 40,
-
-      borderRadius: 13,
-
-      backgroundColor:
-        '#EDF3FD',
-
-      alignItems: 'center',
-
-      justifyContent:
-        'center',
+      opacity: 0.6,
     },
 
     simulatorTextArea: {
       flex: 1,
 
-      marginLeft: 11,
+      marginLeft: 10,
 
       marginRight: 8,
     },
@@ -1769,7 +1735,7 @@ const styles =
     ======================== */
 
     expenseButton: {
-      minHeight: 56,
+      minHeight: 54,
 
       flexDirection: 'row',
 
@@ -1783,7 +1749,7 @@ const styles =
       backgroundColor:
         '#3563C9',
 
-      borderRadius: 17,
+      borderRadius: 15,
     },
 
     expenseButtonPressed: {
@@ -1809,83 +1775,18 @@ const styles =
        Today status
     ======================== */
 
-    todayStatusBox: {
-      marginTop: 12,
+    todayStatusRow: {
+      marginTop: 3,
 
-      minHeight: 54,
+      minHeight: 52,
 
       flexDirection: 'row',
 
       alignItems: 'center',
 
-      backgroundColor:
-        '#F8FAFC',
+      paddingHorizontal: 4,
 
-      borderRadius: 15,
-
-      paddingHorizontal: 12,
-
-      paddingVertical: 9,
-
-      borderWidth: 1,
-
-      borderColor:
-        '#F0F2F5',
-    },
-
-    todayStatusSafe: {
-      backgroundColor:
-        '#F7FAF8',
-
-      borderColor:
-        '#EDF5F0',
-    },
-
-    todayStatusWarning: {
-      backgroundColor:
-        '#FFFBF4',
-
-      borderColor:
-        '#F8F0DF',
-    },
-
-    todayStatusDanger: {
-      backgroundColor:
-        '#FFF8F8',
-
-      borderColor:
-        '#F8EAEA',
-    },
-
-    todayStatusIcon: {
-      width: 32,
-
-      height: 32,
-
-      borderRadius: 10,
-
-      alignItems: 'center',
-
-      justifyContent:
-        'center',
-
-      backgroundColor:
-        '#EEF1F5',
-    },
-
-    todayStatusIconSafe: {
-      backgroundColor:
-        '#ECF6F0',
-    },
-
-    todayStatusIconWarning: {
-      backgroundColor:
-        '#FFF1D9',
-    },
-
-    todayStatusIconDanger: {
-      backgroundColor:
-        '#FCEAEA',
+      paddingVertical: 10,
     },
 
     todayStatusTextArea: {
@@ -1902,6 +1803,18 @@ const styles =
       color: '#172033',
     },
 
+    todayStatusTitleSafe: {
+      color: '#2F7D5A',
+    },
+
+    todayStatusTitleWarning: {
+      color: '#8A631C',
+    },
+
+    todayStatusTitleDanger: {
+      color: '#C65353',
+    },
+
     todayStatusMessage: {
       marginTop: 2,
 
@@ -1909,7 +1822,7 @@ const styles =
 
       lineHeight: 13,
 
-      color: '#8792A2',
+      color: '#98A2B3',
     },
 
     /* ========================
