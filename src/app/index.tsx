@@ -1,17 +1,67 @@
-import { router } from 'expo-router';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { router, useFocusEffect } from 'expo-router';
+import { useCallback, useState } from 'react';
+import {
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
+
+const BUDGET_KEY = 'budget-settings';
+
+type BudgetSettings = {
+  monthlyBudget: number;
+  fixedExpense: number;
+  savingGoal: number;
+  spentAmount: number;
+  remainingDays: number;
+};
+
+const DEFAULT_SETTINGS: BudgetSettings = {
+  monthlyBudget: 1000000,
+  fixedExpense: 400000,
+  savingGoal: 200000,
+  spentAmount: 100000,
+  remainingDays: 10,
+};
 
 export default function HomeScreen() {
-  const monthlyBudget = 1000000;
-  const fixedExpense = 400000;
-  const savingGoal = 200000;
-  const spentAmount = 100000;
-  const remainingDays = 10;
+  const [settings, setSettings] =
+    useState<BudgetSettings>(DEFAULT_SETTINGS);
 
-  const remainingBudget =
-    monthlyBudget - fixedExpense - savingGoal - spentAmount;
+  useFocusEffect(
+    useCallback(() => {
+      loadSettings();
+    }, [])
+  );
 
-  const dailyBudget = Math.floor(remainingBudget / remainingDays);
+  const loadSettings = async () => {
+    try {
+      const saved = await AsyncStorage.getItem(BUDGET_KEY);
+
+      if (!saved) return;
+
+      setSettings(JSON.parse(saved));
+    } catch (error) {
+      console.error('예산 불러오기 실패:', error);
+    }
+  };
+
+  const remainingBudget = Math.max(
+    0,
+    settings.monthlyBudget -
+      settings.fixedExpense -
+      settings.savingGoal -
+      settings.spentAmount
+  );
+
+  const dailyBudget =
+    settings.remainingDays > 0
+      ? Math.floor(
+          remainingBudget / settings.remainingDays
+        )
+      : 0;
 
   const formatMoney = (amount: number) => {
     return amount.toLocaleString('ko-KR');
@@ -19,29 +69,43 @@ export default function HomeScreen() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>오늘 얼마 써도 돼?</Text>
+      <Text style={styles.title}>
+        오늘 얼마 써도 돼?
+      </Text>
 
       <View style={styles.main}>
-        <Text style={styles.label}>오늘은</Text>
+        <Text style={styles.label}>
+          오늘은
+        </Text>
 
         <Text style={styles.amount}>
           {formatMoney(dailyBudget)}원
         </Text>
 
-        <Text style={styles.description}>써도 괜찮아요</Text>
+        <Text style={styles.description}>
+          써도 괜찮아요
+        </Text>
       </View>
 
       <View style={styles.infoBox}>
         <View style={styles.infoRow}>
-          <Text style={styles.infoLabel}>이번 달 남은 생활비</Text>
+          <Text style={styles.infoLabel}>
+            이번 달 남은 생활비
+          </Text>
+
           <Text style={styles.infoValue}>
             {formatMoney(remainingBudget)}원
           </Text>
         </View>
 
         <View style={styles.infoRow}>
-          <Text style={styles.infoLabel}>남은 기간</Text>
-          <Text style={styles.infoValue}>D-{remainingDays}</Text>
+          <Text style={styles.infoLabel}>
+            남은 기간
+          </Text>
+
+          <Text style={styles.infoValue}>
+            D-{settings.remainingDays}
+          </Text>
         </View>
       </View>
 
@@ -49,7 +113,9 @@ export default function HomeScreen() {
         style={styles.settingButton}
         onPress={() => router.push('/settings')}
       >
-        <Text style={styles.settingButtonText}>예산 설정하기</Text>
+        <Text style={styles.settingButtonText}>
+          예산 설정하기
+        </Text>
       </Pressable>
     </View>
   );

@@ -1,5 +1,6 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   Pressable,
   ScrollView,
@@ -9,6 +10,8 @@ import {
   View,
 } from 'react-native';
 
+const BUDGET_KEY = 'budget-settings';
+
 export default function SettingsScreen() {
   const [monthlyBudget, setMonthlyBudget] = useState('');
   const [fixedExpense, setFixedExpense] = useState('');
@@ -16,11 +19,51 @@ export default function SettingsScreen() {
   const [spentAmount, setSpentAmount] = useState('');
   const [remainingDays, setRemainingDays] = useState('');
 
+  useEffect(() => {
+    loadSettings();
+  }, []);
+
+  const loadSettings = async () => {
+    try {
+      const saved = await AsyncStorage.getItem(BUDGET_KEY);
+
+      if (!saved) return;
+
+      const data = JSON.parse(saved);
+
+      setMonthlyBudget(String(data.monthlyBudget ?? ''));
+      setFixedExpense(String(data.fixedExpense ?? ''));
+      setSavingGoal(String(data.savingGoal ?? ''));
+      setSpentAmount(String(data.spentAmount ?? ''));
+      setRemainingDays(String(data.remainingDays ?? ''));
+    } catch (error) {
+      console.error('예산 불러오기 실패:', error);
+    }
+  };
+
+  const saveSettings = async () => {
+    const data = {
+      monthlyBudget: Number(monthlyBudget) || 0,
+      fixedExpense: Number(fixedExpense) || 0,
+      savingGoal: Number(savingGoal) || 0,
+      spentAmount: Number(spentAmount) || 0,
+      remainingDays: Number(remainingDays) || 1,
+    };
+
+    try {
+      await AsyncStorage.setItem(BUDGET_KEY, JSON.stringify(data));
+      router.back();
+    } catch (error) {
+      console.error('예산 저장 실패:', error);
+    }
+  };
+
   return (
     <ScrollView contentContainerStyle={styles.container}>
       <Text style={styles.title}>예산 설정</Text>
+
       <Text style={styles.description}>
-        이번 달 사용할 예산을 입력해주세요.
+        이번 달 예산 정보를 입력해주세요.
       </Text>
 
       <View style={styles.form}>
@@ -28,28 +71,28 @@ export default function SettingsScreen() {
           label="월 예산"
           value={monthlyBudget}
           onChangeText={setMonthlyBudget}
-          placeholder="1,000,000"
+          placeholder="1000000"
         />
 
         <InputItem
           label="고정비"
           value={fixedExpense}
           onChangeText={setFixedExpense}
-          placeholder="400,000"
+          placeholder="400000"
         />
 
         <InputItem
           label="저축 목표"
           value={savingGoal}
           onChangeText={setSavingGoal}
-          placeholder="200,000"
+          placeholder="200000"
         />
 
         <InputItem
           label="이미 사용한 금액"
           value={spentAmount}
           onChangeText={setSpentAmount}
-          placeholder="100,000"
+          placeholder="100000"
         />
 
         <InputItem
@@ -62,9 +105,11 @@ export default function SettingsScreen() {
 
       <Pressable
         style={styles.saveButton}
-        onPress={() => router.back()}
+        onPress={saveSettings}
       >
-        <Text style={styles.saveButtonText}>저장하기</Text>
+        <Text style={styles.saveButtonText}>
+          저장하기
+        </Text>
       </Pressable>
     </ScrollView>
   );
