@@ -3,6 +3,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { router, useFocusEffect } from 'expo-router';
 import {
   useCallback,
+  useEffect,
   useRef,
   useState,
 } from 'react';
@@ -66,6 +67,29 @@ export default function HomeScreen() {
     setTodaySpent,
   ] = useState(0);
 
+  const [
+    displayedDailyBudget,
+    setDisplayedDailyBudget,
+  ] = useState(0);
+
+  const [
+    homeRefreshKey,
+    setHomeRefreshKey,
+  ] = useState(0);
+
+  const [
+    homeDataLoaded,
+    setHomeDataLoaded,
+  ] = useState(false);
+
+  const dailyBudgetAnim = useRef(
+    new Animated.Value(0)
+  ).current;
+
+  const dailyBudgetScale = useRef(
+    new Animated.Value(0.97)
+  ).current;
+
   const slideAnim = useRef(
     new Animated.Value(500)
   ).current;
@@ -77,7 +101,24 @@ export default function HomeScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      loadHomeData();
+      let isActive = true;
+
+      const refreshHome = async () => {
+        await loadHomeData();
+
+        if (isActive) {
+          setHomeDataLoaded(true);
+          setHomeRefreshKey(
+            (prev) => prev + 1
+          );
+        }
+      };
+
+      refreshHome();
+
+      return () => {
+        isActive = false;
+      };
     }, [])
   );
 
@@ -337,6 +378,78 @@ export default function HomeScreen() {
             remainingDays
         )
       : 0;
+
+  useEffect(() => {
+    if (!homeDataLoaded) {
+      return;
+    }
+
+    const listenerId =
+      dailyBudgetAnim.addListener(
+        ({ value }) => {
+          setDisplayedDailyBudget(
+            Math.round(value)
+          );
+        }
+      );
+
+    dailyBudgetAnim.stopAnimation();
+
+    /*
+     * 홈에 처음 들어오거나,
+     * 지출 기록 후 홈으로 돌아왔을 때
+     * 0원부터 새 하루 예산까지 짧게 올라갑니다.
+     */
+    dailyBudgetAnim.setValue(0);
+    dailyBudgetScale.setValue(0.97);
+
+    Animated.parallel([
+      Animated.timing(
+        dailyBudgetAnim,
+        {
+          toValue: dailyBudget,
+          duration: 650,
+          useNativeDriver: false,
+        }
+      ),
+
+      Animated.sequence([
+        Animated.timing(
+          dailyBudgetScale,
+          {
+            toValue: 1.015,
+            duration: 430,
+            useNativeDriver: true,
+          }
+        ),
+
+        Animated.timing(
+          dailyBudgetScale,
+          {
+            toValue: 1,
+            duration: 220,
+            useNativeDriver: true,
+          }
+        ),
+      ]),
+    ]).start(() => {
+      setDisplayedDailyBudget(
+        dailyBudget
+      );
+    });
+
+    return () => {
+      dailyBudgetAnim.removeListener(
+        listenerId
+      );
+    };
+  }, [
+    dailyBudget,
+    homeRefreshKey,
+    homeDataLoaded,
+    dailyBudgetAnim,
+    dailyBudgetScale,
+  ]);
 
   const todayRemaining =
     Math.max(
@@ -699,16 +812,27 @@ export default function HomeScreen() {
             오늘은
           </Text>
 
-          <Text
-            style={
-              styles.dailyAmount
-            }
+          <Animated.View
+            style={{
+              transform: [
+                {
+                  scale:
+                    dailyBudgetScale,
+                },
+              ],
+            }}
           >
-            {formatMoney(
-              dailyBudget
-            )}
-            원
-          </Text>
+            <Text
+              style={
+                styles.dailyAmount
+              }
+            >
+              {formatMoney(
+                displayedDailyBudget
+              )}
+              원
+            </Text>
+          </Animated.View>
 
           <Text
             style={
