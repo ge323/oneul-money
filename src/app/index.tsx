@@ -15,7 +15,7 @@ type BudgetSettings = {
   fixedExpense: number;
   savingGoal: number;
   spentAmount: number;
-  remainingDays: number;
+  payday: number;
 };
 
 const DEFAULT_SETTINGS: BudgetSettings = {
@@ -23,7 +23,7 @@ const DEFAULT_SETTINGS: BudgetSettings = {
   fixedExpense: 400000,
   savingGoal: 200000,
   spentAmount: 100000,
-  remainingDays: 10,
+  payday: 25,
 };
 
 export default function HomeScreen() {
@@ -42,11 +42,67 @@ export default function HomeScreen() {
 
       if (!saved) return;
 
-      setSettings(JSON.parse(saved));
+      const data = JSON.parse(saved);
+
+      setSettings({
+        monthlyBudget:
+          Number(data.monthlyBudget) || 0,
+        fixedExpense:
+          Number(data.fixedExpense) || 0,
+        savingGoal:
+          Number(data.savingGoal) || 0,
+        spentAmount:
+          Number(data.spentAmount) || 0,
+        payday:
+          Number(data.payday) || 25,
+      });
     } catch (error) {
       console.error('예산 불러오기 실패:', error);
     }
   };
+
+  const getRemainingDays = (payday: number) => {
+    const today = new Date();
+
+    const year = today.getFullYear();
+    const month = today.getMonth();
+    const todayDate = today.getDate();
+
+    let targetDate: Date;
+
+    if (todayDate < payday) {
+      targetDate = new Date(
+        year,
+        month,
+        payday
+      );
+    } else {
+      targetDate = new Date(
+        year,
+        month + 1,
+        payday
+      );
+    }
+
+    const todayStart = new Date(
+      year,
+      month,
+      todayDate
+    );
+
+    const difference =
+      targetDate.getTime() -
+      todayStart.getTime();
+
+    const days = Math.ceil(
+      difference / (1000 * 60 * 60 * 24)
+    );
+
+    return Math.max(days, 1);
+  };
+
+  const remainingDays =
+    getRemainingDays(settings.payday);
 
   const remainingBudget = Math.max(
     0,
@@ -57,9 +113,9 @@ export default function HomeScreen() {
   );
 
   const dailyBudget =
-    settings.remainingDays > 0
+    remainingDays > 0
       ? Math.floor(
-          remainingBudget / settings.remainingDays
+          remainingBudget / remainingDays
         )
       : 0;
 
@@ -100,11 +156,11 @@ export default function HomeScreen() {
 
         <View style={styles.infoRow}>
           <Text style={styles.infoLabel}>
-            남은 기간
+            다음 월급일까지
           </Text>
 
           <Text style={styles.infoValue}>
-            D-{settings.remainingDays}
+            D-{remainingDays}
           </Text>
         </View>
       </View>
@@ -150,7 +206,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 22,
     fontWeight: '700',
-    color: '#111827',
+    color: '#172033',
   },
 
   main: {
@@ -161,29 +217,29 @@ const styles = StyleSheet.create({
 
   label: {
     fontSize: 18,
-    color: '#6B7280',
+    color: '#687386',
     marginBottom: 12,
   },
 
-amount: {
-  fontSize: 48,
-  fontWeight: '800',
-  marginBottom: 12,
-  color: '#3563C9',
-},
+  amount: {
+    fontSize: 48,
+    fontWeight: '800',
+    marginBottom: 12,
+    color: '#3563C9',
+  },
 
   description: {
     fontSize: 18,
-    color: '#6B7280',
+    color: '#687386',
   },
 
-infoBox: {
-  backgroundColor: '#F1F5FC',
-  borderRadius: 20,
-  padding: 20,
-  marginBottom: 16,
-  gap: 18,
-},
+  infoBox: {
+    backgroundColor: '#F1F5FC',
+    borderRadius: 20,
+    padding: 20,
+    marginBottom: 16,
+    gap: 18,
+  },
 
   infoRow: {
     flexDirection: 'row',
@@ -193,28 +249,28 @@ infoBox: {
 
   infoLabel: {
     fontSize: 15,
-    color: '#6B7280',
+    color: '#687386',
   },
 
   infoValue: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#111827',
+    color: '#172033',
   },
 
-expenseButton: {
-  backgroundColor: '#EDF3FC',
-  paddingVertical: 16,
-  borderRadius: 16,
-  alignItems: 'center',
-  marginBottom: 10,
-},
+  expenseButton: {
+    backgroundColor: '#EAF0FB',
+    paddingVertical: 16,
+    borderRadius: 16,
+    alignItems: 'center',
+    marginBottom: 10,
+  },
 
-expenseButtonText: {
-  color: '#3563C9',
-  fontSize: 16,
-  fontWeight: '700',
-},
+  expenseButtonText: {
+    color: '#3563C9',
+    fontSize: 16,
+    fontWeight: '700',
+  },
 
   historyButton: {
     paddingVertical: 14,
@@ -222,18 +278,20 @@ expenseButtonText: {
     marginBottom: 10,
   },
 
-historyButtonText: {
-  fontSize: 15,
-  fontWeight: '600',
-  color: '#3563C9',
-},
-settingButton: {
-  backgroundColor: '#3563C9',
-  paddingVertical: 16,
-  borderRadius: 16,
-  alignItems: 'center',
-  marginBottom: 24,
-},
+  historyButtonText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#3563C9',
+  },
+
+  settingButton: {
+    backgroundColor: '#3563C9',
+    paddingVertical: 16,
+    borderRadius: 16,
+    alignItems: 'center',
+    marginBottom: 24,
+  },
+
   settingButtonText: {
     color: '#FFFFFF',
     fontSize: 16,

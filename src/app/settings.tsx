@@ -19,7 +19,7 @@ export default function SettingsScreen() {
   const [fixedExpense, setFixedExpense] = useState('');
   const [savingGoal, setSavingGoal] = useState('');
   const [spentAmount, setSpentAmount] = useState('');
-  const [remainingDays, setRemainingDays] = useState('');
+  const [payday, setPayday] = useState('');
 
   useEffect(() => {
     loadSettings();
@@ -63,21 +63,25 @@ export default function SettingsScreen() {
         Number(data.spentAmount ?? 0).toLocaleString('ko-KR')
       );
 
-      setRemainingDays(
-        String(data.remainingDays ?? '')
-      );
+      setPayday(String(data.payday ?? '25'));
     } catch (error) {
       console.error('예산 불러오기 실패:', error);
     }
   };
 
   const saveSettings = async () => {
+    const paydayNumber = Number(payday);
+
+    if (paydayNumber < 1 || paydayNumber > 31) {
+      return;
+    }
+
     const data = {
       monthlyBudget: parseMoney(monthlyBudget),
       fixedExpense: parseMoney(fixedExpense),
       savingGoal: parseMoney(savingGoal),
       spentAmount: parseMoney(spentAmount),
-      remainingDays: Number(remainingDays) || 1,
+      payday: paydayNumber,
     };
 
     try {
@@ -142,26 +146,31 @@ export default function SettingsScreen() {
 
         <View style={styles.inputGroup}>
           <Text style={styles.label}>
-            남은 일수
+            월급일
           </Text>
 
           <View style={styles.daysInputBox}>
             <TextInput
               style={styles.daysInput}
-              value={remainingDays}
+              value={payday}
               onChangeText={(text) =>
-                setRemainingDays(
+                setPayday(
                   text.replace(/[^0-9]/g, '')
                 )
               }
-              placeholder="10"
+              placeholder="25"
               keyboardType="numeric"
+              maxLength={2}
             />
 
             <Text style={styles.unitText}>
               일
             </Text>
           </View>
+
+          <Text style={styles.helperText}>
+            매월 월급이 들어오는 날짜를 입력해주세요.
+          </Text>
         </View>
       </View>
 
@@ -280,6 +289,11 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '600',
     color: '#687386',
+  },
+
+  helperText: {
+    fontSize: 13,
+    color: '#8792A2',
   },
 
   saveButton: {
