@@ -189,7 +189,7 @@ export default function SettingsScreen() {
         JSON.stringify(updatedData)
       );
 
-      router.back();
+      router.replace('/(tabs)');
     } catch (error) {
       console.error('예산 저장 실패:', error);
     }
@@ -433,7 +433,7 @@ export default function SettingsScreen() {
             </Text>
 
             <Text style={styles.livingBudgetDescription}>
-              사용 가능 금액에서 저축과 고정지출을 제외한 금액이에요.
+              사용 가능 금액에서 저축, 투자, 고정지출을 제외한 금액이에요.
             </Text>
           </View>
 
