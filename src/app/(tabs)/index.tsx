@@ -1555,16 +1555,13 @@ const styles =
 
     scrollContent: {
       flexGrow: 1,
-
-      paddingTop: 58,
-
-      paddingBottom: 118,
+      paddingTop: 46,
+      paddingBottom: 112,
     },
 
     scrollContentCompact: {
-      paddingTop: 34,
-
-      paddingBottom: 104,
+      paddingTop: 28,
+      paddingBottom: 96,
     },
 
     content: {
@@ -1583,7 +1580,7 @@ const styles =
 
       color: '#172033',
 
-      marginBottom: 24,
+      marginBottom: 20,
     },
 
     titleCompact: {
@@ -1598,19 +1595,15 @@ const styles =
       backgroundColor:
         '#F3F6FC',
 
-      borderRadius: 24,
-
-      paddingHorizontal: 20,
-
-      paddingTop: 22,
-
-      paddingBottom: 15,
+      borderRadius: 22,
+      paddingHorizontal: 22,
+      paddingTop: 24,
+      paddingBottom: 17,
     },
 
     dailyCardCompact: {
-      paddingTop: 18,
-
-      paddingBottom: 13,
+      paddingTop: 20,
+      paddingBottom: 15,
     },
 
     dailyLabel: {
@@ -1664,9 +1657,8 @@ const styles =
       backgroundColor:
         '#E2E8F2',
 
-      marginTop: 18,
-
-      marginBottom: 12,
+      marginTop: 20,
+      marginBottom: 14,
     },
 
     dailyBottomRow: {
@@ -1729,14 +1721,11 @@ const styles =
     ======================== */
 
     todaySummary: {
-      paddingTop: 18,
-
-      paddingBottom: 17,
-
+      marginTop: 18,
+      paddingHorizontal: 2,
+      paddingBottom: 18,
       borderBottomWidth: 1,
-
-      borderBottomColor:
-        '#EEF1F5',
+      borderBottomColor: '#E9EDF3',
     },
 
     todaySummaryTop: {
@@ -1767,10 +1756,8 @@ const styles =
     },
 
     todaySummaryBottom: {
-      marginTop: 7,
-
+      marginTop: 8,
       flexDirection: 'row',
-
       alignItems: 'center',
     },
 
@@ -1832,19 +1819,13 @@ const styles =
     ======================== */
 
     remainingRow: {
-      minHeight: 56,
-
+      minHeight: 64,
       flexDirection: 'row',
-
       alignItems: 'center',
-
-      justifyContent:
-        'space-between',
-
+      justifyContent: 'space-between',
+      paddingHorizontal: 2,
       borderBottomWidth: 1,
-
-      borderBottomColor:
-        '#EEF1F5',
+      borderBottomColor: '#E9EDF3',
     },
 
     remainingLabel: {
@@ -1870,18 +1851,15 @@ const styles =
     ======================== */
 
     actionSection: {
-      marginTop: 8,
+      marginTop: 18,
+      gap: 14,
     },
 
     simulatorButton: {
       minHeight: 60,
-
       flexDirection: 'row',
-
       alignItems: 'center',
-
       paddingHorizontal: 2,
-
       paddingVertical: 9,
     },
 
@@ -1891,39 +1869,26 @@ const styles =
 
     simulatorTextArea: {
       flex: 1,
-
       marginLeft: 10,
-
       marginRight: 8,
     },
 
     simulatorTitle: {
       fontSize: 14,
-
-      fontFamily:
-        'Pretendard-Bold',
-
+      fontFamily: 'Pretendard-Bold',
       color: '#172033',
     },
 
     simulatorDescription: {
       marginTop: 2,
-
       fontSize: 10,
-
       lineHeight: 15,
-
-      fontFamily:
-        'Pretendard-Regular',
-
+      fontFamily: 'Pretendard-Regular',
       color: '#98A2B3',
     },
 
     expenseButton: {
-      minHeight: 54,
-
-      marginTop: 4,
-
+      minHeight: 56,
       flexDirection: 'row',
 
       alignItems: 'center',
@@ -1936,7 +1901,7 @@ const styles =
       backgroundColor:
         '#3563C9',
 
-      borderRadius: 15,
+      borderRadius: 16,
     },
 
     expenseButtonPressed: {
@@ -1961,17 +1926,12 @@ const styles =
 
     reserveGuide: {
       marginTop: 14,
-
+      paddingHorizontal: 10,
       textAlign: 'center',
-
       fontSize: 10,
-
       lineHeight: 15,
-
-      fontFamily:
-        'Pretendard-Regular',
-
-      color: '#A5ADBA',
+      fontFamily: 'Pretendard-Regular',
+      color: '#9AA4B2',
     },
 
     /* ========================
