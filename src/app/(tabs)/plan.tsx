@@ -1145,7 +1145,7 @@ export default function PlanScreen() {
             {
               upcomingExpenses.length
             }
-            건을 생활비에 미리 반영해요.
+            건을 홈의 생활비와 오늘 권장 금액에 미리 반영해요.
           </Text>
         </View>
 

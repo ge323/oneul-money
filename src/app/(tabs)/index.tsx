@@ -21,12 +21,21 @@ import {
 
 const BUDGET_KEY = 'budget-settings';
 const EXPENSES_KEY = 'expenses';
+const PLANNED_EXPENSES_KEY = 'planned-expenses';
 
 type Expense = {
   id: string;
   title: string;
   amount: number;
   category?: string;
+  createdAt: string;
+};
+
+type PlannedExpense = {
+  id: string;
+  title: string;
+  amount: number;
+  date: string;
   createdAt: string;
 };
 
@@ -82,6 +91,11 @@ export default function HomeScreen() {
   const [
     todaySpent,
     setTodaySpent,
+  ] = useState(0);
+
+  const [
+    plannedAmount,
+    setPlannedAmount,
   ] = useState(0);
 
   const [
@@ -145,12 +159,16 @@ export default function HomeScreen() {
         const [
           savedBudget,
           savedExpenses,
+          savedPlannedExpenses,
         ] = await Promise.all([
           AsyncStorage.getItem(
             BUDGET_KEY
           ),
           AsyncStorage.getItem(
             EXPENSES_KEY
+          ),
+          AsyncStorage.getItem(
+            PLANNED_EXPENSES_KEY
           ),
         ]);
 
@@ -243,6 +261,53 @@ export default function HomeScreen() {
 
         setTodaySpent(
           todayTotal
+        );
+
+        const parsedPlannedExpenses:
+          PlannedExpense[] =
+          savedPlannedExpenses
+            ? JSON.parse(
+                savedPlannedExpenses
+              )
+            : [];
+
+        const todayStart =
+          new Date(
+            today.getFullYear(),
+            today.getMonth(),
+            today.getDate()
+          );
+
+        const upcomingPlannedTotal =
+          parsedPlannedExpenses.reduce(
+            (
+              sum,
+              expense
+            ) => {
+              const expenseDate =
+                new Date(
+                  `${expense.date}T00:00:00`
+                );
+
+              if (
+                expenseDate <
+                todayStart
+              ) {
+                return sum;
+              }
+
+              return (
+                sum +
+                (Number(
+                  expense.amount
+                ) || 0)
+              );
+            },
+            0
+          );
+
+        setPlannedAmount(
+          upcomingPlannedTotal
         );
       } catch (error) {
         console.error(
@@ -389,7 +454,7 @@ export default function HomeScreen() {
 
   const SAFETY_RESERVE_RATE = 0.1;
 
-  // 실제로 남아 있는 생활비
+  // 실제 지출뿐 아니라 앞으로 예정된 지출도 미리 빼둔 생활비
   const remainingBudget =
     Math.max(
       0,
@@ -398,7 +463,8 @@ export default function HomeScreen() {
         settings.fixedExpense -
         settings.savingGoal -
         settings.investmentAmount -
-        settings.spentAmount
+        settings.spentAmount -
+        plannedAmount
     );
 
   // 남은 생활비의 10%는 예상치 못한 지출을 위한 안전 여유금으로 보호
@@ -1056,29 +1122,30 @@ export default function HomeScreen() {
 
           {/* 남은 생활비 */}
 
-          <View
-            style={
-              styles.remainingRow
-            }
-          >
-            <Text
-              style={
-                styles.remainingLabel
-              }
-            >
-              남은 생활비
-            </Text>
+          <View style={styles.remainingSection}>
+            <View style={styles.remainingTopRow}>
+              <Text style={styles.remainingLabel}>
+                남은 생활비
+              </Text>
 
-            <Text
-              style={
-                styles.remainingAmount
-              }
-            >
-              {formatMoney(
-                remainingBudget
-              )}
-              원
-            </Text>
+              <Text style={styles.remainingAmount}>
+                {formatMoney(remainingBudget)}원
+              </Text>
+            </View>
+
+            {plannedAmount > 0 && (
+              <View style={styles.plannedNoticeRow}>
+                <Ionicons
+                  name="calendar-outline"
+                  size={13}
+                  color="#7292D8"
+                />
+
+                <Text style={styles.plannedNotice}>
+                  예정된 지출 {formatMoney(plannedAmount)}원을 미리 제외했어요.
+                </Text>
+              </View>
+            )}
           </View>
 
           {/* 행동 영역 */}
@@ -1818,32 +1885,46 @@ const styles =
        Remaining
     ======================== */
 
-    remainingRow: {
-      minHeight: 64,
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
+    remainingSection: {
+      minHeight: 72,
       paddingHorizontal: 2,
+      paddingTop: 17,
+      paddingBottom: 17,
       borderBottomWidth: 1,
       borderBottomColor: '#E9EDF3',
     },
 
+    remainingTopRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+    },
+
     remainingLabel: {
       fontSize: 13,
-
-      fontFamily:
-        'Pretendard-Medium',
-
+      fontFamily: 'Pretendard-Medium',
       color: '#687386',
     },
 
     remainingAmount: {
       fontSize: 15,
-
-      fontFamily:
-        'Pretendard-ExtraBold',
-
+      fontFamily: 'Pretendard-ExtraBold',
       color: '#172033',
+    },
+
+    plannedNoticeRow: {
+      marginTop: 7,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 5,
+    },
+
+    plannedNotice: {
+      flex: 1,
+      fontSize: 11,
+      lineHeight: 16,
+      fontFamily: 'Pretendard-Regular',
+      color: '#8B96A8',
     },
 
     /* ========================
@@ -1851,16 +1932,20 @@ const styles =
     ======================== */
 
     actionSection: {
-      marginTop: 18,
-      gap: 14,
+      marginTop: 16,
+      gap: 12,
     },
 
     simulatorButton: {
-      minHeight: 60,
+      minHeight: 62,
       flexDirection: 'row',
       alignItems: 'center',
-      paddingHorizontal: 2,
-      paddingVertical: 9,
+      paddingHorizontal: 14,
+      paddingVertical: 10,
+      backgroundColor: '#F8FAFD',
+      borderWidth: 1,
+      borderColor: '#EEF2F7',
+      borderRadius: 16,
     },
 
     simulatorButtonPressed: {
@@ -1884,10 +1969,11 @@ const styles =
       fontSize: 10,
       lineHeight: 15,
       fontFamily: 'Pretendard-Regular',
-      color: '#98A2B3',
+      color: '#8F9AAD',
     },
 
     expenseButton: {
+      marginTop: 25,
       minHeight: 56,
       flexDirection: 'row',
 
