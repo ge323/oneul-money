@@ -795,12 +795,26 @@ export default function HomeScreen() {
   const handleServiceMenuPress = (
     label: string
   ) => {
-    if (label === '개인정보처리방침') {
+    if (
+      label === '개인정보처리방침' ||
+      label === '이용약관' ||
+      label === '오픈소스 라이선스'
+    ) {
       setShowServiceMenu(false);
       serviceMenuBackdropOpacity.setValue(0);
       serviceMenuSlideAnim.setValue(420);
 
-      router.push('/privacy');
+      if (label === '개인정보처리방침') {
+        router.push('/privacy');
+        return;
+      }
+
+      if (label === '이용약관') {
+        router.push('/terms');
+        return;
+      }
+
+      router.push('/licenses');
       return;
     }
 
