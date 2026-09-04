@@ -7,11 +7,6 @@
     "icon": "./assets/images/icon.png",
     "scheme": "oneulmoney",
     "userInterfaceStyle": "automatic",
-
-    "ios": {
-      "icon": "./assets/expo.icon"
-    },
-
     "android": {
       "package": "com.ge323.eolma",
       "versionCode": 1,
@@ -21,12 +16,10 @@
       },
       "predictiveBackGestureEnabled": false
     },
-
     "web": {
       "output": "static",
       "favicon": "./assets/images/favicon.png"
     },
-
     "plugins": [
       "expo-router",
       [
@@ -38,10 +31,15 @@
         }
       ]
     ],
-
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "1f5b57bd-b05e-4ddf-8c81-81e98434f6a8"
+      }
     }
   }
 }
