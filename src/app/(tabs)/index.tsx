@@ -792,9 +792,18 @@ export default function HomeScreen() {
     });
   };
 
-  const showPreparingMessage = (
+  const handleServiceMenuPress = (
     label: string
   ) => {
+    if (label === '개인정보처리방침') {
+      setShowServiceMenu(false);
+      serviceMenuBackdropOpacity.setValue(0);
+      serviceMenuSlideAnim.setValue(420);
+
+      router.push('/privacy');
+      return;
+    }
+
     closeServiceMenu();
 
     setTimeout(() => {
@@ -1439,7 +1448,7 @@ export default function HomeScreen() {
                     styles.serviceMenuItemLast,
                 ]}
                 onPress={() =>
-                  showPreparingMessage(item.label)
+                  handleServiceMenuPress(item.label)
                 }
               >
                 <View style={styles.serviceMenuItemLeft}>
@@ -1489,7 +1498,7 @@ export default function HomeScreen() {
                     styles.serviceMenuItemLast,
                 ]}
                 onPress={() =>
-                  showPreparingMessage(item.label)
+                  handleServiceMenuPress(item.label)
                 }
               >
                 <View style={styles.serviceMenuItemLeft}>
