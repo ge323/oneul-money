@@ -795,37 +795,25 @@ export default function HomeScreen() {
   const handleServiceMenuPress = (
     label: string
   ) => {
-    if (
-      label === '개인정보처리방침' ||
-      label === '이용약관' ||
-      label === '오픈소스 라이선스'
-    ) {
-      setShowServiceMenu(false);
-      serviceMenuBackdropOpacity.setValue(0);
-      serviceMenuSlideAnim.setValue(420);
+    const routes: Record<string, string> = {
+      개인정보처리방침: '/privacy',
+      이용약관: '/terms',
+      '오픈소스 라이선스': '/licenses',
+      문의하기: '/contact',
+      '앱 정보': '/app-info',
+    };
 
-      if (label === '개인정보처리방침') {
-        router.push('/privacy');
-        return;
-      }
+    const targetRoute = routes[label];
 
-      if (label === '이용약관') {
-        router.push('/terms');
-        return;
-      }
-
-      router.push('/licenses');
+    if (!targetRoute) {
       return;
     }
 
-    closeServiceMenu();
+    setShowServiceMenu(false);
+    serviceMenuBackdropOpacity.setValue(0);
+    serviceMenuSlideAnim.setValue(420);
 
-    setTimeout(() => {
-      Alert.alert(
-        label,
-        '해당 페이지는 다음 단계에서 연결할 예정이에요.'
-      );
-    }, 220);
+    router.push(targetRoute as any);
   };
 
   /* =========================
