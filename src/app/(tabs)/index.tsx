@@ -8,6 +8,7 @@ import {
   useState,
 } from 'react';
 import {
+  Alert,
   Animated,
   Modal,
   Pressable,
@@ -84,6 +85,11 @@ export default function HomeScreen() {
   ] = useState(false);
 
   const [
+    showServiceMenu,
+    setShowServiceMenu,
+  ] = useState(false);
+
+  const [
     purchaseAmount,
     setPurchaseAmount,
   ] = useState('');
@@ -126,6 +132,16 @@ export default function HomeScreen() {
   ).current;
 
   const backdropOpacity =
+    useRef(
+      new Animated.Value(0)
+    ).current;
+
+  const serviceMenuSlideAnim =
+    useRef(
+      new Animated.Value(420)
+    ).current;
+
+  const serviceMenuBackdropOpacity =
     useRef(
       new Animated.Value(0)
     ).current;
@@ -720,6 +736,76 @@ export default function HomeScreen() {
     getTodayStatus();
 
   /* =========================
+     서비스 메뉴
+  ========================= */
+
+  const openServiceMenu = () => {
+    serviceMenuSlideAnim.setValue(420);
+    serviceMenuBackdropOpacity.setValue(0);
+
+    setShowServiceMenu(true);
+
+    requestAnimationFrame(() => {
+      Animated.sequence([
+        Animated.timing(
+          serviceMenuBackdropOpacity,
+          {
+            toValue: 1,
+            duration: 90,
+            useNativeDriver: true,
+          }
+        ),
+
+        Animated.timing(
+          serviceMenuSlideAnim,
+          {
+            toValue: 0,
+            duration: 210,
+            useNativeDriver: true,
+          }
+        ),
+      ]).start();
+    });
+  };
+
+  const closeServiceMenu = () => {
+    Animated.sequence([
+      Animated.timing(
+        serviceMenuSlideAnim,
+        {
+          toValue: 420,
+          duration: 170,
+          useNativeDriver: true,
+        }
+      ),
+
+      Animated.timing(
+        serviceMenuBackdropOpacity,
+        {
+          toValue: 0,
+          duration: 70,
+          useNativeDriver: true,
+        }
+      ),
+    ]).start(() => {
+      setShowServiceMenu(false);
+    });
+  };
+
+  const showPreparingMessage = (
+    label: string
+  ) => {
+    closeServiceMenu();
+
+    setTimeout(() => {
+      Alert.alert(
+        label,
+        '해당 페이지는 다음 단계에서 연결할 예정이에요.'
+      );
+    }, 220);
+  };
+
+  /* =========================
      이거 사도 돼?
   ========================= */
 
@@ -920,18 +1006,35 @@ export default function HomeScreen() {
             },
           ]}
         >
-          {/* 타이틀 */}
+          {/* 상단 헤더 */}
 
-          <Text
+          <View
             style={[
-              styles.title,
-
+              styles.headerRow,
               isCompactHeight &&
-                styles.titleCompact,
+                styles.headerRowCompact,
             ]}
           >
-            오늘 얼마 써도 돼?
-          </Text>
+            <Text style={styles.title}>
+              오늘 얼마 써도 돼?
+            </Text>
+
+            <Pressable
+              style={({ pressed }) => [
+                styles.menuButton,
+                pressed &&
+                  styles.menuButtonPressed,
+              ]}
+              onPress={openServiceMenu}
+              hitSlop={8}
+            >
+              <Ionicons
+                name="menu-outline"
+                size={25}
+                color="#172033"
+              />
+            </Pressable>
+          </View>
 
           {/* 오늘 권장 생활비 */}
 
@@ -1243,6 +1346,178 @@ export default function HomeScreen() {
           </Text>
         </View>
       </ScrollView>
+
+      {/* =========================
+          서비스 메뉴
+      ========================= */}
+
+      <Modal
+        visible={showServiceMenu}
+        transparent
+        animationType="none"
+        statusBarTranslucent
+        onRequestClose={closeServiceMenu}
+      >
+        <View style={styles.serviceMenuModalRoot}>
+          <Animated.View
+            style={[
+              styles.serviceMenuBackdrop,
+              {
+                opacity:
+                  serviceMenuBackdropOpacity,
+              },
+            ]}
+          >
+            <Pressable
+              style={styles.backdropPressArea}
+              onPress={closeServiceMenu}
+            />
+          </Animated.View>
+
+          <Animated.View
+            style={[
+              styles.serviceMenuSheet,
+              {
+                transform: [
+                  {
+                    translateX:
+                      serviceMenuSlideAnim,
+                  },
+                ],
+              },
+            ]}
+          >
+            <View style={styles.serviceMenuHeader}>
+              <View>
+                <Text style={styles.serviceMenuBrand}>
+                  얼마
+                </Text>
+
+                <Text style={styles.serviceMenuDescription}>
+                  서비스 정보와 지원 메뉴를 확인하세요.
+                </Text>
+              </View>
+
+              <Pressable
+                style={styles.closeButton}
+                onPress={closeServiceMenu}
+              >
+                <Ionicons
+                  name="close"
+                  size={22}
+                  color="#687386"
+                />
+              </Pressable>
+            </View>
+
+            <Text style={styles.serviceSectionLabel}>
+              서비스 정보
+            </Text>
+
+            {[
+              {
+                label: '개인정보처리방침',
+                icon: 'shield-checkmark-outline' as const,
+                color: '#3563C9',
+              },
+              {
+                label: '이용약관',
+                icon: 'document-text-outline' as const,
+                color: '#687386',
+              },
+              {
+                label: '오픈소스 라이선스',
+                icon: 'code-slash-outline' as const,
+                color: '#687386',
+              },
+            ].map((item, index, array) => (
+              <Pressable
+                key={item.label}
+                style={[
+                  styles.serviceMenuItem,
+                  index === array.length - 1 &&
+                    styles.serviceMenuItemLast,
+                ]}
+                onPress={() =>
+                  showPreparingMessage(item.label)
+                }
+              >
+                <View style={styles.serviceMenuItemLeft}>
+                  <Ionicons
+                    name={item.icon}
+                    size={20}
+                    color={item.color}
+                  />
+
+                  <Text style={styles.serviceMenuItemText}>
+                    {item.label}
+                  </Text>
+                </View>
+
+                <Ionicons
+                  name="chevron-forward"
+                  size={18}
+                  color="#A3ADBC"
+                />
+              </Pressable>
+            ))}
+
+            <Text
+              style={[
+                styles.serviceSectionLabel,
+                styles.serviceSupportLabel,
+              ]}
+            >
+              지원
+            </Text>
+
+            {[
+              {
+                label: '문의하기',
+                icon: 'mail-outline' as const,
+              },
+              {
+                label: '앱 정보',
+                icon: 'information-circle-outline' as const,
+              },
+            ].map((item, index, array) => (
+              <Pressable
+                key={item.label}
+                style={[
+                  styles.serviceMenuItem,
+                  index === array.length - 1 &&
+                    styles.serviceMenuItemLast,
+                ]}
+                onPress={() =>
+                  showPreparingMessage(item.label)
+                }
+              >
+                <View style={styles.serviceMenuItemLeft}>
+                  <Ionicons
+                    name={item.icon}
+                    size={20}
+                    color="#687386"
+                  />
+
+                  <Text style={styles.serviceMenuItemText}>
+                    {item.label}
+                  </Text>
+                </View>
+
+                <Ionicons
+                  name="chevron-forward"
+                  size={18}
+                  color="#A3ADBC"
+                />
+              </Pressable>
+            ))}
+
+            <Text style={styles.serviceVersion}>
+              v1.0.0
+            </Text>
+          </Animated.View>
+        </View>
+      </Modal>
 
       {/* =========================
           Bottom Sheet
@@ -1639,19 +1914,36 @@ const styles =
       alignSelf: 'center',
     },
 
-    title: {
-      fontSize: 21,
-
-      fontFamily:
-        'Pretendard-ExtraBold',
-
-      color: '#172033',
-
+    headerRow: {
+      minHeight: 38,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
       marginBottom: 20,
     },
 
-    titleCompact: {
+    headerRowCompact: {
       marginBottom: 18,
+    },
+
+    title: {
+      flex: 1,
+      fontSize: 21,
+      fontFamily: 'Pretendard-ExtraBold',
+      color: '#172033',
+    },
+
+    menuButton: {
+      width: 38,
+      height: 38,
+      marginLeft: 12,
+      borderRadius: 12,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+
+    menuButtonPressed: {
+      backgroundColor: '#F3F6FA',
     },
 
     /* ========================
@@ -2018,6 +2310,109 @@ const styles =
       lineHeight: 15,
       fontFamily: 'Pretendard-Regular',
       color: '#9AA4B2',
+    },
+
+    /* ========================
+       Service menu
+    ======================== */
+serviceMenuModalRoot: {
+  flex: 1,
+  alignItems: 'flex-end',
+},
+
+    serviceMenuBackdrop: {
+      position: 'absolute',
+      top: 0,
+      bottom: 0,
+      left: 0,
+      right: 0,
+      backgroundColor: 'rgba(23, 32, 51, 0.34)',
+    },
+
+    serviceMenuSheet: {
+  width: '72%',
+  maxWidth: 360,
+  height: '100%',
+
+  backgroundColor: '#FFFFFF',
+
+  paddingHorizontal: 20,
+  paddingTop: 48,
+  paddingBottom: 28,
+
+  shadowColor: '#000000',
+  shadowOffset: {
+    width: -4,
+    height: 0,
+  },
+  shadowOpacity: 0.12,
+  shadowRadius: 16,
+  elevation: 14,
+},
+
+    serviceMenuHeader: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      justifyContent: 'space-between',
+      marginBottom: 22,
+    },
+
+    serviceMenuBrand: {
+      fontSize: 23,
+      fontFamily: 'Pretendard-ExtraBold',
+      color: '#172033',
+    },
+
+    serviceMenuDescription: {
+      marginTop: 5,
+      fontSize: 12,
+      lineHeight: 18,
+      fontFamily: 'Pretendard-Regular',
+      color: '#8792A2',
+    },
+
+    serviceSectionLabel: {
+      marginBottom: 8,
+      fontSize: 11,
+      fontFamily: 'Pretendard-Bold',
+      color: '#98A2B3',
+    },
+
+    serviceSupportLabel: {
+      marginTop: 22,
+    },
+
+    serviceMenuItem: {
+      minHeight: 54,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      borderBottomWidth: 1,
+      borderBottomColor: '#EEF1F5',
+    },
+
+    serviceMenuItemLast: {
+      borderBottomWidth: 0,
+    },
+
+    serviceMenuItemLeft: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 11,
+    },
+
+    serviceMenuItemText: {
+      fontSize: 14,
+      fontFamily: 'Pretendard-SemiBold',
+      color: '#172033',
+    },
+
+    serviceVersion: {
+      marginTop: 24,
+      textAlign: 'center',
+      fontSize: 11,
+      fontFamily: 'Pretendard-Regular',
+      color: '#A3ADBC',
     },
 
     /* ========================
