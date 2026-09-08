@@ -1,9 +1,9 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Tabs, router } from 'expo-router';
 import {
-  Dimensions,
   Pressable,
   StyleSheet,
+  useWindowDimensions,
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -11,22 +11,49 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 export default function TabLayout() {
   const insets = useSafeAreaInsets();
 
-  const screenHeight =
-    Dimensions.get('window').height;
+  const {
+    height: screenHeight,
+  } = useWindowDimensions();
 
-  // 화면 높이에 따라 반응형으로 조정
-  const baseTabBarHeight = Math.min(
-    Math.max(screenHeight * 0.085, 64),
-    82
-  );
+  /*
+   * 기본 탭바 높이
+   *
+   * 작은 화면에서도 최소 78 확보
+   * 큰 화면에서도 88 이상 커지지 않도록 제한
+   */
+  const baseTabBarHeight =
+    Math.min(
+      Math.max(
+        screenHeight * 0.085,
+        78
+      ),
+      88
+    );
+
+  /*
+   * Android 하단 제스처 영역까지 포함
+   */
+  const bottomSafeArea =
+    Math.max(
+      insets.bottom,
+      8
+    );
 
   const totalTabBarHeight =
-    baseTabBarHeight + insets.bottom;
+    baseTabBarHeight +
+    bottomSafeArea;
 
-  const centerButtonSize = Math.min(
-    Math.max(screenHeight * 0.065, 54),
-    62
-  );
+  /*
+   * 중앙 + 버튼
+   */
+  const centerButtonSize =
+    Math.min(
+      Math.max(
+        screenHeight * 0.062,
+        56
+      ),
+      62
+    );
 
   return (
     <Tabs
@@ -37,37 +64,31 @@ export default function TabLayout() {
           '#3563C9',
 
         tabBarInactiveTintColor:
-          '#7A8799',
+          '#66758A',
+
+        tabBarHideOnKeyboard: true,
 
         tabBarStyle: [
           styles.tabBar,
-
           {
             height:
               totalTabBarHeight,
 
-            paddingBottom:
-              Math.max(
-                insets.bottom,
-                8
-              ),
+            paddingTop: 9,
 
-            paddingTop:
-              Math.max(
-                baseTabBarHeight *
-                  0.08,
-                6
-              ),
+            paddingBottom:
+              bottomSafeArea,
           },
         ],
 
-        tabBarLabelStyle:
-          styles.tabLabel,
-
         tabBarItemStyle:
           styles.tabItem,
+
+        tabBarLabelStyle:
+          styles.tabLabel,
       }}
     >
+      {/* 홈 */}
       <Tabs.Screen
         name="index"
         options={{
@@ -83,13 +104,14 @@ export default function TabLayout() {
                   ? 'home'
                   : 'home-outline'
               }
-              size={24}
+              size={25}
               color={color}
             />
           ),
         }}
       />
 
+      {/* 내역 */}
       <Tabs.Screen
         name="history"
         options={{
@@ -105,13 +127,14 @@ export default function TabLayout() {
                   ? 'receipt'
                   : 'receipt-outline'
               }
-              size={24}
+              size={25}
               color={color}
             />
           ),
         }}
       />
 
+      {/* 가운데 지출 추가 버튼 */}
       <Tabs.Screen
         name="expense-button"
         options={{
@@ -119,17 +142,14 @@ export default function TabLayout() {
 
           tabBarButton: () => (
             <View
-              style={[
-                styles.centerButtonWrapper,
-
-                {
-                  height:
-                    totalTabBarHeight,
-                },
-              ]}
+              style={
+                styles.centerButtonWrapper
+              }
             >
               <Pressable
-                style={[
+                style={({
+                  pressed,
+                }) => [
                   styles.centerButton,
 
                   {
@@ -143,9 +163,20 @@ export default function TabLayout() {
                       centerButtonSize /
                       2,
 
-                    top:
-                      -centerButtonSize *
-                      0.22,
+                    transform: [
+                      {
+                        translateY:
+                          -centerButtonSize *
+                          0.18,
+                      },
+
+                      {
+                        scale:
+                          pressed
+                            ? 0.96
+                            : 1,
+                      },
+                    ],
                   },
                 ]}
                 onPress={() =>
@@ -156,10 +187,7 @@ export default function TabLayout() {
               >
                 <Ionicons
                   name="add"
-                  size={
-                    centerButtonSize *
-                    0.52
-                  }
+                  size={32}
                   color="#FFFFFF"
                 />
               </Pressable>
@@ -168,6 +196,7 @@ export default function TabLayout() {
         }}
       />
 
+      {/* 계획 */}
       <Tabs.Screen
         name="plan"
         options={{
@@ -183,13 +212,14 @@ export default function TabLayout() {
                   ? 'calendar'
                   : 'calendar-outline'
               }
-              size={24}
+              size={25}
               color={color}
             />
           ),
         }}
       />
 
+      {/* 설정 */}
       <Tabs.Screen
         name="setting-tab"
         options={{
@@ -205,7 +235,7 @@ export default function TabLayout() {
                   ? 'settings'
                   : 'settings-outline'
               }
-              size={24}
+              size={25}
               color={color}
             />
           ),
@@ -226,7 +256,10 @@ const styles =
       borderTopColor:
         '#E3E8EF',
 
-      elevation: 8,
+      overflow:
+        'visible',
+
+      elevation: 10,
 
       shadowColor:
         '#000000',
@@ -236,23 +269,46 @@ const styles =
         height: -2,
       },
 
-      shadowOpacity: 0.06,
+      shadowOpacity: 0.07,
 
-      shadowRadius: 6,
+      shadowRadius: 8,
     },
 
+    /*
+     * 아이콘 + 글자가 들어가는
+     * 탭 하나의 영역
+     */
     tabItem: {
+      paddingTop: 1,
+
+      paddingBottom: 2,
+
       justifyContent:
         'center',
+
+      overflow:
+        'visible',
     },
 
+    /*
+     * lineHeight를 명시해야
+     * 일부 Android / Web 환경에서
+     * 글자 아래가 잘리지 않음
+     */
     tabLabel: {
       fontSize: 12,
+
+      lineHeight: 17,
 
       fontFamily:
         'Pretendard-SemiBold',
 
       marginTop: 2,
+
+      marginBottom: 1,
+
+      includeFontPadding:
+        false,
     },
 
     centerButtonWrapper: {
@@ -263,12 +319,14 @@ const styles =
 
       justifyContent:
         'center',
+
+      overflow:
+        'visible',
+
+      paddingBottom: 4,
     },
 
     centerButton: {
-      position:
-        'relative',
-
       backgroundColor:
         '#3563C9',
 
@@ -286,10 +344,10 @@ const styles =
         height: 5,
       },
 
-      shadowOpacity: 0.16,
+      shadowOpacity: 0.18,
 
-      shadowRadius: 8,
+      shadowRadius: 9,
 
-      elevation: 8,
+      elevation: 9,
     },
   });
