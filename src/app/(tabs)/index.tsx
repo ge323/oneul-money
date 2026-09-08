@@ -10,7 +10,9 @@ import {
 import {
   Alert,
   Animated,
+  KeyboardAvoidingView,
   Modal,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -1006,6 +1008,13 @@ export default function HomeScreen() {
         ]}
         showsVerticalScrollIndicator={false}
         bounces={false}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode={
+          Platform.OS === 'ios'
+            ? 'interactive'
+            : 'on-drag'
+        }
+        contentInsetAdjustmentBehavior="automatic"
       >
         <View
           style={[
@@ -1313,7 +1322,7 @@ export default function HomeScreen() {
               <Ionicons
                 name="chevron-forward"
                 size={18}
-                color="#A3ADBC"
+                color="#687386"
               />
             </Pressable>
 
@@ -1468,7 +1477,7 @@ export default function HomeScreen() {
                 <Ionicons
                   name="chevron-forward"
                   size={18}
-                  color="#A3ADBC"
+                  color="#687386"
                 />
               </Pressable>
             ))}
@@ -1518,7 +1527,7 @@ export default function HomeScreen() {
                 <Ionicons
                   name="chevron-forward"
                   size={18}
-                  color="#A3ADBC"
+                  color="#687386"
                 />
               </Pressable>
             ))}
@@ -1545,10 +1554,14 @@ export default function HomeScreen() {
           closeSimulator
         }
       >
-        <View
-          style={
-            styles.modalRoot
+        <KeyboardAvoidingView
+          style={styles.modalRoot}
+          behavior={
+            Platform.OS === 'ios'
+              ? 'padding'
+              : 'height'
           }
+          keyboardVerticalOffset={0}
         >
           <Animated.View
             style={[
@@ -1663,7 +1676,9 @@ export default function HomeScreen() {
                   )
                 }
                 placeholder="0"
+                placeholderTextColor="#687386"
                 keyboardType="numeric"
+                returnKeyType="done"
               />
 
               <Text
@@ -1725,7 +1740,7 @@ export default function HomeScreen() {
                     <Ionicons
                       name="arrow-forward"
                       size={22}
-                      color="#98A2B3"
+                      color="#687386"
                     />
                   </View>
 
@@ -1887,7 +1902,7 @@ export default function HomeScreen() {
               </>
             )}
           </Animated.View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
     </>
   );
@@ -1939,7 +1954,8 @@ const styles =
 
     title: {
       flex: 1,
-      fontSize: 21,
+      fontSize: 23,
+      lineHeight: 30,
       fontFamily: 'Pretendard-ExtraBold',
       color: '#172033',
     },
@@ -1978,13 +1994,10 @@ const styles =
 
     dailyLabel: {
       textAlign: 'center',
-
-      fontSize: 13,
-
-      fontFamily:
-        'Pretendard-Medium',
-
-      color: '#7C8798',
+      fontSize: 15,
+      lineHeight: 21,
+      fontFamily: 'Pretendard-Medium',
+      color: '#687386',
     },
 
     dailyAmount: {
@@ -2012,13 +2025,10 @@ const styles =
 
     dailyMessage: {
       textAlign: 'center',
-
-      fontSize: 13,
-
-      fontFamily:
-        'Pretendard-Regular',
-
-      color: '#687386',
+      fontSize: 14,
+      lineHeight: 20,
+      fontFamily: 'Pretendard-Regular',
+      color: '#566176',
     },
 
     dailyDivider: {
@@ -2041,23 +2051,18 @@ const styles =
     },
 
     monthSpentLabel: {
-      fontSize: 10,
-
-      fontFamily:
-        'Pretendard-Regular',
-
-      color: '#98A2B3',
+      fontSize: 13,
+      lineHeight: 18,
+      fontFamily: 'Pretendard-Regular',
+      color: '#687386',
     },
 
     monthSpentAmount: {
       marginTop: 2,
-
-      fontSize: 12,
-
-      fontFamily:
-        'Pretendard-Bold',
-
-      color: '#687386',
+      fontSize: 14,
+      lineHeight: 20,
+      fontFamily: 'Pretendard-Bold',
+      color: '#566176',
     },
 
     dDayBadge: {
@@ -2078,11 +2083,9 @@ const styles =
     },
 
     dDayText: {
-      fontSize: 11,
-
-      fontFamily:
-        'Pretendard-ExtraBold',
-
+      fontSize: 13,
+      lineHeight: 18,
+      fontFamily: 'Pretendard-ExtraBold',
       color: '#3563C9',
     },
 
@@ -2108,20 +2111,16 @@ const styles =
     },
 
     todaySummaryLabel: {
-      fontSize: 13,
-
-      fontFamily:
-        'Pretendard-Medium',
-
-      color: '#687386',
+      fontSize: 15,
+      lineHeight: 21,
+      fontFamily: 'Pretendard-Medium',
+      color: '#566176',
     },
 
     todaySummaryAmount: {
-      fontSize: 15,
-
-      fontFamily:
-        'Pretendard-ExtraBold',
-
+      fontSize: 17,
+      lineHeight: 23,
+      fontFamily: 'Pretendard-ExtraBold',
       color: '#172033',
     },
 
@@ -2161,15 +2160,10 @@ const styles =
 
     todaySummaryMessage: {
       flex: 1,
-
-      fontSize: 11,
-
-      lineHeight: 16,
-
-      fontFamily:
-        'Pretendard-Medium',
-
-      color: '#8792A2',
+      fontSize: 13,
+      lineHeight: 19,
+      fontFamily: 'Pretendard-Medium',
+      color: '#687386',
     },
 
     todaySummaryMessageSafe: {
@@ -2204,13 +2198,15 @@ const styles =
     },
 
     remainingLabel: {
-      fontSize: 13,
+      fontSize: 15,
+      lineHeight: 21,
       fontFamily: 'Pretendard-Medium',
-      color: '#687386',
+      color: '#566176',
     },
 
     remainingAmount: {
-      fontSize: 15,
+      fontSize: 17,
+      lineHeight: 23,
       fontFamily: 'Pretendard-ExtraBold',
       color: '#172033',
     },
@@ -2224,10 +2220,10 @@ const styles =
 
     plannedNotice: {
       flex: 1,
-      fontSize: 11,
-      lineHeight: 16,
+      fontSize: 13,
+      lineHeight: 19,
       fontFamily: 'Pretendard-Regular',
-      color: '#8B96A8',
+      color: '#687386',
     },
 
     /* ========================
@@ -2262,17 +2258,18 @@ const styles =
     },
 
     simulatorTitle: {
-      fontSize: 14,
+      fontSize: 16,
+      lineHeight: 22,
       fontFamily: 'Pretendard-Bold',
       color: '#172033',
     },
 
     simulatorDescription: {
-      marginTop: 2,
-      fontSize: 10,
-      lineHeight: 15,
+      marginTop: 3,
+      fontSize: 13,
+      lineHeight: 19,
       fontFamily: 'Pretendard-Regular',
-      color: '#8F9AAD',
+      color: '#687386',
     },
 
     expenseButton: {
@@ -2306,21 +2303,19 @@ const styles =
 
     expenseButtonText: {
       color: '#FFFFFF',
-
-      fontSize: 15,
-
-      fontFamily:
-        'Pretendard-ExtraBold',
+      fontSize: 17,
+      lineHeight: 23,
+      fontFamily: 'Pretendard-ExtraBold',
     },
 
     reserveGuide: {
       marginTop: 14,
       paddingHorizontal: 10,
       textAlign: 'center',
-      fontSize: 10,
-      lineHeight: 15,
+      fontSize: 12,
+      lineHeight: 18,
       fontFamily: 'Pretendard-Regular',
-      color: '#9AA4B2',
+      color: '#687386',
     },
 
     /* ========================
@@ -2376,17 +2371,18 @@ serviceMenuModalRoot: {
 
     serviceMenuDescription: {
       marginTop: 5,
-      fontSize: 12,
-      lineHeight: 18,
+      fontSize: 14,
+      lineHeight: 20,
       fontFamily: 'Pretendard-Regular',
-      color: '#8792A2',
+      color: '#687386',
     },
 
     serviceSectionLabel: {
       marginBottom: 8,
-      fontSize: 11,
+      fontSize: 13,
+      lineHeight: 18,
       fontFamily: 'Pretendard-Bold',
-      color: '#98A2B3',
+      color: '#687386',
     },
 
     serviceSupportLabel: {
@@ -2413,7 +2409,8 @@ serviceMenuModalRoot: {
     },
 
     serviceMenuItemText: {
-      fontSize: 14,
+      fontSize: 16,
+      lineHeight: 22,
       fontFamily: 'Pretendard-SemiBold',
       color: '#172033',
     },
@@ -2421,9 +2418,10 @@ serviceMenuModalRoot: {
     serviceVersion: {
       marginTop: 24,
       textAlign: 'center',
-      fontSize: 11,
+      fontSize: 13,
+      lineHeight: 18,
       fontFamily: 'Pretendard-Regular',
-      color: '#A3ADBC',
+      color: '#687386',
     },
 
     /* ========================
@@ -2454,6 +2452,7 @@ serviceMenuModalRoot: {
     },
 
     bottomSheet: {
+      maxHeight: '92%',
       backgroundColor:
         '#FFFFFF',
 
@@ -2516,21 +2515,18 @@ serviceMenuModalRoot: {
     },
 
     sheetTitle: {
-      fontSize: 22,
-
+      fontSize: 23,
+      lineHeight: 30,
       fontFamily: 'Pretendard-ExtraBold',
-
       color: '#172033',
     },
 
     sheetDescription: {
       marginTop: 7,
-
-      fontSize: 13,
-
-      lineHeight: 19,
-
-      color: '#8792A2',
+      fontSize: 14,
+      lineHeight: 21,
+      fontFamily: 'Pretendard-Regular',
+      color: '#687386',
     },
 
     closeButton: {
@@ -2550,12 +2546,10 @@ serviceMenuModalRoot: {
     },
 
     sheetLabel: {
-      fontSize: 14,
-
+      fontSize: 16,
+      lineHeight: 22,
       fontFamily: 'Pretendard-Bold',
-
       color: '#172033',
-
       marginBottom: 9,
     },
 
@@ -2616,9 +2610,10 @@ serviceMenuModalRoot: {
     },
 
     comparisonLabel: {
-      fontSize: 12,
-
-      color: '#8792A2',
+      fontSize: 14,
+      lineHeight: 20,
+      fontFamily: 'Pretendard-Medium',
+      color: '#687386',
     },
 
     comparisonAmount: {
@@ -2643,10 +2638,10 @@ serviceMenuModalRoot: {
 
     comparisonSub: {
       marginTop: 4,
-
-      fontSize: 11,
-
-      color: '#98A2B3',
+      fontSize: 13,
+      lineHeight: 18,
+      fontFamily: 'Pretendard-Regular',
+      color: '#687386',
     },
 
     arrowArea: {
@@ -2669,9 +2664,10 @@ serviceMenuModalRoot: {
     },
 
     differenceText: {
-      fontSize: 13,
-
-      color: '#687386',
+      fontSize: 14,
+      lineHeight: 20,
+      fontFamily: 'Pretendard-Regular',
+      color: '#566176',
     },
 
     differenceStrong: {
@@ -2715,21 +2711,18 @@ serviceMenuModalRoot: {
     },
 
     statusTitle: {
-      fontSize: 14,
-
+      fontSize: 16,
+      lineHeight: 22,
       fontFamily: 'Pretendard-ExtraBold',
-
       color: '#172033',
     },
 
     statusMessage: {
       marginTop: 4,
-
-      fontSize: 12,
-
-      lineHeight: 18,
-
-      color: '#687386',
+      fontSize: 14,
+      lineHeight: 21,
+      fontFamily: 'Pretendard-Regular',
+      color: '#566176',
     },
 
     remainingAfterBox: {
@@ -2751,16 +2744,16 @@ serviceMenuModalRoot: {
     },
 
     remainingAfterLabel: {
-      fontSize: 13,
-
-      color: '#687386',
+      fontSize: 14,
+      lineHeight: 20,
+      fontFamily: 'Pretendard-Medium',
+      color: '#566176',
     },
 
     remainingAfterAmount: {
-      fontSize: 17,
-
+      fontSize: 18,
+      lineHeight: 24,
       fontFamily: 'Pretendard-ExtraBold',
-
       color: '#172033',
     },
   });

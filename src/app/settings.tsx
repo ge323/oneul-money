@@ -3,6 +3,8 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { router } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import {
+  KeyboardAvoidingView,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -196,11 +198,19 @@ export default function SettingsScreen() {
   };
 
   return (
-    <ScrollView
+    <KeyboardAvoidingView
       style={styles.screen}
-      contentContainerStyle={styles.container}
-      showsVerticalScrollIndicator={false}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={0}
     >
+      <ScrollView
+        style={styles.screen}
+        contentContainerStyle={styles.container}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
+        contentInsetAdjustmentBehavior="automatic"
+      >
       <AppHeader
         title="예산 설정"
         description="이번 달에 실제로 사용할 돈을 기준으로 생활비를 계산해보세요."
@@ -305,7 +315,7 @@ export default function SettingsScreen() {
                       <Ionicons
                         name="close"
                         size={19}
-                        color="#98A2B3"
+                        color="#687386"
                       />
                     </Pressable>
                   </View>
@@ -363,7 +373,7 @@ export default function SettingsScreen() {
                   <Ionicons
                     name="close"
                     size={19}
-                    color="#98A2B3"
+                    color="#687386"
                   />
                 </Pressable>
               </View>
@@ -373,6 +383,8 @@ export default function SettingsScreen() {
                 value={fixedTitle}
                 onChangeText={setFixedTitle}
                 placeholder="예: 월세, 통신비, 보험료"
+                placeholderTextColor="#687386"
+                returnKeyType="next"
               />
 
               <View style={styles.amountInputBox}>
@@ -383,7 +395,9 @@ export default function SettingsScreen() {
                     setFixedAmount(formatMoneyInput(text))
                   }
                   placeholder="0"
+                  placeholderTextColor="#687386"
                   keyboardType="numeric"
+                  returnKeyType="done"
                 />
 
                 <Text style={styles.unitText}>
@@ -520,7 +534,8 @@ export default function SettingsScreen() {
           저장하기
         </Text>
       </Pressable>
-    </ScrollView>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -567,7 +582,9 @@ function MoneyInput({
           value={value}
           onChangeText={onChangeText}
           placeholder={placeholder}
+          placeholderTextColor="#687386"
           keyboardType="numeric"
+          returnKeyType="done"
         />
 
         <Text style={styles.unitText}>
@@ -609,17 +626,17 @@ const styles = StyleSheet.create({
   },
 
   container: {
-    paddingHorizontal: 24,
-    paddingTop: 32,
-    paddingBottom: 50,
+    paddingHorizontal: 20,
+    paddingTop: 24,
+    paddingBottom: 140,
   },
 
   form: {
-    gap: 26,
+    gap: 30,
   },
 
   inputGroup: {
-    gap: 8,
+    gap: 10,
   },
 
   labelRow: {
@@ -628,43 +645,48 @@ const styles = StyleSheet.create({
   },
 
   label: {
-    fontSize: 15,
+    fontSize: 17,
+    lineHeight: 24,
     fontFamily: 'Pretendard-Bold',
     color: '#172033',
   },
 
   optionalText: {
-    marginLeft: 7,
-    fontSize: 11,
+    marginLeft: 8,
+    fontSize: 13,
+    lineHeight: 18,
     fontFamily: 'Pretendard-SemiBold',
-    color: '#98A2B3',
+    color: '#687386',
   },
 
   inputDescription: {
-    fontSize: 12,
-    lineHeight: 18,
-    color: '#8792A2',
+    fontSize: 14,
+    lineHeight: 21,
+    fontFamily: 'Pretendard-Regular',
+    color: '#687386',
   },
 
   helperBox: {
-    marginTop: -12,
+    marginTop: -10,
     flexDirection: 'row',
     alignItems: 'flex-start',
     backgroundColor: '#F8FAFC',
     borderRadius: 14,
-    paddingHorizontal: 13,
-    paddingVertical: 11,
+    paddingHorizontal: 14,
+    paddingVertical: 13,
   },
 
   helperText: {
     flex: 1,
-    marginLeft: 7,
-    fontSize: 11,
-    lineHeight: 17,
-    color: '#687386',
+    marginLeft: 8,
+    fontSize: 14,
+    lineHeight: 21,
+    fontFamily: 'Pretendard-Regular',
+    color: '#566176',
   },
 
   moneyInputBox: {
+    minHeight: 62,
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#F5F7FA',
@@ -675,16 +697,17 @@ const styles = StyleSheet.create({
   moneyInput: {
     flex: 1,
     paddingVertical: 17,
-    fontSize: 17,
+    fontSize: 18,
+    lineHeight: 24,
     fontFamily: 'Pretendard-SemiBold',
     color: '#172033',
   },
 
   unitText: {
     marginLeft: 8,
-    fontSize: 15,
+    fontSize: 16,
     fontFamily: 'Pretendard-SemiBold',
-    color: '#687386',
+    color: '#566176',
   },
 
   fixedSection: {
@@ -701,15 +724,18 @@ const styles = StyleSheet.create({
   },
 
   sectionTitle: {
-    fontSize: 17,
+    fontSize: 19,
+    lineHeight: 26,
     fontFamily: 'Pretendard-ExtraBold',
     color: '#172033',
   },
 
   sectionDescription: {
-    marginTop: 5,
-    fontSize: 13,
-    color: '#8792A2',
+    marginTop: 6,
+    fontSize: 14,
+    lineHeight: 21,
+    fontFamily: 'Pretendard-Regular',
+    color: '#687386',
   },
 
   fixedList: {
@@ -722,7 +748,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    minHeight: 64,
+    minHeight: 70,
     borderBottomWidth: 1,
     borderBottomColor: '#EEF1F5',
   },
@@ -745,7 +771,8 @@ const styles = StyleSheet.create({
 
   fixedItemTitle: {
     flex: 1,
-    fontSize: 15,
+    fontSize: 16,
+    lineHeight: 22,
     fontFamily: 'Pretendard-SemiBold',
     color: '#172033',
   },
@@ -757,7 +784,8 @@ const styles = StyleSheet.create({
   },
 
   fixedItemAmount: {
-    fontSize: 14,
+    fontSize: 16,
+    lineHeight: 22,
     fontFamily: 'Pretendard-Bold',
     color: '#172033',
   },
@@ -778,13 +806,15 @@ const styles = StyleSheet.create({
   },
 
   emptyFixedText: {
-    fontSize: 13,
-    color: '#98A2B3',
+    fontSize: 14,
+    lineHeight: 20,
+    fontFamily: 'Pretendard-Regular',
+    color: '#687386',
   },
 
   openAddFixedButton: {
     marginTop: 12,
-    minHeight: 46,
+    minHeight: 52,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -800,7 +830,8 @@ const styles = StyleSheet.create({
   },
 
   openAddFixedButtonText: {
-    fontSize: 14,
+    fontSize: 15,
+    lineHeight: 21,
     fontFamily: 'Pretendard-Bold',
     color: '#3563C9',
   },
@@ -827,18 +858,21 @@ const styles = StyleSheet.create({
   },
 
   addTitle: {
-    fontSize: 14,
+    fontSize: 16,
+    lineHeight: 22,
     fontFamily: 'Pretendard-Bold',
     color: '#172033',
     marginBottom: 2,
   },
 
   titleInput: {
+    minHeight: 56,
     backgroundColor: '#FFFFFF',
     borderRadius: 14,
     paddingHorizontal: 15,
     paddingVertical: 15,
-    fontSize: 15,
+    fontSize: 16,
+    lineHeight: 22,
     color: '#172033',
   },
 
@@ -853,7 +887,8 @@ const styles = StyleSheet.create({
   amountInput: {
     flex: 1,
     paddingVertical: 15,
-    fontSize: 16,
+    fontSize: 17,
+    lineHeight: 23,
     fontFamily: 'Pretendard-SemiBold',
     color: '#172033',
   },
@@ -874,7 +909,8 @@ const styles = StyleSheet.create({
   },
 
   addButtonText: {
-    fontSize: 14,
+    fontSize: 15,
+    lineHeight: 21,
     fontFamily: 'Pretendard-Bold',
     color: '#3563C9',
   },
@@ -889,13 +925,15 @@ const styles = StyleSheet.create({
   },
 
   totalFixedLabel: {
-    fontSize: 13,
+    fontSize: 14,
+    lineHeight: 20,
     fontFamily: 'Pretendard-SemiBold',
-    color: '#687386',
+    color: '#566176',
   },
 
   totalFixedAmount: {
-    fontSize: 15,
+    fontSize: 17,
+    lineHeight: 23,
     fontFamily: 'Pretendard-ExtraBold',
     color: '#3563C9',
   },
@@ -916,17 +954,19 @@ const styles = StyleSheet.create({
   },
 
   livingBudgetLabel: {
-    fontSize: 16,
+    fontSize: 18,
+    lineHeight: 24,
     fontFamily: 'Pretendard-ExtraBold',
     color: '#172033',
   },
 
   livingBudgetDescription: {
     maxWidth: 300,
-    marginTop: 5,
-    fontSize: 12,
-    lineHeight: 18,
-    color: '#8792A2',
+    marginTop: 6,
+    fontSize: 14,
+    lineHeight: 21,
+    fontFamily: 'Pretendard-Regular',
+    color: '#687386',
   },
 
   livingBudgetIcon: {
@@ -941,7 +981,8 @@ const styles = StyleSheet.create({
 
   livingBudgetAmount: {
     marginTop: 18,
-    fontSize: 28,
+    fontSize: 30,
+    lineHeight: 38,
     fontFamily: 'Pretendard-ExtraBold',
     color: '#3563C9',
   },
@@ -965,14 +1006,17 @@ const styles = StyleSheet.create({
   },
 
   calculationLabel: {
-    fontSize: 12,
-    color: '#8792A2',
+    fontSize: 14,
+    lineHeight: 20,
+    fontFamily: 'Pretendard-Regular',
+    color: '#687386',
   },
 
   calculationValue: {
-    fontSize: 12,
+    fontSize: 14,
+    lineHeight: 20,
     fontFamily: 'Pretendard-Bold',
-    color: '#687386',
+    color: '#566176',
   },
 
   warningBox: {
@@ -987,18 +1031,21 @@ const styles = StyleSheet.create({
 
   warningText: {
     flex: 1,
-    marginLeft: 7,
-    fontSize: 11,
-    lineHeight: 17,
-    color: '#B64545',
+    marginLeft: 8,
+    fontSize: 14,
+    lineHeight: 21,
+    fontFamily: 'Pretendard-Medium',
+    color: '#A33E3E',
   },
 
   saveButton: {
     marginTop: 34,
+    minHeight: 58,
     backgroundColor: '#3563C9',
     borderRadius: 16,
     paddingVertical: 17,
     alignItems: 'center',
+    justifyContent: 'center',
   },
 
   saveButtonPressed: {
@@ -1011,7 +1058,8 @@ const styles = StyleSheet.create({
 
   saveButtonText: {
     color: '#FFFFFF',
-    fontSize: 16,
+    fontSize: 17,
+    lineHeight: 23,
     fontFamily: 'Pretendard-Bold',
   },
 });

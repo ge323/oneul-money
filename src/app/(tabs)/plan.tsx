@@ -10,6 +10,7 @@ import {
 import {
   Alert,
   Animated,
+  KeyboardAvoidingView,
   Modal,
   Platform,
   Pressable,
@@ -1094,9 +1095,14 @@ export default function PlanScreen() {
         contentContainerStyle={
           styles.container
         }
-        showsVerticalScrollIndicator={
-          false
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode={
+          Platform.OS === 'ios'
+            ? 'interactive'
+            : 'on-drag'
         }
+        contentInsetAdjustmentBehavior="automatic"
       >
         <Text
           style={styles.title}
@@ -1201,7 +1207,7 @@ export default function PlanScreen() {
                 <Ionicons
                   name="calendar-outline"
                   size={30}
-                  color="#98A2B3"
+                  color="#687386"
                 />
               </View>
 
@@ -1432,10 +1438,14 @@ export default function PlanScreen() {
           closePlanModal
         }
       >
-        <View
-          style={
-            styles.modalRoot
+        <KeyboardAvoidingView
+          style={styles.modalRoot}
+          behavior={
+            Platform.OS === 'ios'
+              ? 'padding'
+              : 'height'
           }
+          keyboardVerticalOffset={0}
         >
           <Animated.View
             style={[
@@ -1539,6 +1549,8 @@ export default function PlanScreen() {
                 setTitle
               }
               placeholder="예: 주말 데이트"
+              placeholderTextColor="#687386"
+              returnKeyType="next"
             />
 
             <Text
@@ -1570,7 +1582,9 @@ export default function PlanScreen() {
                   )
                 }
                 placeholder="0"
+                placeholderTextColor="#687386"
                 keyboardType="numeric"
+                returnKeyType="done"
               />
 
               <Text
@@ -1630,7 +1644,7 @@ export default function PlanScreen() {
               <Ionicons
                 name="chevron-forward"
                 size={18}
-                color="#98A2B3"
+                color="#687386"
               />
             </Pressable>
 
@@ -1710,7 +1724,7 @@ export default function PlanScreen() {
               </Text>
             </Pressable>
           </Animated.View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
 
       {/* 실제 지출 */}
@@ -1726,10 +1740,14 @@ export default function PlanScreen() {
           closeCompleteModal
         }
       >
-        <View
-          style={
-            styles.modalRoot
+        <KeyboardAvoidingView
+          style={styles.modalRoot}
+          behavior={
+            Platform.OS === 'ios'
+              ? 'padding'
+              : 'height'
           }
+          keyboardVerticalOffset={0}
         >
           <Animated.View
             style={[
@@ -1901,6 +1919,8 @@ export default function PlanScreen() {
                     }
                     keyboardType="numeric"
                     placeholder="0"
+                    placeholderTextColor="#687386"
+                    returnKeyType="done"
                   />
 
                   <Text
@@ -2024,7 +2044,7 @@ export default function PlanScreen() {
               </>
             )}
           </Animated.View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
 
       {/* 달력 */}
@@ -2142,7 +2162,7 @@ export default function PlanScreen() {
                   '#172033',
 
                 textDisabledColor:
-                  '#D5DAE2',
+                  '#AAB4C2',
 
                 arrowColor:
                   '#3563C9',
@@ -2160,13 +2180,13 @@ export default function PlanScreen() {
                   '600',
 
                 textMonthFontSize:
-                  17,
+                  18,
 
                 textDayFontSize:
-                  14,
+                  16,
 
                 textDayHeaderFontSize:
-                  12,
+                  14,
               }}
             />
 
@@ -2207,22 +2227,24 @@ const styles =
     },
 
     container: {
-      paddingHorizontal: 24,
-      paddingTop: 60,
-      paddingBottom: 120,
+      paddingHorizontal: 20,
+      paddingTop: 52,
+      paddingBottom: 150,
     },
 
     title: {
-      fontSize: 28,
+      fontSize: 30,
+      lineHeight: 38,
       fontFamily: 'Pretendard-ExtraBold',
       color: '#172033',
     },
 
     description: {
       marginTop: 8,
-      fontSize: 15,
-      lineHeight: 21,
-      color: '#8792A2',
+      fontSize: 16,
+      lineHeight: 23,
+      fontFamily: 'Pretendard-Regular',
+      color: '#687386',
     },
 
     summaryCard: {
@@ -2237,52 +2259,40 @@ const styles =
     },
 
     summaryLabel: {
-      fontSize: 14,
-
-      color: '#687386',
+      fontSize: 15,
+      lineHeight: 21,
+      fontFamily: 'Pretendard-Medium',
+      color: '#566176',
     },
 
     summaryAmount: {
       marginTop: 7,
-
-      fontSize: 30,
-
+      fontSize: 32,
+      lineHeight: 40,
       fontFamily: 'Pretendard-ExtraBold',
-
       color: '#3563C9',
     },
 
     summaryDescription: {
-      marginTop: 7,
-
-      fontSize: 12,
-
-      color: '#8792A2',
+      marginTop: 8,
+      fontSize: 14,
+      lineHeight: 21,
+      fontFamily: 'Pretendard-Regular',
+      color: '#687386',
     },
 
     addButton: {
       marginTop: 14,
-
+      minHeight: 54,
       flexDirection: 'row',
-
       alignItems: 'center',
-
-      justifyContent:
-        'center',
-
-      gap: 5,
-
-      backgroundColor:
-        '#F8FAFC',
-
+      justifyContent: 'center',
+      gap: 6,
+      backgroundColor: '#F8FAFC',
       borderRadius: 16,
-
       paddingVertical: 15,
-
       borderWidth: 1,
-
-      borderColor:
-        '#E4E9F0',
+      borderColor: '#E4E9F0',
     },
 
     addButtonPressed: {
@@ -2291,10 +2301,9 @@ const styles =
     },
 
     addButtonText: {
-      fontSize: 15,
-
+      fontSize: 16,
+      lineHeight: 22,
       fontFamily: 'Pretendard-Bold',
-
       color: '#3563C9',
     },
 
@@ -2303,19 +2312,16 @@ const styles =
     },
 
     sectionTitle: {
-      fontSize: 18,
-
+      fontSize: 19,
+      lineHeight: 26,
       fontFamily: 'Pretendard-ExtraBold',
-
       color: '#172033',
-
       marginBottom: 14,
     },
 
     expenseCard: {
       position: 'relative',
-
-      minHeight: 74,
+      minHeight: 82,
 
       justifyContent:
         'center',
@@ -2339,8 +2345,8 @@ const styles =
     },
 
     expenseIcon: {
-      width: 44,
-      height: 44,
+      width: 48,
+      height: 48,
 
       borderRadius: 14,
 
@@ -2360,26 +2366,24 @@ const styles =
     },
 
     expenseTitle: {
-      fontSize: 15,
-
+      fontSize: 17,
+      lineHeight: 23,
       fontFamily: 'Pretendard-Bold',
-
       color: '#172033',
     },
 
     expenseDate: {
       marginTop: 4,
-
-      fontSize: 12,
-
-      color: '#8792A2',
+      fontSize: 14,
+      lineHeight: 20,
+      fontFamily: 'Pretendard-Regular',
+      color: '#687386',
     },
 
     expenseAmount: {
-      fontSize: 15,
-
+      fontSize: 16,
+      lineHeight: 22,
       fontFamily: 'Pretendard-ExtraBold',
-
       color: '#172033',
     },
 
@@ -2449,26 +2453,23 @@ const styles =
     },
 
     completeMenuText: {
-      fontSize: 14,
-
+      fontSize: 15,
+      lineHeight: 21,
       fontFamily: 'Pretendard-Bold',
-
       color: '#3563C9',
     },
 
     menuText: {
-      fontSize: 14,
-
+      fontSize: 15,
+      lineHeight: 21,
       fontFamily: 'Pretendard-SemiBold',
-
       color: '#172033',
     },
 
     deleteText: {
-      fontSize: 14,
-
+      fontSize: 15,
+      lineHeight: 21,
       fontFamily: 'Pretendard-SemiBold',
-
       color: '#D84B4B',
     },
 
@@ -2498,23 +2499,18 @@ const styles =
 
     emptyTitle: {
       marginTop: 14,
-
-      fontSize: 16,
-
+      fontSize: 18,
+      lineHeight: 24,
       fontFamily: 'Pretendard-Bold',
-
       color: '#172033',
     },
 
     emptyDescription: {
       marginTop: 7,
-
-      fontSize: 13,
-
-      lineHeight: 20,
-
-      color: '#8792A2',
-
+      fontSize: 14,
+      lineHeight: 21,
+      fontFamily: 'Pretendard-Regular',
+      color: '#687386',
       textAlign: 'center',
     },
 
@@ -2544,17 +2540,13 @@ const styles =
     },
 
     bottomSheet: {
-      backgroundColor:
-        '#FFFFFF',
-
+      maxHeight: '92%',
+      backgroundColor: '#FFFFFF',
       borderTopLeftRadius: 28,
       borderTopRightRadius: 28,
-
-      paddingHorizontal: 24,
-
+      paddingHorizontal: 22,
       paddingTop: 12,
-
-      paddingBottom: 34,
+      paddingBottom: 28,
 
       shadowColor:
         '#000000',
@@ -2605,21 +2597,18 @@ const styles =
     },
 
     sheetTitle: {
-      fontSize: 22,
-
+      fontSize: 23,
+      lineHeight: 30,
       fontFamily: 'Pretendard-ExtraBold',
-
       color: '#172033',
     },
 
     sheetDescription: {
       marginTop: 6,
-
-      fontSize: 13,
-
-      lineHeight: 19,
-
-      color: '#8792A2',
+      fontSize: 14,
+      lineHeight: 20,
+      fontFamily: 'Pretendard-Regular',
+      color: '#687386',
     },
 
     closeButton: {
@@ -2639,12 +2628,10 @@ const styles =
     },
 
     inputLabel: {
-      fontSize: 14,
-
+      fontSize: 16,
+      lineHeight: 22,
       fontFamily: 'Pretendard-Bold',
-
       color: '#172033',
-
       marginBottom: 8,
     },
 
@@ -2653,78 +2640,62 @@ const styles =
     },
 
     input: {
-      backgroundColor:
-        '#F5F7FA',
-
+      minHeight: 58,
+      backgroundColor: '#F5F7FA',
       borderRadius: 15,
-
       paddingHorizontal: 16,
-
       paddingVertical: 15,
-
-      fontSize: 15,
-
+      fontSize: 17,
+      lineHeight: 23,
       color: '#172033',
     },
 
     amountInputBox: {
+      minHeight: 62,
       flexDirection: 'row',
-
       alignItems: 'center',
-
-      backgroundColor:
-        '#F5F7FA',
-
+      backgroundColor: '#F5F7FA',
       borderRadius: 15,
-
       paddingHorizontal: 16,
     },
 
     amountInput: {
       flex: 1,
-
       paddingVertical: 15,
-
-      fontSize: 20,
-
+      fontSize: 22,
+      lineHeight: 28,
       fontFamily: 'Pretendard-Bold',
-
       color: '#3563C9',
     },
 
     unit: {
-      fontSize: 14,
-
+      fontSize: 16,
+      lineHeight: 22,
       fontFamily: 'Pretendard-SemiBold',
-
-      color: '#687386',
+      color: '#566176',
     },
 
     saveButton: {
       marginTop: 26,
-
-      backgroundColor:
-        '#3563C9',
-
+      minHeight: 58,
+      backgroundColor: '#3563C9',
       borderRadius: 16,
-
       paddingVertical: 17,
-
       alignItems: 'center',
+      justifyContent: 'center',
     },
 
     saveButtonText: {
       color: '#FFFFFF',
-
-      fontSize: 16,
-
+      fontSize: 17,
+      lineHeight: 23,
       fontFamily: 'Pretendard-Bold',
     },
 
     /* 날짜 */
 
     dateSelectButton: {
-      minHeight: 58,
+      minHeight: 62,
 
       flexDirection: 'row',
 
@@ -2774,11 +2745,9 @@ const styles =
 
     dateSelectText: {
       flex: 1,
-
-      fontSize: 14,
-
+      fontSize: 16,
+      lineHeight: 22,
       fontFamily: 'Pretendard-SemiBold',
-
       color: '#172033',
     },
 
@@ -2807,11 +2776,10 @@ const styles =
     },
 
     quickDateText: {
-      fontSize: 12,
-
+      fontSize: 14,
+      lineHeight: 19,
       fontFamily: 'Pretendard-SemiBold',
-
-      color: '#687386',
+      color: '#566176',
     },
 
     /* 달력 */
@@ -2883,19 +2851,18 @@ const styles =
     },
 
     calendarTitle: {
-      fontSize: 20,
-
+      fontSize: 21,
+      lineHeight: 28,
       fontFamily: 'Pretendard-ExtraBold',
-
       color: '#172033',
     },
 
     calendarDescription: {
       marginTop: 5,
-
-      fontSize: 12,
-
-      color: '#8792A2',
+      fontSize: 14,
+      lineHeight: 20,
+      fontFamily: 'Pretendard-Regular',
+      color: '#687386',
     },
 
     calendarCloseButton: {
@@ -2937,10 +2904,9 @@ const styles =
     },
 
     selectedDateText: {
-      fontSize: 14,
-
+      fontSize: 15,
+      lineHeight: 21,
       fontFamily: 'Pretendard-Bold',
-
       color: '#3563C9',
     },
 
@@ -2963,19 +2929,18 @@ const styles =
     },
 
     completeTitle: {
-      fontSize: 16,
-
+      fontSize: 17,
+      lineHeight: 23,
       fontFamily: 'Pretendard-Bold',
-
       color: '#172033',
     },
 
     completeDate: {
       marginTop: 5,
-
-      fontSize: 12,
-
-      color: '#8792A2',
+      fontSize: 14,
+      lineHeight: 20,
+      fontFamily: 'Pretendard-Regular',
+      color: '#687386',
     },
 
     expectedArea: {
@@ -2986,19 +2951,18 @@ const styles =
     },
 
     expectedLabel: {
-      fontSize: 11,
-
-      color: '#98A2B3',
+      fontSize: 13,
+      lineHeight: 18,
+      fontFamily: 'Pretendard-Medium',
+      color: '#687386',
     },
 
     expectedAmount: {
       marginTop: 4,
-
-      fontSize: 15,
-
+      fontSize: 16,
+      lineHeight: 22,
       fontFamily: 'Pretendard-Bold',
-
-      color: '#687386',
+      color: '#566176',
     },
 
     actualAmountLabel: {
@@ -3020,13 +2984,10 @@ const styles =
 
     actualAmountInput: {
       flex: 1,
-
       paddingVertical: 17,
-
-      fontSize: 24,
-
+      fontSize: 26,
+      lineHeight: 34,
       fontFamily: 'Pretendard-ExtraBold',
-
       color: '#3563C9',
     },
 
@@ -3043,20 +3004,23 @@ const styles =
     },
 
     sameAmountText: {
-      fontSize: 13,
-
-      color: '#687386',
+      fontSize: 14,
+      lineHeight: 20,
+      fontFamily: 'Pretendard-Medium',
+      color: '#566176',
     },
 
     moreAmountText: {
-      fontSize: 13,
-
-      color: '#C56A43',
+      fontSize: 14,
+      lineHeight: 20,
+      fontFamily: 'Pretendard-Medium',
+      color: '#B65F3C',
     },
 
     lessAmountText: {
-      fontSize: 13,
-
+      fontSize: 14,
+      lineHeight: 20,
+      fontFamily: 'Pretendard-Medium',
       color: '#2F7D5A',
     },
 
@@ -3066,11 +3030,9 @@ const styles =
 
     completeGuide: {
       marginTop: 20,
-
-      fontSize: 12,
-
-      lineHeight: 18,
-
-      color: '#98A2B3',
+      fontSize: 14,
+      lineHeight: 21,
+      fontFamily: 'Pretendard-Regular',
+      color: '#687386',
     },
   });

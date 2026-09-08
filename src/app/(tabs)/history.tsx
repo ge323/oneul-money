@@ -944,10 +944,14 @@ export default function HistoryScreen() {
       contentContainerStyle={
         styles.container
       }
-      showsVerticalScrollIndicator={
-        false
-      }
+      showsVerticalScrollIndicator={false}
       keyboardShouldPersistTaps="handled"
+      keyboardDismissMode={
+        Platform.OS === 'ios'
+          ? 'interactive'
+          : 'on-drag'
+      }
+      contentInsetAdjustmentBehavior="automatic"
     >
       {/* =====================
           상단
@@ -1037,7 +1041,7 @@ export default function HistoryScreen() {
         <Ionicons
           name="chevron-forward"
           size={18}
-          color="#98A2B3"
+          color="#687386"
         />
       </Pressable>
 
@@ -1173,7 +1177,7 @@ export default function HistoryScreen() {
           <Ionicons
             name="search-outline"
             size={20}
-            color="#98A2B3"
+            color="#687386"
           />
 
           <TextInput
@@ -1195,7 +1199,7 @@ export default function HistoryScreen() {
               );
             }}
             placeholder="지출 내역 검색"
-            placeholderTextColor="#A8B0BE"
+            placeholderTextColor="#687386"
             returnKeyType="search"
           />
 
@@ -1214,7 +1218,7 @@ export default function HistoryScreen() {
                 <Ionicons
                   name="close-circle"
                   size={20}
-                  color="#A8B0BE"
+                  color="#687386"
                 />
               </Pressable>
             )}
@@ -1427,7 +1431,7 @@ export default function HistoryScreen() {
               <Ionicons
                 name="receipt-outline"
                 size={30}
-                color="#98A2B3"
+                color="#687386"
               />
             </View>
 
@@ -1466,7 +1470,7 @@ export default function HistoryScreen() {
               <Ionicons
                 name="search-outline"
                 size={29}
-                color="#98A2B3"
+                color="#687386"
               />
             </View>
 
@@ -1799,25 +1803,28 @@ const styles =
     },
 
     container: {
-      paddingHorizontal: 24,
-      paddingTop: 60,
-      paddingBottom: 120,
+      paddingHorizontal: 20,
+      paddingTop: 52,
+      paddingBottom: 150,
     },
 
     header: {
-      marginBottom: 20,
+      marginBottom: 22,
     },
 
     title: {
-      fontSize: 28,
+      fontSize: 30,
+      lineHeight: 38,
       fontFamily: 'Pretendard-ExtraBold',
       color: '#172033',
     },
 
     description: {
       marginTop: 8,
-      fontSize: 15,
-      color: '#8792A2',
+      fontSize: 16,
+      lineHeight: 23,
+      fontFamily: 'Pretendard-Regular',
+      color: '#687386',
     },
 
     // ========================
@@ -1825,27 +1832,16 @@ const styles =
     // ========================
 
     reportButton: {
+      minHeight: 74,
       flexDirection: 'row',
-
       alignItems: 'center',
-
-      justifyContent:
-        'space-between',
-
-      backgroundColor:
-        '#F8FAFC',
-
+      justifyContent: 'space-between',
+      backgroundColor: '#F8FAFC',
       borderRadius: 18,
-
-      paddingHorizontal: 14,
-
-      paddingVertical: 14,
-
+      paddingHorizontal: 15,
+      paddingVertical: 15,
       borderWidth: 1,
-
-      borderColor:
-        '#EDF0F4',
-
+      borderColor: '#EDF0F4',
       marginBottom: 16,
     },
 
@@ -1887,21 +1883,18 @@ const styles =
     },
 
     reportButtonTitle: {
-      fontSize: 14,
-
+      fontSize: 16,
+      lineHeight: 22,
       fontFamily: 'Pretendard-ExtraBold',
-
       color: '#172033',
     },
 
     reportButtonDescription: {
-      marginTop: 4,
-
-      fontSize: 11,
-
-      lineHeight: 16,
-
-      color: '#8792A2',
+      marginTop: 5,
+      fontSize: 14,
+      lineHeight: 20,
+      fontFamily: 'Pretendard-Regular',
+      color: '#687386',
     },
 
     // ========================
@@ -1909,19 +1902,14 @@ const styles =
     // ========================
 
     monthSelector: {
+      minHeight: 64,
       flexDirection: 'row',
       alignItems: 'center',
-      justifyContent:
-        'space-between',
-
-      backgroundColor:
-        '#F8FAFC',
-
+      justifyContent: 'space-between',
+      backgroundColor: '#F8FAFC',
       borderRadius: 18,
-
       paddingHorizontal: 10,
       paddingVertical: 10,
-
       marginBottom: 14,
     },
 
@@ -1947,17 +1935,18 @@ const styles =
     },
 
     monthTitle: {
-      fontSize: 17,
+      fontSize: 19,
+      lineHeight: 26,
       fontFamily: 'Pretendard-ExtraBold',
       color: '#172033',
     },
 
     currentMonthGuide: {
-      marginTop: 3,
-
-      fontSize: 10,
-
-      color: '#98A2B3',
+      marginTop: 4,
+      fontSize: 13,
+      lineHeight: 18,
+      fontFamily: 'Pretendard-Medium',
+      color: '#687386',
     },
 
     // ========================
@@ -1974,27 +1963,26 @@ const styles =
     },
 
     totalLabel: {
-      fontSize: 14,
-
-      color: '#687386',
+      fontSize: 15,
+      lineHeight: 21,
+      fontFamily: 'Pretendard-Medium',
+      color: '#566176',
     },
 
     totalAmount: {
       marginTop: 8,
-
-      fontSize: 30,
-
+      fontSize: 32,
+      lineHeight: 40,
       fontFamily: 'Pretendard-ExtraBold',
-
       color: '#3563C9',
     },
 
     totalDescription: {
       marginTop: 8,
-
-      fontSize: 13,
-
-      color: '#8792A2',
+      fontSize: 14,
+      lineHeight: 20,
+      fontFamily: 'Pretendard-Regular',
+      color: '#687386',
     },
 
     // ========================
@@ -2006,7 +1994,7 @@ const styles =
     },
 
     searchBox: {
-      minHeight: 52,
+      minHeight: 58,
 
       flexDirection: 'row',
 
@@ -2027,15 +2015,11 @@ const styles =
 
     searchInput: {
       flex: 1,
-
       marginLeft: 9,
-
-      paddingVertical: 13,
-
-      fontSize: 14,
-
+      paddingVertical: 14,
+      fontSize: 16,
+      lineHeight: 22,
       color: '#172033',
-
       outlineStyle: 'none' as any,
     },
 
@@ -2067,7 +2051,7 @@ const styles =
     },
 
     filterChip: {
-      height: 38,
+      minHeight: 42,
 
       flexDirection: 'row',
 
@@ -2097,11 +2081,10 @@ const styles =
     },
 
     filterChipText: {
-      fontSize: 12,
-
+      fontSize: 14,
+      lineHeight: 19,
       fontFamily: 'Pretendard-SemiBold',
-
-      color: '#687386',
+      color: '#566176',
     },
 
     filterChipTextSelected: {
@@ -2135,19 +2118,18 @@ const styles =
     },
 
     searchResultTitle: {
-      fontSize: 12,
-
+      fontSize: 14,
+      lineHeight: 20,
       fontFamily: 'Pretendard-Bold',
-
       color: '#172033',
     },
 
     searchResultInfo: {
-      marginTop: 3,
-
-      fontSize: 12,
-
-      color: '#8792A2',
+      marginTop: 4,
+      fontSize: 14,
+      lineHeight: 20,
+      fontFamily: 'Pretendard-Regular',
+      color: '#687386',
     },
 
     resetButton: {
@@ -2168,11 +2150,10 @@ const styles =
     },
 
     resetButtonText: {
-      fontSize: 11,
-
+      fontSize: 13,
+      lineHeight: 18,
       fontFamily: 'Pretendard-SemiBold',
-
-      color: '#687386',
+      color: '#566176',
     },
 
     // ========================
@@ -2199,19 +2180,17 @@ const styles =
     },
 
     dateTitle: {
-      fontSize: 15,
-
+      fontSize: 17,
+      lineHeight: 23,
       fontFamily: 'Pretendard-ExtraBold',
-
       color: '#172033',
     },
 
     dayTotal: {
-      fontSize: 13,
-
+      fontSize: 14,
+      lineHeight: 20,
       fontFamily: 'Pretendard-SemiBold',
-
-      color: '#8792A2',
+      color: '#687386',
     },
 
     dayList: {
@@ -2235,13 +2214,9 @@ const styles =
 
     expenseItem: {
       flexDirection: 'row',
-
-      justifyContent:
-        'space-between',
-
+      justifyContent: 'space-between',
       alignItems: 'center',
-
-      minHeight: 72,
+      minHeight: 80,
 
       borderBottomWidth: 1,
 
@@ -2260,9 +2235,8 @@ const styles =
     },
 
     categoryIcon: {
-      width: 46,
-
-      height: 46,
+      width: 50,
+      height: 50,
 
       borderRadius: 15,
 
@@ -2282,10 +2256,9 @@ const styles =
     },
 
     expenseTitle: {
-      fontSize: 16,
-
+      fontSize: 17,
+      lineHeight: 23,
       fontFamily: 'Pretendard-Bold',
-
       color: '#172033',
     },
 
@@ -2298,9 +2271,10 @@ const styles =
     },
 
     expenseTime: {
-      fontSize: 12,
-
-      color: '#98A2B3',
+      fontSize: 13,
+      lineHeight: 18,
+      fontFamily: 'Pretendard-Regular',
+      color: '#687386',
     },
 
     metaDot: {
@@ -2317,9 +2291,10 @@ const styles =
     },
 
     expenseCategoryName: {
-      fontSize: 11,
-
-      color: '#98A2B3',
+      fontSize: 13,
+      lineHeight: 18,
+      fontFamily: 'Pretendard-Regular',
+      color: '#687386',
     },
 
     rightArea: {
@@ -2331,10 +2306,9 @@ const styles =
     },
 
     expenseAmount: {
-      fontSize: 15,
-
+      fontSize: 16,
+      lineHeight: 22,
       fontFamily: 'Pretendard-Bold',
-
       color: '#172033',
     },
 
@@ -2408,18 +2382,16 @@ const styles =
     },
 
     menuText: {
-      fontSize: 14,
-
+      fontSize: 15,
+      lineHeight: 21,
       fontFamily: 'Pretendard-SemiBold',
-
       color: '#172033',
     },
 
     deleteText: {
-      fontSize: 14,
-
+      fontSize: 15,
+      lineHeight: 21,
       fontFamily: 'Pretendard-SemiBold',
-
       color: '#D84B4B',
     },
 
@@ -2451,23 +2423,18 @@ const styles =
 
     emptyTitle: {
       marginTop: 16,
-
-      fontSize: 16,
-
+      fontSize: 18,
+      lineHeight: 24,
       fontFamily: 'Pretendard-Bold',
-
       color: '#172033',
     },
 
     emptyText: {
       marginTop: 7,
-
-      fontSize: 13,
-
-      lineHeight: 20,
-
-      color: '#8792A2',
-
+      fontSize: 14,
+      lineHeight: 21,
+      fontFamily: 'Pretendard-Regular',
+      color: '#687386',
       textAlign: 'center',
     },
 
@@ -2485,10 +2452,9 @@ const styles =
     },
 
     emptyResetButtonText: {
-      fontSize: 13,
-
+      fontSize: 14,
+      lineHeight: 20,
       fontFamily: 'Pretendard-Bold',
-
       color: '#3563C9',
     },
   });
