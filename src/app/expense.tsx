@@ -12,7 +12,9 @@ import {
 } from 'react';
 import {
   Animated,
+  KeyboardAvoidingView,
   Modal,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -795,16 +797,29 @@ export default function ExpenseScreen() {
 
   return (
     <>
-      <ScrollView
+      <KeyboardAvoidingView
         style={styles.screen}
-        contentContainerStyle={
-          styles.container
+        behavior={
+          Platform.OS === 'ios'
+            ? 'padding'
+            : 'height'
         }
-        showsVerticalScrollIndicator={
-          false
-        }
-        keyboardShouldPersistTaps="handled"
+        keyboardVerticalOffset={0}
       >
+        <ScrollView
+          style={styles.screen}
+          contentContainerStyle={styles.container}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode={
+            Platform.OS === 'ios'
+              ? 'interactive'
+              : 'on-drag'
+          }
+          contentInsetAdjustmentBehavior="automatic"
+          automaticallyAdjustKeyboardInsets
+          nestedScrollEnabled
+        >
         <AppHeader
           title={
             isEditMode
@@ -850,6 +865,7 @@ export default function ExpenseScreen() {
                   )
                 }
                 placeholder="0"
+                placeholderTextColor="#687386"
                 keyboardType="numeric"
               />
 
@@ -879,6 +895,8 @@ export default function ExpenseScreen() {
                 setTitle
               }
               placeholder="예: 점심"
+              placeholderTextColor="#687386"
+              returnKeyType="done"
             />
           </View>
 
@@ -1041,7 +1059,8 @@ export default function ExpenseScreen() {
               : '기록하기'}
           </Text>
         </Pressable>
-      </ScrollView>
+        </ScrollView>
+      </KeyboardAvoidingView>
 
       <Modal
         visible={showDateModal}
@@ -1114,20 +1133,20 @@ export default function ExpenseScreen() {
               theme={{
                 backgroundColor: '#FFFFFF',
                 calendarBackground: '#FFFFFF',
-                textSectionTitleColor: '#98A2B3',
+                textSectionTitleColor: '#687386',
                 selectedDayBackgroundColor: '#3563C9',
                 selectedDayTextColor: '#FFFFFF',
                 todayTextColor: '#3563C9',
                 dayTextColor: '#172033',
-                textDisabledColor: '#D0D5DD',
+                textDisabledColor: '#AAB4C2',
                 arrowColor: '#3563C9',
                 monthTextColor: '#172033',
                 textDayFontFamily: 'Pretendard-Medium',
                 textMonthFontFamily: 'Pretendard-Bold',
                 textDayHeaderFontFamily: 'Pretendard-Medium',
-                textDayFontSize: 14,
-                textMonthFontSize: 17,
-                textDayHeaderFontSize: 12,
+                textDayFontSize: 16,
+                textMonthFontSize: 18,
+                textDayHeaderFontSize: 14,
               }}
             />
 
@@ -1166,8 +1185,14 @@ export default function ExpenseScreen() {
           closeCategoryModal
         }
       >
-        <View
+        <KeyboardAvoidingView
           style={styles.modalRoot}
+          behavior={
+            Platform.OS === 'ios'
+              ? 'padding'
+              : 'height'
+          }
+          keyboardVerticalOffset={0}
         >
           <Animated.View
             style={[
@@ -1271,7 +1296,9 @@ export default function ExpenseScreen() {
                 setNewCategoryName
               }
               placeholder="예: 반려동물"
+              placeholderTextColor="#687386"
               maxLength={10}
+              returnKeyType="done"
             />
 
             <Text
@@ -1344,7 +1371,7 @@ export default function ExpenseScreen() {
               </Text>
             </Pressable>
           </Animated.View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
     </>
   );
@@ -1360,21 +1387,22 @@ const styles =
 
     container: {
       flexGrow: 1,
-      paddingHorizontal: 24,
-      paddingTop: 32,
-      paddingBottom: 50,
+      paddingHorizontal: 20,
+      paddingTop: 24,
+      paddingBottom: 140,
     },
 
     form: {
-      gap: 28,
+      gap: 30,
     },
 
     inputGroup: {
-      gap: 10,
+      gap: 11,
     },
 
     label: {
-      fontSize: 15,
+      fontSize: 17,
+      lineHeight: 24,
       fontFamily: 'Pretendard-Bold',
       color: '#172033',
     },
@@ -1382,51 +1410,41 @@ const styles =
     amountInputBox: {
       flexDirection: 'row',
       alignItems: 'center',
-
-      backgroundColor:
-        '#F1F5FC',
-
-      borderRadius: 16,
-
+      minHeight: 72,
+      backgroundColor: '#F1F5FC',
+      borderRadius: 18,
       paddingHorizontal: 18,
     },
 
     amountInput: {
       flex: 1,
-
       paddingVertical: 18,
-
-      fontSize: 28,
+      fontSize: 30,
+      lineHeight: 38,
       fontFamily: 'Pretendard-ExtraBold',
-
       color: '#3563C9',
     },
 
     unit: {
       marginLeft: 8,
-
-      fontSize: 15,
+      fontSize: 17,
       fontFamily: 'Pretendard-Bold',
-
-      color: '#687386',
+      color: '#566176',
     },
 
     input: {
-      backgroundColor:
-        '#F5F7FA',
-
+      minHeight: 60,
+      backgroundColor: '#F5F7FA',
       borderRadius: 16,
-
       paddingHorizontal: 16,
-      paddingVertical: 16,
-
-      fontSize: 16,
-
+      paddingVertical: 17,
+      fontSize: 17,
+      lineHeight: 23,
       color: '#172033',
     },
 
     dateSelectButton: {
-      minHeight: 58,
+      minHeight: 62,
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
@@ -1446,8 +1464,9 @@ const styles =
     },
 
     dateSelectText: {
-      fontSize: 16,
-      fontFamily: 'Pretendard-Medium',
+      fontSize: 17,
+      lineHeight: 23,
+      fontFamily: 'Pretendard-SemiBold',
       color: '#172033',
     },
 
@@ -1486,9 +1505,10 @@ const styles =
 
     calendarSubtitle: {
       marginTop: 5,
-      fontSize: 13,
+      fontSize: 14,
+      lineHeight: 20,
       fontFamily: 'Pretendard-Regular',
-      color: '#98A2B3',
+      color: '#687386',
     },
 
     calendarCloseButton: {
@@ -1510,7 +1530,7 @@ const styles =
     },
 
     todayButtonText: {
-      fontSize: 15,
+      fontSize: 16,
       fontFamily: 'Pretendard-Bold',
       color: '#3563C9',
     },
@@ -1525,14 +1545,10 @@ const styles =
     categoryButton: {
       flexDirection: 'row',
       alignItems: 'center',
-
+      minHeight: 48,
       gap: 7,
-
-      backgroundColor:
-        '#F5F7FA',
-
+      backgroundColor: '#F5F7FA',
       borderRadius: 14,
-
       paddingHorizontal: 14,
       paddingVertical: 12,
     },
@@ -1543,10 +1559,10 @@ const styles =
     },
 
     categoryText: {
-      fontSize: 14,
+      fontSize: 15,
+      lineHeight: 20,
       fontFamily: 'Pretendard-SemiBold',
-
-      color: '#687386',
+      color: '#566176',
     },
 
     categoryTextSelected: {
@@ -1565,23 +1581,19 @@ const styles =
     },
 
     addCategoryText: {
-      fontSize: 14,
+      fontSize: 15,
       fontFamily: 'Pretendard-Bold',
-
       color: '#3563C9',
     },
 
     saveButton: {
-      marginTop: 36,
-
-      backgroundColor:
-        '#3563C9',
-
+      marginTop: 34,
+      minHeight: 58,
+      backgroundColor: '#3563C9',
       borderRadius: 16,
-
       paddingVertical: 17,
-
       alignItems: 'center',
+      justifyContent: 'center',
     },
 
     saveButtonPressed: {
@@ -1591,8 +1603,7 @@ const styles =
 
     saveButtonText: {
       color: '#FFFFFF',
-
-      fontSize: 16,
+      fontSize: 17,
       fontFamily: 'Pretendard-Bold',
     },
 
@@ -1620,15 +1631,13 @@ const styles =
     },
 
     bottomSheet: {
-      backgroundColor:
-        '#FFFFFF',
-
+      maxHeight: '92%',
+      backgroundColor: '#FFFFFF',
       borderTopLeftRadius: 28,
       borderTopRightRadius: 28,
-
-      paddingHorizontal: 24,
+      paddingHorizontal: 22,
       paddingTop: 12,
-      paddingBottom: 34,
+      paddingBottom: 28,
 
       shadowColor:
         '#000000',
@@ -1686,12 +1695,9 @@ const styles =
 
     sheetDescription: {
       marginTop: 7,
-
-      fontSize: 13,
-
-      lineHeight: 19,
-
-      color: '#8792A2',
+      fontSize: 14,
+      lineHeight: 20,
+      color: '#687386',
     },
 
     closeButton: {
@@ -1709,26 +1715,21 @@ const styles =
     },
 
     sheetLabel: {
-      fontSize: 14,
-
+      fontSize: 15,
+      lineHeight: 21,
       fontFamily: 'Pretendard-Bold',
-
       color: '#172033',
-
       marginBottom: 9,
     },
 
     modalCategoryNameInput: {
-      backgroundColor:
-        '#F5F7FA',
-
+      minHeight: 58,
+      backgroundColor: '#F5F7FA',
       borderRadius: 16,
-
       paddingHorizontal: 16,
       paddingVertical: 16,
-
-      fontSize: 16,
-
+      fontSize: 17,
+      lineHeight: 23,
       color: '#172033',
     },
 
@@ -1791,9 +1792,7 @@ const styles =
 
     categorySaveButtonText: {
       color: '#FFFFFF',
-
-      fontSize: 16,
-
+      fontSize: 17,
       fontFamily: 'Pretendard-Bold',
     },
   });

@@ -1481,6 +1481,14 @@ export default function PlanScreen() {
               },
             ]}
           >
+            <ScrollView
+              style={styles.bottomSheetScroll}
+              contentContainerStyle={styles.bottomSheetScrollContent}
+              showsVerticalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
+              keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
+              nestedScrollEnabled
+            >
             <View
               style={
                 styles.sheetHandle
@@ -1723,6 +1731,7 @@ export default function PlanScreen() {
                   : '추가하기'}
               </Text>
             </Pressable>
+            </ScrollView>
           </Animated.View>
         </KeyboardAvoidingView>
       </Modal>
@@ -1783,6 +1792,14 @@ export default function PlanScreen() {
               },
             ]}
           >
+            <ScrollView
+              style={styles.bottomSheetScroll}
+              contentContainerStyle={styles.bottomSheetScrollContent}
+              showsVerticalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
+              keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
+              nestedScrollEnabled
+            >
             <View
               style={
                 styles.sheetHandle
@@ -2043,6 +2060,7 @@ export default function PlanScreen() {
                 </Pressable>
               </>
             )}
+            </ScrollView>
           </Animated.View>
         </KeyboardAvoidingView>
       </Modal>
@@ -2539,8 +2557,17 @@ const styles =
       flex: 1,
     },
 
+    bottomSheetScroll: {
+      flexGrow: 0,
+    },
+
+    bottomSheetScrollContent: {
+      paddingBottom: 42,
+    },
+
     bottomSheet: {
-      maxHeight: '92%',
+      maxHeight: '90%',
+      overflow: 'hidden',
       backgroundColor: '#FFFFFF',
       borderTopLeftRadius: 28,
       borderTopRightRadius: 28,
