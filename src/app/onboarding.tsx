@@ -24,10 +24,12 @@ const ONBOARDING_KEY =
 
 type OnboardingPage = {
   id: string;
-  image: ImageSourcePropType;
+  image?: ImageSourcePropType;
+  mascot: ImageSourcePropType;
   title: string;
   highlight: string;
   description: string;
+  visualType: 'mockup' | 'simulator';
 };
 
 const pages: OnboardingPage[] = [
@@ -38,12 +40,18 @@ const pages: OnboardingPage[] = [
       '../../assets/images/onboarding/onboarding_1.png'
     ),
 
+    mascot: require(
+      '../../assets/images/character/hi.png'
+    ),
+
     title: '오늘, 얼마까지\n',
 
     highlight: '써도 될까요?',
 
     description:
       '이번 달 사용할 금액과 고정지출,\n월급일까지의 기간을 계산해\n오늘 쓸 수 있는 금액을 알려드려요.',
+
+    visualType: 'mockup',
   },
 
   {
@@ -53,6 +61,10 @@ const pages: OnboardingPage[] = [
       '../../assets/images/onboarding/onboarding_2.png'
     ),
 
+    mascot: require(
+      '../../assets/images/character/money.png'
+    ),
+
     title: '기록할수록\n',
 
     highlight:
@@ -60,12 +72,32 @@ const pages: OnboardingPage[] = [
 
     description:
       '지출을 기록하면 남은 생활비를 반영해\n오늘 쓸 수 있는 금액을\n바로 다시 계산해드려요.',
+
+    visualType: 'mockup',
+  },
+
+  {
+    id: '3',
+
+    mascot: require(
+      '../../assets/images/character/question.png'
+    ),
+
+    title: '사기 전에\n',
+
+    highlight: '한번 확인해보세요',
+
+    description:
+      '사고 싶은 금액을 입력하면\n구매 후 하루 예산이 얼마나 남는지\n미리 확인할 수 있어요.',
+
+    visualType: 'simulator',
   },
 ];
 
 export default function OnboardingScreen() {
   const {
     width: screenWidth,
+    height: screenHeight,
   } = useWindowDimensions();
 
   const flatListRef =
@@ -77,6 +109,9 @@ export default function OnboardingScreen() {
     currentIndex,
     setCurrentIndex,
   ] = useState(0);
+
+  const isCompactHeight =
+    screenHeight < 760;
 
   const finishOnboarding =
     async () => {
@@ -160,6 +195,281 @@ export default function OnboardingScreen() {
 
     setCurrentIndex(
       newIndex
+    );
+  };
+
+  const renderVisual = (
+    item: OnboardingPage
+  ) => {
+    if (
+      item.visualType ===
+      'simulator'
+    ) {
+      return (
+        <View
+          style={
+            styles.simulatorVisualArea
+          }
+        >
+          <View
+            style={
+              styles.simulatorCard
+            }
+          >
+            <View
+              style={
+                styles.simulatorCardHeader
+              }
+            >
+              <View>
+                <Text
+                  style={
+                    styles.simulatorCardTitle
+                  }
+                >
+                  이거 사도 돼?
+                </Text>
+
+                <Text
+                  style={
+                    styles.simulatorCardDescription
+                  }
+                >
+                  구매 후 하루 예산을
+                  미리 확인해보세요.
+                </Text>
+              </View>
+
+              <View
+                style={
+                  styles.simulatorCloseButton
+                }
+              >
+                <Ionicons
+                  name="close"
+                  size={18}
+                  color="#687386"
+                />
+              </View>
+            </View>
+
+            <Text
+              style={
+                styles.simulatorInputLabel
+              }
+            >
+              사고 싶은 금액
+            </Text>
+
+            <View
+              style={
+                styles.simulatorInputBox
+              }
+            >
+              <Text
+                style={
+                  styles.simulatorInputAmount
+                }
+              >
+                89,000
+              </Text>
+
+              <Text
+                style={
+                  styles.simulatorInputUnit
+                }
+              >
+                원
+              </Text>
+            </View>
+
+            <View
+              style={
+                styles.simulatorResultBox
+              }
+            >
+              <View
+                style={
+                  styles.simulatorResultIcon
+                }
+              >
+                <Ionicons
+                  name="checkmark"
+                  size={16}
+                  color="#FFFFFF"
+                />
+              </View>
+
+              <View
+                style={
+                  styles.simulatorResultTextArea
+                }
+              >
+                <Text
+                  style={
+                    styles.simulatorResultTitle
+                  }
+                >
+                  생활비 안에서는 괜찮아요
+                </Text>
+
+                <Text
+                  style={
+                    styles.simulatorResultDescription
+                  }
+                >
+                  구매 후에도 하루 예산이
+                  남아 있어요.
+                </Text>
+              </View>
+            </View>
+
+            <View
+              style={
+                styles.simulatorBudgetRow
+              }
+            >
+              <View>
+                <Text
+                  style={
+                    styles.simulatorBudgetLabel
+                  }
+                >
+                  현재 하루 예산
+                </Text>
+
+                <Text
+                  style={
+                    styles.simulatorBudgetAmount
+                  }
+                >
+                  35,869원
+                </Text>
+              </View>
+
+              <Ionicons
+                name="arrow-forward"
+                size={18}
+                color="#98A2B3"
+              />
+
+              <View
+                style={
+                  styles.simulatorBudgetRight
+                }
+              >
+                <Text
+                  style={
+                    styles.simulatorBudgetLabel
+                  }
+                >
+                  구매 후
+                </Text>
+
+                <Text
+                  style={[
+                    styles.simulatorBudgetAmount,
+                    styles.simulatorBudgetAfter,
+                  ]}
+                >
+                  32,572원
+                </Text>
+              </View>
+            </View>
+          </View>
+
+          <Image
+            source={
+              item.mascot
+            }
+            style={[
+              styles.simulatorMascot,
+              {
+                width:
+                  Math.min(
+                    screenWidth *
+                      0.20,
+                    90
+                  ),
+
+                height:
+                  Math.min(
+                    screenWidth *
+                      0.20,
+                    90
+                  ),
+              },
+            ]}
+            resizeMode="contain"
+          />
+        </View>
+      );
+    }
+
+    return (
+      <View
+        style={
+          styles.imageArea
+        }
+      >
+        {item.image && (
+          <Image
+            source={
+              item.image
+            }
+            style={[
+              styles.image,
+
+              {
+                width:
+                  Math.min(
+                    screenWidth *
+                      0.78,
+                    360
+                  ),
+
+                height:
+                  Math.min(
+                    screenWidth *
+                      0.78,
+                    360
+                  ),
+              },
+            ]}
+            resizeMode="contain"
+          />
+        )}
+
+        <Image
+          source={
+            item.mascot
+          }
+          style={[
+            styles.mascot,
+
+            item.id === '1'
+              ? styles.mascotPageOne
+              : styles.mascotPageTwo,
+
+            {
+              width:
+                Math.min(
+                  screenWidth *
+                    0.25,
+                  112
+                ),
+
+              height:
+                Math.min(
+                  screenWidth *
+                    0.25,
+                  112
+                ),
+            },
+          ]}
+          resizeMode="contain"
+        />
+      </View>
     );
   };
 
@@ -276,6 +586,9 @@ export default function OnboardingScreen() {
             style={[
               styles.page,
 
+              isCompactHeight &&
+                styles.pageCompact,
+
               {
                 width:
                   screenWidth,
@@ -293,9 +606,12 @@ export default function OnboardingScreen() {
             {/* 제목 */}
 
             <View
-              style={
-                styles.textArea
-              }
+              style={[
+                styles.textArea,
+
+                isCompactHeight &&
+                  styles.textAreaCompact,
+              ]}
             >
               <Text
                 style={
@@ -328,39 +644,11 @@ export default function OnboardingScreen() {
               </Text>
             </View>
 
-            {/* 이미지 */}
+            {/* 이미지 / 시뮬레이터 */}
 
-            <View
-              style={
-                styles.imageArea
-              }
-            >
-              <Image
-                source={
-                  item.image
-                }
-                style={[
-                  styles.image,
-
-                  {
-                    width:
-                      Math.min(
-                        screenWidth *
-                          0.78,
-                        360
-                      ),
-
-                    height:
-                      Math.min(
-                        screenWidth *
-                          0.78,
-                        360
-                      ),
-                  },
-                ]}
-                resizeMode="contain"
-              />
-            </View>
+            {renderVisual(
+              item
+            )}
           </Pressable>
         )}
       />
@@ -504,12 +792,14 @@ const styles =
     },
 
     skipText: {
-      fontSize: 13,
+      fontSize: 14,
+
+      lineHeight: 20,
 
       fontFamily:
         'Pretendard-Medium',
 
-      color: '#8792A2',
+      color: '#687386',
     },
 
     /* ========================
@@ -519,14 +809,22 @@ const styles =
     page: {
       flex: 1,
 
-      paddingHorizontal: 26,
+      paddingHorizontal: 24,
+    },
+
+    pageCompact: {
+      paddingHorizontal: 20,
     },
 
     textArea: {
       alignItems:
         'center',
 
-      marginTop: 18,
+      marginTop: 16,
+    },
+
+    textAreaCompact: {
+      marginTop: 8,
     },
 
     title: {
@@ -553,23 +851,23 @@ const styles =
     },
 
     description: {
-      marginTop: 16,
+      marginTop: 14,
 
       textAlign:
         'center',
 
-      fontSize: 14,
+      fontSize: 15,
 
-      lineHeight: 22,
+      lineHeight: 23,
 
       fontFamily:
         'Pretendard-Regular',
 
-      color: '#7C8798',
+      color: '#687386',
     },
 
     /* ========================
-       이미지
+       기존 목업 + 캐릭터
     ======================== */
 
     imageArea: {
@@ -581,13 +879,313 @@ const styles =
       justifyContent:
         'center',
 
-      marginTop: 6,
+      marginTop: 4,
+
+      position: 'relative',
     },
 
     image: {
       maxWidth: 360,
 
       maxHeight: 360,
+    },
+
+    mascot: {
+      position: 'absolute',
+
+      zIndex: 2,
+    },
+
+    mascotPageOne: {
+      right: '3%',
+
+      bottom: '7%',
+    },
+
+    mascotPageTwo: {
+      left: '2%',
+
+      bottom: '5%',
+    },
+
+    /* ========================
+       3페이지 구매 시뮬레이터
+    ======================== */
+
+    simulatorVisualArea: {
+      flex: 1,
+
+      alignItems: 'center',
+
+      justifyContent:
+        'center',
+
+      position: 'relative',
+
+      paddingTop: 8,
+    },
+
+    simulatorCard: {
+      width: '92%',
+
+      maxWidth: 350,
+
+      backgroundColor:
+        '#FFFFFF',
+
+      borderRadius: 24,
+
+      paddingHorizontal: 20,
+
+      paddingTop: 20,
+
+      paddingBottom: 20,
+
+      borderWidth: 1,
+
+      borderColor:
+        '#EBEFF5',
+
+      shadowColor:
+        '#172033',
+
+      shadowOffset: {
+        width: 0,
+        height: 8,
+      },
+
+      shadowOpacity: 0.08,
+
+      shadowRadius: 18,
+
+      elevation: 5,
+    },
+
+    simulatorCardHeader: {
+      flexDirection: 'row',
+
+      justifyContent:
+        'space-between',
+
+      alignItems:
+        'flex-start',
+    },
+
+    simulatorCardTitle: {
+      fontSize: 19,
+
+      lineHeight: 26,
+
+      fontFamily:
+        'Pretendard-ExtraBold',
+
+      color: '#172033',
+    },
+
+    simulatorCardDescription: {
+      marginTop: 4,
+
+      fontSize: 12,
+
+      lineHeight: 18,
+
+      fontFamily:
+        'Pretendard-Regular',
+
+      color: '#687386',
+    },
+
+    simulatorCloseButton: {
+      width: 34,
+
+      height: 34,
+
+      borderRadius: 17,
+
+      alignItems: 'center',
+
+      justifyContent:
+        'center',
+
+      backgroundColor:
+        '#F5F7FA',
+    },
+
+    simulatorInputLabel: {
+      marginTop: 19,
+
+      marginBottom: 8,
+
+      fontSize: 13,
+
+      lineHeight: 19,
+
+      fontFamily:
+        'Pretendard-Bold',
+
+      color: '#172033',
+    },
+
+    simulatorInputBox: {
+      minHeight: 58,
+
+      flexDirection: 'row',
+
+      alignItems: 'center',
+
+      backgroundColor:
+        '#F1F5FC',
+
+      borderRadius: 16,
+
+      paddingHorizontal: 16,
+    },
+
+    simulatorInputAmount: {
+      flex: 1,
+
+      fontSize: 24,
+
+      lineHeight: 31,
+
+      fontFamily:
+        'Pretendard-ExtraBold',
+
+      color: '#3563C9',
+    },
+
+    simulatorInputUnit: {
+      fontSize: 14,
+
+      fontFamily:
+        'Pretendard-Bold',
+
+      color: '#687386',
+    },
+
+    simulatorResultBox: {
+      marginTop: 14,
+
+      flexDirection: 'row',
+
+      alignItems:
+        'flex-start',
+
+      backgroundColor:
+        '#EEF8F3',
+
+      borderRadius: 16,
+
+      padding: 14,
+    },
+
+    simulatorResultIcon: {
+      width: 28,
+
+      height: 28,
+
+      borderRadius: 14,
+
+      backgroundColor:
+        '#3E956C',
+
+      alignItems: 'center',
+
+      justifyContent:
+        'center',
+
+      marginTop: 1,
+    },
+
+    simulatorResultTextArea: {
+      flex: 1,
+
+      marginLeft: 10,
+    },
+
+    simulatorResultTitle: {
+      fontSize: 14,
+
+      lineHeight: 20,
+
+      fontFamily:
+        'Pretendard-Bold',
+
+      color: '#276A4D',
+    },
+
+    simulatorResultDescription: {
+      marginTop: 3,
+
+      fontSize: 12,
+
+      lineHeight: 18,
+
+      fontFamily:
+        'Pretendard-Regular',
+
+      color: '#4F7565',
+    },
+
+    simulatorBudgetRow: {
+      marginTop: 15,
+
+      flexDirection: 'row',
+
+      alignItems: 'center',
+
+      justifyContent:
+        'space-between',
+
+      paddingTop: 15,
+
+      borderTopWidth: 1,
+
+      borderTopColor:
+        '#EEF1F5',
+    },
+
+    simulatorBudgetRight: {
+      alignItems:
+        'flex-end',
+    },
+
+    simulatorBudgetLabel: {
+      fontSize: 11,
+
+      lineHeight: 16,
+
+      fontFamily:
+        'Pretendard-Medium',
+
+      color: '#687386',
+    },
+
+    simulatorBudgetAmount: {
+      marginTop: 3,
+
+      fontSize: 15,
+
+      lineHeight: 21,
+
+      fontFamily:
+        'Pretendard-ExtraBold',
+
+      color: '#172033',
+    },
+
+    simulatorBudgetAfter: {
+      color: '#3563C9',
+    },
+
+    simulatorMascot: {
+      position: 'absolute',
+
+      right: -10,
+
+      bottom: 45,
+
+      zIndex: 3,
     },
 
     /* ========================
@@ -611,7 +1209,7 @@ const styles =
 
       gap: 7,
 
-      marginBottom: 20,
+      marginBottom: 18,
     },
 
     dot: {
@@ -634,6 +1232,8 @@ const styles =
 
     nextButton: {
       minHeight: 56,
+
+      borderWidth: 0,
 
       flexDirection: 'row',
 
@@ -658,6 +1258,8 @@ const styles =
 
     nextButtonText: {
       fontSize: 16,
+
+      lineHeight: 22,
 
       fontFamily:
         'Pretendard-Bold',
