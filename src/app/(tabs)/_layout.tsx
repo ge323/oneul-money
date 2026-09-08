@@ -1,24 +1,71 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Tabs, router } from 'expo-router';
 import {
+  Dimensions,
   Pressable,
   StyleSheet,
   View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function TabLayout() {
+  const insets = useSafeAreaInsets();
+
+  const screenHeight =
+    Dimensions.get('window').height;
+
+  // 화면 높이에 따라 반응형으로 조정
+  const baseTabBarHeight = Math.min(
+    Math.max(screenHeight * 0.085, 64),
+    82
+  );
+
+  const totalTabBarHeight =
+    baseTabBarHeight + insets.bottom;
+
+  const centerButtonSize = Math.min(
+    Math.max(screenHeight * 0.065, 54),
+    62
+  );
+
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
+
         tabBarActiveTintColor:
           '#3563C9',
+
         tabBarInactiveTintColor:
-          '#98A2B3',
-        tabBarStyle:
+          '#7A8799',
+
+        tabBarStyle: [
           styles.tabBar,
+
+          {
+            height:
+              totalTabBarHeight,
+
+            paddingBottom:
+              Math.max(
+                insets.bottom,
+                8
+              ),
+
+            paddingTop:
+              Math.max(
+                baseTabBarHeight *
+                  0.08,
+                6
+              ),
+          },
+        ],
+
         tabBarLabelStyle:
           styles.tabLabel,
+
+        tabBarItemStyle:
+          styles.tabItem,
       }}
     >
       <Tabs.Screen
@@ -28,7 +75,6 @@ export default function TabLayout() {
 
           tabBarIcon: ({
             color,
-            size,
             focused,
           }) => (
             <Ionicons
@@ -37,7 +83,7 @@ export default function TabLayout() {
                   ? 'home'
                   : 'home-outline'
               }
-              size={size}
+              size={24}
               color={color}
             />
           ),
@@ -51,7 +97,6 @@ export default function TabLayout() {
 
           tabBarIcon: ({
             color,
-            size,
             focused,
           }) => (
             <Ionicons
@@ -60,7 +105,7 @@ export default function TabLayout() {
                   ? 'receipt'
                   : 'receipt-outline'
               }
-              size={size}
+              size={24}
               color={color}
             />
           ),
@@ -74,14 +119,35 @@ export default function TabLayout() {
 
           tabBarButton: () => (
             <View
-              style={
-                styles.centerButtonWrapper
-              }
+              style={[
+                styles.centerButtonWrapper,
+
+                {
+                  height:
+                    totalTabBarHeight,
+                },
+              ]}
             >
               <Pressable
-                style={
-                  styles.centerButton
-                }
+                style={[
+                  styles.centerButton,
+
+                  {
+                    width:
+                      centerButtonSize,
+
+                    height:
+                      centerButtonSize,
+
+                    borderRadius:
+                      centerButtonSize /
+                      2,
+
+                    top:
+                      -centerButtonSize *
+                      0.22,
+                  },
+                ]}
                 onPress={() =>
                   router.push(
                     '/expense'
@@ -90,7 +156,10 @@ export default function TabLayout() {
               >
                 <Ionicons
                   name="add"
-                  size={32}
+                  size={
+                    centerButtonSize *
+                    0.52
+                  }
                   color="#FFFFFF"
                 />
               </Pressable>
@@ -106,7 +175,6 @@ export default function TabLayout() {
 
           tabBarIcon: ({
             color,
-            size,
             focused,
           }) => (
             <Ionicons
@@ -115,7 +183,7 @@ export default function TabLayout() {
                   ? 'calendar'
                   : 'calendar-outline'
               }
-              size={size}
+              size={24}
               color={color}
             />
           ),
@@ -123,18 +191,26 @@ export default function TabLayout() {
       />
 
       <Tabs.Screen
-          name="setting-tab"
-          options={{
-            title: '설정',
-            tabBarIcon: ({ color, size, focused }) => (
-              <Ionicons
-                name={focused ? 'settings' : 'settings-outline'}
-                size={size}
-                color={color}
-              />
-            ),
-          }}
-        />
+        name="setting-tab"
+        options={{
+          title: '설정',
+
+          tabBarIcon: ({
+            color,
+            focused,
+          }) => (
+            <Ionicons
+              name={
+                focused
+                  ? 'settings'
+                  : 'settings-outline'
+              }
+              size={24}
+              color={color}
+            />
+          ),
+        }}
+      />
     </Tabs>
   );
 }
@@ -142,38 +218,65 @@ export default function TabLayout() {
 const styles =
   StyleSheet.create({
     tabBar: {
-      height: 78,
-      paddingTop: 8,
-      paddingBottom: 10,
       backgroundColor:
         '#FFFFFF',
+
       borderTopWidth: 1,
+
       borderTopColor:
-        '#EEF1F5',
+        '#E3E8EF',
+
+      elevation: 8,
+
+      shadowColor:
+        '#000000',
+
+      shadowOffset: {
+        width: 0,
+        height: -2,
+      },
+
+      shadowOpacity: 0.06,
+
+      shadowRadius: 6,
+    },
+
+    tabItem: {
+      justifyContent:
+        'center',
     },
 
     tabLabel: {
-      fontSize: 11,
-      fontFamily: 'Pretendard-SemiBold',
+      fontSize: 12,
+
+      fontFamily:
+        'Pretendard-SemiBold',
+
+      marginTop: 2,
     },
 
     centerButtonWrapper: {
       flex: 1,
-      alignItems: 'center',
+
+      alignItems:
+        'center',
+
       justifyContent:
         'center',
     },
 
     centerButton: {
-      width: 58,
-      height: 58,
-      borderRadius: 29,
+      position:
+        'relative',
+
       backgroundColor:
         '#3563C9',
-      alignItems: 'center',
+
+      alignItems:
+        'center',
+
       justifyContent:
         'center',
-      marginTop: -24,
 
       shadowColor:
         '#000000',
@@ -184,8 +287,9 @@ const styles =
       },
 
       shadowOpacity: 0.16,
+
       shadowRadius: 8,
 
-      elevation: 6,
+      elevation: 8,
     },
   });
