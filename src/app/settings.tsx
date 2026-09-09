@@ -238,14 +238,13 @@ export default function SettingsScreen() {
           />
 
           <Text style={styles.helperText}>
-            월급과 꼭 같을 필요는 없어요. 이번 달에 실제로 관리할 금액만 입력하면 돼요.
+            월급이 아니라 이번 달에 실제로 관리할 금액을 입력해주세요.
           </Text>
         </View>
 
         {/* 저축 목표 */}
         <MoneyInput
           label="저축 목표"
-          optional
           description="이번 달 사용하지 않고 따로 모아둘 금액이에요."
           value={savingGoal}
           onChangeText={(text) =>
@@ -257,7 +256,6 @@ export default function SettingsScreen() {
         {/* 투자 금액 */}
         <MoneyInput
           label="투자 금액"
-          optional
           description="이번 달 투자에 사용할 금액이에요."
           value={investmentAmount}
           onChangeText={(text) =>
@@ -634,7 +632,7 @@ const styles = StyleSheet.create({
   },
 
   form: {
-    gap: 30,
+    gap: 28,
   },
 
   inputGroup: {
@@ -669,22 +667,19 @@ const styles = StyleSheet.create({
   },
 
   helperBox: {
-    marginTop: -10,
+    marginTop: -14,
     flexDirection: 'row',
     alignItems: 'flex-start',
-    backgroundColor: '#F8FAFC',
-    borderRadius: 14,
-    paddingHorizontal: 14,
-    paddingVertical: 13,
+    paddingHorizontal: 2,
   },
 
   helperText: {
     flex: 1,
-    marginLeft: 8,
-    fontSize: 14,
-    lineHeight: 21,
+    marginLeft: 7,
+    fontSize: 13,
+    lineHeight: 19,
     fontFamily: 'Pretendard-Regular',
-    color: '#566176',
+    color: '#687386',
   },
 
   moneyInputBox: {
@@ -822,9 +817,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 5,
     borderRadius: 14,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#FBFCFE',
     borderWidth: 1,
-    borderColor: '#E7ECF3',
+    borderColor: '#DCE5F5',
   },
 
   openAddFixedButtonPressed: {
@@ -942,11 +937,9 @@ const styles = StyleSheet.create({
 
   livingBudgetCard: {
     marginTop: 28,
-    backgroundColor: '#F8FAFC',
-    borderRadius: 20,
-    padding: 18,
-    borderWidth: 1,
-    borderColor: '#EDF0F4',
+    backgroundColor: '#F1F5FC',
+    borderRadius: 22,
+    padding: 20,
   },
 
   livingBudgetHeader: {
@@ -982,9 +975,9 @@ const styles = StyleSheet.create({
   },
 
   livingBudgetAmount: {
-    marginTop: 18,
-    fontSize: 30,
-    lineHeight: 38,
+    marginTop: 17,
+    fontSize: 32,
+    lineHeight: 40,
     fontFamily: 'Pretendard-ExtraBold',
     color: '#3563C9',
   },
@@ -1041,7 +1034,7 @@ const styles = StyleSheet.create({
   },
 
   saveButton: {
-    marginTop: 34,
+    marginTop: 30,
     minHeight: 58,
     backgroundColor: '#3563C9',
     borderRadius: 16,
