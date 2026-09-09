@@ -31,6 +31,8 @@ import {
   ensureCurrentMonthBudget,
 } from '../../utils/monthly-budgets';
 
+import Screen from '../../components/screen';
+
 const PLANNED_EXPENSES_KEY = 'planned-expenses';
 const EXPENSES_KEY = 'expenses';
 
@@ -272,10 +274,10 @@ export default function PlanScreen() {
 
         const expenses:
           Expense[] = savedExpenses
-          ? JSON.parse(
+            ? JSON.parse(
               savedExpenses
             )
-          : [];
+            : [];
 
         const spentThisMonth =
           expenses.reduce(
@@ -287,15 +289,15 @@ export default function PlanScreen() {
 
               const isThisMonth =
                 expenseDate.getFullYear() ===
-                  now.getFullYear() &&
+                now.getFullYear() &&
                 expenseDate.getMonth() ===
-                  now.getMonth();
+                now.getMonth();
 
               return isThisMonth
                 ? sum +
-                    (Number(
-                      expense.amount
-                    ) || 0)
+                (Number(
+                  expense.amount
+                ) || 0)
                 : sum;
             },
             0
@@ -445,7 +447,7 @@ export default function PlanScreen() {
 
     const days = Math.round(
       difference /
-        (1000 * 60 * 60 * 24)
+      (1000 * 60 * 60 * 24)
     );
 
     if (days <= 0) {
@@ -1167,9 +1169,9 @@ export default function PlanScreen() {
 
           return (
             expenseDate.getFullYear() ===
-              now.getFullYear() &&
+            now.getFullYear() &&
             expenseDate.getMonth() ===
-              now.getMonth()
+            now.getMonth()
           );
         }
       );
@@ -1185,24 +1187,24 @@ export default function PlanScreen() {
   const remainingLivingBudget =
     Math.max(
       monthlyLivingBudget -
-        monthlySpent,
+      monthlySpent,
       0
     );
 
   const remainingAfterPlanned =
     Math.max(
       remainingLivingBudget -
-        totalPlanned,
+      totalPlanned,
       0
     );
 
   const plannedUsageRate =
     remainingLivingBudget > 0
       ? Math.min(
-          totalPlanned /
-            remainingLivingBudget,
-          1
-        )
+        totalPlanned /
+        remainingLivingBudget,
+        1
+      )
       : totalPlanned > 0
         ? 1
         : 0;
@@ -1220,477 +1222,479 @@ export default function PlanScreen() {
 
   return (
     <>
-      <ScrollView
-        style={
-          styles.screen
-        }
-        contentContainerStyle={
-          styles.container
-        }
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
-        keyboardDismissMode={
-          Platform.OS === 'ios'
-            ? 'interactive'
-            : 'on-drag'
-        }
-        contentInsetAdjustmentBehavior="automatic"
-      >
-        <Text
-          style={styles.title}
-        >
-          소비 계획
-        </Text>
-
-        <Text
+      <Screen>
+        <ScrollView
           style={
-            styles.description
+            styles.screen
           }
+          contentContainerStyle={
+            styles.container
+          }
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode={
+            Platform.OS === 'ios'
+              ? 'interactive'
+              : 'on-drag'
+          }
+          contentInsetAdjustmentBehavior="never"
         >
-          앞으로 쓸 돈을 미리 등록하고 이번 달 생활비를 관리해보세요.
-        </Text>
+          <Text
+            style={styles.title}
+          >
+            소비 계획
+          </Text>
 
-        <View
-          style={
-            styles.summaryCard
-          }
-        >
+          <Text
+            style={
+              styles.description
+            }
+          >
+            앞으로 쓸 돈을 미리 등록해보세요.
+          </Text>
+
           <View
             style={
-              styles.summaryTopRow
+              styles.summaryCard
             }
+          >
+            <View
+              style={
+                styles.summaryTopRow
+              }
+            >
+              <Text
+                style={
+                  styles.summaryLabel
+                }
+              >
+                이번 달 예정 지출
+              </Text>
+
+              <View
+                style={
+                  styles.summaryCountBadge
+                }
+              >
+                <Text
+                  style={
+                    styles.summaryCountText
+                  }
+                >
+                  {currentMonthPlannedExpenses.length}건
+                </Text>
+              </View>
+            </View>
+
+            <Text
+              style={
+                styles.summaryAmount
+              }
+            >
+              {formatMoney(
+                totalPlanned
+              )}
+              원
+            </Text>
+
+            <Text
+              style={
+                styles.summaryDescription
+              }
+            >
+              예정 지출을 생활비에 미리 반영했어요.
+            </Text>
+
+            {totalPlanned > 0 && (
+              <>
+                <View
+                  style={
+                    styles.budgetDivider
+                  }
+                />
+
+                <View
+                  style={
+                    styles.budgetRow
+                  }
+                >
+                  <View>
+                    <Text
+                      style={
+                        styles.budgetCaption
+                      }
+                    >
+                      현재 남은 생활비
+                    </Text>
+
+                    <Text
+                      style={
+                        styles.budgetValue
+                      }
+                    >
+                      {formatMoney(
+                        remainingLivingBudget
+                      )}
+                      원
+                    </Text>
+                  </View>
+
+                  <Ionicons
+                    name="arrow-forward"
+                    size={18}
+                    color="#8A96A8"
+                  />
+
+                  <View
+                    style={
+                      styles.budgetRight
+                    }
+                  >
+                    <Text
+                      style={
+                        styles.budgetCaption
+                      }
+                    >
+                      예정 지출 반영 후
+                    </Text>
+
+                    <Text
+                      style={
+                        styles.budgetAfterValue
+                      }
+                    >
+                      {formatMoney(
+                        remainingAfterPlanned
+                      )}
+                      원
+                    </Text>
+                  </View>
+                </View>
+
+                {totalPlanned > 0 && (
+                  <View
+                    style={
+                      styles.progressTrack
+                    }
+                  >
+                    <View
+                      style={[
+                        styles.progressFill,
+                        {
+                          width: `${plannedUsageRate * 100}%`,
+                        },
+                      ]}
+                    />
+                  </View>
+                )}
+
+                {totalPlanned >
+                  remainingLivingBudget &&
+                  totalPlanned > 0 && (
+                    <Text
+                      style={
+                        styles.budgetWarning
+                      }
+                    >
+                      예정 지출이 현재 남은 생활비보다 커요.
+                    </Text>
+                  )}
+              </>
+            )}
+          </View>
+
+          <Pressable
+            style={({ pressed }) => [
+              styles.addButton,
+
+              pressed &&
+              styles.addButtonPressed,
+            ]}
+            onPress={
+              openAddModal
+            }
+          >
+            <Ionicons
+              name="add"
+              size={20}
+              color="#3563C9"
+            />
+
+            <Text
+              style={
+                styles.addButtonText
+              }
+            >
+              예정 지출 추가
+            </Text>
+          </Pressable>
+
+          <View
+            style={styles.list}
           >
             <Text
               style={
-                styles.summaryLabel
+                styles.sectionTitle
               }
             >
-              이번 달 예정 지출
+              예정 지출
             </Text>
 
-            <View
-              style={
-                styles.summaryCountBadge
-              }
-            >
-              <Text
-                style={
-                  styles.summaryCountText
-                }
-              >
-                {currentMonthPlannedExpenses.length}건
-              </Text>
-            </View>
-          </View>
-
-          <Text
-            style={
-              styles.summaryAmount
-            }
-          >
-            {formatMoney(
-              totalPlanned
-            )}
-            원
-          </Text>
-
-          <Text
-            style={
-              styles.summaryDescription
-            }
-          >
-            예정 지출을 생활비에 미리 반영했어요.
-          </Text>
-
-          {totalPlanned > 0 && (
-            <>
-          <View
-            style={
-              styles.budgetDivider
-            }
-          />
-
-          <View
-            style={
-              styles.budgetRow
-            }
-          >
-            <View>
-              <Text
-                style={
-                  styles.budgetCaption
-                }
-              >
-                현재 남은 생활비
-              </Text>
-
-              <Text
-                style={
-                  styles.budgetValue
-                }
-              >
-                {formatMoney(
-                  remainingLivingBudget
-                )}
-                원
-              </Text>
-            </View>
-
-            <Ionicons
-              name="arrow-forward"
-              size={18}
-              color="#8A96A8"
-            />
-
-            <View
-              style={
-                styles.budgetRight
-              }
-            >
-              <Text
-                style={
-                  styles.budgetCaption
-                }
-              >
-                예정 지출 반영 후
-              </Text>
-
-              <Text
-                style={
-                  styles.budgetAfterValue
-                }
-              >
-                {formatMoney(
-                  remainingAfterPlanned
-                )}
-                원
-              </Text>
-            </View>
-          </View>
-
-          {totalPlanned > 0 && (
-            <View
-              style={
-                styles.progressTrack
-              }
-            >
-              <View
-                style={[
-                  styles.progressFill,
-                  {
-                    width: `${plannedUsageRate * 100}%`,
-                  },
-                ]}
-              />
-            </View>
-          )}
-
-          {totalPlanned >
-            remainingLivingBudget &&
-            totalPlanned > 0 && (
-              <Text
-                style={
-                  styles.budgetWarning
-                }
-              >
-                예정 지출이 현재 남은 생활비보다 커요.
-              </Text>
-            )}
-            </>
-          )}
-        </View>
-
-        <Pressable
-          style={({ pressed }) => [
-            styles.addButton,
-
-            pressed &&
-            styles.addButtonPressed,
-          ]}
-          onPress={
-            openAddModal
-          }
-        >
-          <Ionicons
-            name="add"
-            size={20}
-            color="#3563C9"
-          />
-
-          <Text
-            style={
-              styles.addButtonText
-            }
-          >
-            예정 지출 추가
-          </Text>
-        </Pressable>
-
-        <View
-          style={styles.list}
-        >
-          <Text
-            style={
-              styles.sectionTitle
-            }
-          >
-            예정 지출
-          </Text>
-
-          {upcomingExpenses.length ===
-            0 ? (
-            <View
-              style={
-                styles.empty
-              }
-            >
+            {upcomingExpenses.length ===
+              0 ? (
               <View
                 style={
-                  styles.emptyIconBox
+                  styles.empty
                 }
               >
-                <Ionicons
-                  name="calendar-outline"
-                  size={30}
-                  color="#687386"
-                />
+                <View
+                  style={
+                    styles.emptyIconBox
+                  }
+                >
+                  <Ionicons
+                    name="calendar-outline"
+                    size={30}
+                    color="#687386"
+                  />
+                </View>
+
+                <Text
+                  style={
+                    styles.emptyTitle
+                  }
+                >
+                  예정된 지출이 없어요
+                </Text>
+
+                <Text
+                  style={
+                    styles.emptyDescription
+                  }
+                >
+                  약속이나 병원, 미용실처럼 앞으로 쓸 돈을 미리 등록해보세요.
+                </Text>
               </View>
+            ) : (
+              upcomingExpenses.map(
+                (expense) => {
+                  const isMenuOpen =
+                    openedMenuId ===
+                    expense.id;
 
-              <Text
-                style={
-                  styles.emptyTitle
-                }
-              >
-                예정된 지출이 없어요
-              </Text>
-
-              <Text
-                style={
-                  styles.emptyDescription
-                }
-              >
-                약속이나 병원, 미용실처럼 앞으로 쓸 돈을 미리 등록해보세요.
-              </Text>
-            </View>
-          ) : (
-            upcomingExpenses.map(
-              (expense) => {
-                const isMenuOpen =
-                  openedMenuId ===
-                  expense.id;
-
-                return (
-                  <View
-                    key={
-                      expense.id
-                    }
-                    style={[
-                      styles.expenseCard,
-
-                      isMenuOpen &&
-                      styles.expenseCardOpen,
-                    ]}
-                  >
+                  return (
                     <View
-                      style={
-                        styles.expenseTop
+                      key={
+                        expense.id
                       }
+                      style={[
+                        styles.expenseCard,
+
+                        isMenuOpen &&
+                        styles.expenseCardOpen,
+                      ]}
                     >
                       <View
                         style={
-                          styles.expenseIcon
+                          styles.expenseTop
                         }
                       >
-                        <Ionicons
-                          name="calendar-outline"
-                          size={20}
-                          color="#5F6F86"
-                        />
-                      </View>
-
-                      <View
-                        style={
-                          styles.expenseInfo
-                        }
-                      >
-                        <Text
+                        <View
                           style={
-                            styles.expenseTitle
+                            styles.expenseIcon
                           }
                         >
-                          {
-                            expense.title
-                          }
-                        </Text>
+                          <Ionicons
+                            name="calendar-outline"
+                            size={20}
+                            color="#5F6F86"
+                          />
+                        </View>
 
                         <View
                           style={
-                            styles.expenseMetaRow
+                            styles.expenseInfo
                           }
                         >
                           <Text
                             style={
-                              styles.expenseDate
+                              styles.expenseTitle
                             }
                           >
-                            {formatDate(
-                              expense.date
-                            )}
+                            {
+                              expense.title
+                            }
                           </Text>
 
                           <View
                             style={
-                              styles.expenseDDayBadge
+                              styles.expenseMetaRow
                             }
                           >
                             <Text
                               style={
-                                styles.expenseDDayText
+                                styles.expenseDate
                               }
                             >
-                              {getDDayLabel(
+                              {formatDate(
                                 expense.date
                               )}
                             </Text>
+
+                            <View
+                              style={
+                                styles.expenseDDayBadge
+                              }
+                            >
+                              <Text
+                                style={
+                                  styles.expenseDDayText
+                                }
+                              >
+                                {getDDayLabel(
+                                  expense.date
+                                )}
+                              </Text>
+                            </View>
                           </View>
                         </View>
+
+                        <Text
+                          style={
+                            styles.expenseAmount
+                          }
+                        >
+                          {formatMoney(
+                            expense.amount
+                          )}
+                          원
+                        </Text>
+
+                        <Pressable
+                          style={
+                            styles.menuButton
+                          }
+                          onPress={() =>
+                            setOpenedMenuId(
+                              isMenuOpen
+                                ? null
+                                : expense.id
+                            )
+                          }
+                          hitSlop={10}
+                        >
+                          <Ionicons
+                            name="ellipsis-vertical"
+                            size={20}
+                            color="#687386"
+                          />
+                        </Pressable>
                       </View>
 
-                      <Text
-                        style={
-                          styles.expenseAmount
-                        }
-                      >
-                        {formatMoney(
-                          expense.amount
-                        )}
-                        원
-                      </Text>
+                      {/* 메뉴 */}
 
-                      <Pressable
-                        style={
-                          styles.menuButton
-                        }
-                        onPress={() =>
-                          setOpenedMenuId(
-                            isMenuOpen
-                              ? null
-                              : expense.id
-                          )
-                        }
-                        hitSlop={10}
-                      >
-                        <Ionicons
-                          name="ellipsis-vertical"
-                          size={20}
-                          color="#687386"
-                        />
-                      </Pressable>
+                      {isMenuOpen && (
+                        <View
+                          style={
+                            styles.menu
+                          }
+                        >
+                          <Pressable
+                            style={
+                              styles.menuItem
+                            }
+                            onPress={() =>
+                              openCompleteModal(
+                                expense
+                              )
+                            }
+                          >
+                            <Ionicons
+                              name="checkmark-circle-outline"
+                              size={18}
+                              color="#3563C9"
+                            />
+
+                            <Text
+                              style={
+                                styles.completeMenuText
+                              }
+                            >
+                              지출 완료
+                            </Text>
+                          </Pressable>
+
+                          <View
+                            style={
+                              styles.menuDivider
+                            }
+                          />
+
+                          <Pressable
+                            style={
+                              styles.menuItem
+                            }
+                            onPress={() =>
+                              openEditModal(
+                                expense
+                              )
+                            }
+                          >
+                            <Ionicons
+                              name="pencil-outline"
+                              size={18}
+                              color="#172033"
+                            />
+
+                            <Text
+                              style={
+                                styles.menuText
+                              }
+                            >
+                              수정하기
+                            </Text>
+                          </Pressable>
+
+                          <View
+                            style={
+                              styles.menuDivider
+                            }
+                          />
+
+                          <Pressable
+                            style={
+                              styles.menuItem
+                            }
+                            onPress={() =>
+                              confirmDelete(
+                                expense
+                              )
+                            }
+                          >
+                            <Ionicons
+                              name="trash-outline"
+                              size={18}
+                              color="#D84B4B"
+                            />
+
+                            <Text
+                              style={
+                                styles.deleteText
+                              }
+                            >
+                              삭제하기
+                            </Text>
+                          </Pressable>
+                        </View>
+                      )}
                     </View>
-
-                    {/* 메뉴 */}
-
-                    {isMenuOpen && (
-                      <View
-                        style={
-                          styles.menu
-                        }
-                      >
-                        <Pressable
-                          style={
-                            styles.menuItem
-                          }
-                          onPress={() =>
-                            openCompleteModal(
-                              expense
-                            )
-                          }
-                        >
-                          <Ionicons
-                            name="checkmark-circle-outline"
-                            size={18}
-                            color="#3563C9"
-                          />
-
-                          <Text
-                            style={
-                              styles.completeMenuText
-                            }
-                          >
-                            지출 완료
-                          </Text>
-                        </Pressable>
-
-                        <View
-                          style={
-                            styles.menuDivider
-                          }
-                        />
-
-                        <Pressable
-                          style={
-                            styles.menuItem
-                          }
-                          onPress={() =>
-                            openEditModal(
-                              expense
-                            )
-                          }
-                        >
-                          <Ionicons
-                            name="pencil-outline"
-                            size={18}
-                            color="#172033"
-                          />
-
-                          <Text
-                            style={
-                              styles.menuText
-                            }
-                          >
-                            수정하기
-                          </Text>
-                        </Pressable>
-
-                        <View
-                          style={
-                            styles.menuDivider
-                          }
-                        />
-
-                        <Pressable
-                          style={
-                            styles.menuItem
-                          }
-                          onPress={() =>
-                            confirmDelete(
-                              expense
-                            )
-                          }
-                        >
-                          <Ionicons
-                            name="trash-outline"
-                            size={18}
-                            color="#D84B4B"
-                          />
-
-                          <Text
-                            style={
-                              styles.deleteText
-                            }
-                          >
-                            삭제하기
-                          </Text>
-                        </Pressable>
-                      </View>
-                    )}
-                  </View>
-                );
-              }
-            )
-          )}
-        </View>
-      </ScrollView>
+                  );
+                }
+              )
+            )}
+          </View>
+        </ScrollView>
+      </Screen>
 
       {/* 예정 지출 추가/수정 */}
 
@@ -1756,248 +1760,248 @@ export default function PlanScreen() {
               keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
               nestedScrollEnabled
             >
-            <View
-              style={
-                styles.sheetHandle
-              }
-            />
-
-            <View
-              style={
-                styles.sheetHeader
-              }
-            >
               <View
                 style={
-                  styles.sheetTitleArea
+                  styles.sheetHandle
                 }
-              >
-                <Text
-                  style={
-                    styles.sheetTitle
-                  }
-                >
-                  {editingExpense
-                    ? '예정 지출 수정'
-                    : '예정 지출 추가'}
-                </Text>
-
-                <Text
-                  style={
-                    styles.sheetDescription
-                  }
-                >
-                  예정된 지출 금액과 날짜를 등록해주세요.
-                </Text>
-              </View>
-
-              <Pressable
-                style={
-                  styles.closeButton
-                }
-                onPress={
-                  closePlanModal
-                }
-              >
-                <Ionicons
-                  name="close"
-                  size={22}
-                  color="#687386"
-                />
-              </Pressable>
-            </View>
-
-            <Text
-              style={
-                styles.inputLabel
-              }
-            >
-              어디에 쓸 예정인가요?
-            </Text>
-
-            <TextInput
-              style={
-                styles.input
-              }
-              value={title}
-              onChangeText={
-                setTitle
-              }
-              placeholder="예: 주말 데이트"
-              placeholderTextColor="#687386"
-              returnKeyType="next"
-            />
-
-            <Text
-              style={[
-                styles.inputLabel,
-                styles.inputTopMargin,
-              ]}
-            >
-              예상 금액
-            </Text>
-
-            <View
-              style={
-                styles.amountInputBox
-              }
-            >
-              <TextInput
-                style={
-                  styles.amountInput
-                }
-                value={amount}
-                onChangeText={(
-                  text
-                ) =>
-                  setAmount(
-                    formatMoneyInput(
-                      text
-                    )
-                  )
-                }
-                placeholder="0"
-                placeholderTextColor="#687386"
-                keyboardType="numeric"
-                returnKeyType="done"
               />
 
-              <Text
-                style={
-                  styles.unit
-                }
-              >
-                원
-              </Text>
-            </View>
-
-            <Text
-              style={[
-                styles.inputLabel,
-                styles.inputTopMargin,
-              ]}
-            >
-              언제 사용할 예정인가요?
-            </Text>
-
-            <Pressable
-              style={
-                styles.dateSelectButton
-              }
-              onPress={
-                openCalendar
-              }
-            >
               <View
                 style={
-                  styles.dateSelectLeft
+                  styles.sheetHeader
                 }
               >
                 <View
                   style={
-                    styles.dateIconBox
+                    styles.sheetTitleArea
+                  }
+                >
+                  <Text
+                    style={
+                      styles.sheetTitle
+                    }
+                  >
+                    {editingExpense
+                      ? '예정 지출 수정'
+                      : '예정 지출 추가'}
+                  </Text>
+
+                  <Text
+                    style={
+                      styles.sheetDescription
+                    }
+                  >
+                    예정된 지출 금액과 날짜를 등록해주세요.
+                  </Text>
+                </View>
+
+                <Pressable
+                  style={
+                    styles.closeButton
+                  }
+                  onPress={
+                    closePlanModal
                   }
                 >
                   <Ionicons
-                    name="calendar-outline"
-                    size={19}
-                    color="#3563C9"
+                    name="close"
+                    size={22}
+                    color="#687386"
                   />
-                </View>
+                </Pressable>
+              </View>
+
+              <Text
+                style={
+                  styles.inputLabel
+                }
+              >
+                어디에 쓸 예정인가요?
+              </Text>
+
+              <TextInput
+                style={
+                  styles.input
+                }
+                value={title}
+                onChangeText={
+                  setTitle
+                }
+                placeholder="예: 주말 데이트"
+                placeholderTextColor="#687386"
+                returnKeyType="next"
+              />
+
+              <Text
+                style={[
+                  styles.inputLabel,
+                  styles.inputTopMargin,
+                ]}
+              >
+                예상 금액
+              </Text>
+
+              <View
+                style={
+                  styles.amountInputBox
+                }
+              >
+                <TextInput
+                  style={
+                    styles.amountInput
+                  }
+                  value={amount}
+                  onChangeText={(
+                    text
+                  ) =>
+                    setAmount(
+                      formatMoneyInput(
+                        text
+                      )
+                    )
+                  }
+                  placeholder="0"
+                  placeholderTextColor="#687386"
+                  keyboardType="numeric"
+                  returnKeyType="done"
+                />
 
                 <Text
                   style={
-                    styles.dateSelectText
+                    styles.unit
                   }
                 >
-                  {formatDisplayDate(
-                    date
-                  )}
+                  원
                 </Text>
               </View>
 
-              <Ionicons
-                name="chevron-forward"
-                size={18}
-                color="#687386"
-              />
-            </Pressable>
-
-            <View
-              style={
-                styles.quickDateRow
-              }
-            >
-              <Pressable
-                style={
-                  styles.quickDateButton
-                }
-                onPress={
-                  selectToday
-                }
-              >
-                <Text
-                  style={
-                    styles.quickDateText
-                  }
-                >
-                  오늘
-                </Text>
-              </Pressable>
-
-              <Pressable
-                style={
-                  styles.quickDateButton
-                }
-                onPress={
-                  selectTomorrow
-                }
-              >
-                <Text
-                  style={
-                    styles.quickDateText
-                  }
-                >
-                  내일
-                </Text>
-              </Pressable>
-
-              <Pressable
-                style={
-                  styles.quickDateButton
-                }
-                onPress={
-                  selectWeekend
-                }
-              >
-                <Text
-                  style={
-                    styles.quickDateText
-                  }
-                >
-                  이번 주말
-                </Text>
-              </Pressable>
-            </View>
-
-            <Pressable
-              style={
-                styles.saveButton
-              }
-              onPress={
-                savePlannedExpense
-              }
-            >
               <Text
+                style={[
+                  styles.inputLabel,
+                  styles.inputTopMargin,
+                ]}
+              >
+                언제 사용할 예정인가요?
+              </Text>
+
+              <Pressable
                 style={
-                  styles.saveButtonText
+                  styles.dateSelectButton
+                }
+                onPress={
+                  openCalendar
                 }
               >
-                {editingExpense
-                  ? '수정하기'
-                  : '추가하기'}
-              </Text>
-            </Pressable>
+                <View
+                  style={
+                    styles.dateSelectLeft
+                  }
+                >
+                  <View
+                    style={
+                      styles.dateIconBox
+                    }
+                  >
+                    <Ionicons
+                      name="calendar-outline"
+                      size={19}
+                      color="#3563C9"
+                    />
+                  </View>
+
+                  <Text
+                    style={
+                      styles.dateSelectText
+                    }
+                  >
+                    {formatDisplayDate(
+                      date
+                    )}
+                  </Text>
+                </View>
+
+                <Ionicons
+                  name="chevron-forward"
+                  size={18}
+                  color="#687386"
+                />
+              </Pressable>
+
+              <View
+                style={
+                  styles.quickDateRow
+                }
+              >
+                <Pressable
+                  style={
+                    styles.quickDateButton
+                  }
+                  onPress={
+                    selectToday
+                  }
+                >
+                  <Text
+                    style={
+                      styles.quickDateText
+                    }
+                  >
+                    오늘
+                  </Text>
+                </Pressable>
+
+                <Pressable
+                  style={
+                    styles.quickDateButton
+                  }
+                  onPress={
+                    selectTomorrow
+                  }
+                >
+                  <Text
+                    style={
+                      styles.quickDateText
+                    }
+                  >
+                    내일
+                  </Text>
+                </Pressable>
+
+                <Pressable
+                  style={
+                    styles.quickDateButton
+                  }
+                  onPress={
+                    selectWeekend
+                  }
+                >
+                  <Text
+                    style={
+                      styles.quickDateText
+                    }
+                  >
+                    이번 주말
+                  </Text>
+                </Pressable>
+              </View>
+
+              <Pressable
+                style={
+                  styles.saveButton
+                }
+                onPress={
+                  savePlannedExpense
+                }
+              >
+                <Text
+                  style={
+                    styles.saveButtonText
+                  }
+                >
+                  {editingExpense
+                    ? '수정하기'
+                    : '추가하기'}
+                </Text>
+              </Pressable>
             </ScrollView>
           </Animated.View>
         </KeyboardAvoidingView>
@@ -2067,266 +2071,266 @@ export default function PlanScreen() {
               keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
               nestedScrollEnabled
             >
-            <View
-              style={
-                styles.sheetHandle
-              }
-            />
-
-            <View
-              style={
-                styles.sheetHeader
-              }
-            >
               <View
                 style={
-                  styles.sheetTitleArea
+                  styles.sheetHandle
                 }
-              >
-                <Text
-                  style={
-                    styles.sheetTitle
-                  }
-                >
-                  실제 지출 기록
-                </Text>
+              />
 
-                <Text
-                  style={
-                    styles.sheetDescription
-                  }
-                >
-                  실제로 사용한 금액을 확인해주세요.
-                </Text>
-              </View>
-
-              <Pressable
+              <View
                 style={
-                  styles.closeButton
-                }
-                onPress={
-                  closeCompleteModal
+                  styles.sheetHeader
                 }
               >
-                <Ionicons
-                  name="close"
-                  size={22}
-                  color="#687386"
-                />
-              </Pressable>
-            </View>
-
-            {completingExpense && (
-              <>
                 <View
                   style={
-                    styles.completeSummary
+                    styles.sheetTitleArea
                   }
                 >
-                  <View>
-                    <Text
-                      style={
-                        styles.completeTitle
-                      }
-                    >
-                      {
-                        completingExpense.title
-                      }
-                    </Text>
-
-                    <Text
-                      style={
-                        styles.completeDate
-                      }
-                    >
-                      {formatDate(
-                        completingExpense.date
-                      )}
-                    </Text>
-                  </View>
-
-                  <View
+                  <Text
                     style={
-                      styles.expectedArea
+                      styles.sheetTitle
                     }
                   >
-                    <Text
-                      style={
-                        styles.expectedLabel
-                      }
-                    >
-                      예상
-                    </Text>
-
-                    <Text
-                      style={
-                        styles.expectedAmount
-                      }
-                    >
-                      {formatMoney(
-                        completingExpense.amount
-                      )}
-                      원
-                    </Text>
-                  </View>
-                </View>
-
-                <Text
-                  style={[
-                    styles.inputLabel,
-                    styles.actualAmountLabel,
-                  ]}
-                >
-                  실제 사용 금액
-                </Text>
-
-                <View
-                  style={
-                    styles.actualAmountBox
-                  }
-                >
-                  <TextInput
-                    style={
-                      styles.actualAmountInput
-                    }
-                    value={
-                      actualAmount
-                    }
-                    onChangeText={(
-                      text
-                    ) =>
-                      setActualAmount(
-                        formatMoneyInput(
-                          text
-                        )
-                      )
-                    }
-                    keyboardType="numeric"
-                    placeholder="0"
-                    placeholderTextColor="#687386"
-                    returnKeyType="done"
-                  />
+                    실제 지출 기록
+                  </Text>
 
                   <Text
                     style={
-                      styles.unit
+                      styles.sheetDescription
                     }
                   >
-                    원
+                    실제로 사용한 금액을 확인해주세요.
                   </Text>
                 </View>
-
-                {actualNumericAmount >
-                  0 && (
-                    <View
-                      style={
-                        styles.differenceBox
-                      }
-                    >
-                      {amountDifference ===
-                        0 ? (
-                        <>
-                          <Ionicons
-                            name="checkmark-circle-outline"
-                            size={18}
-                            color="#3563C9"
-                          />
-
-                          <Text
-                            style={
-                              styles.sameAmountText
-                            }
-                          >
-                            예상한 금액과 같아요.
-                          </Text>
-                        </>
-                      ) : amountDifference >
-                        0 ? (
-                        <>
-                          <Ionicons
-                            name="arrow-up-outline"
-                            size={18}
-                            color="#C56A43"
-                          />
-
-                          <Text
-                            style={
-                              styles.moreAmountText
-                            }
-                          >
-                            예상보다{' '}
-                            <Text
-                              style={
-                                styles.differenceStrong
-                              }
-                            >
-                              {formatMoney(
-                                amountDifference
-                              )}
-                              원
-                            </Text>{' '}
-                            더 사용했어요.
-                          </Text>
-                        </>
-                      ) : (
-                        <>
-                          <Ionicons
-                            name="arrow-down-outline"
-                            size={18}
-                            color="#2F7D5A"
-                          />
-
-                          <Text
-                            style={
-                              styles.lessAmountText
-                            }
-                          >
-                            예상보다{' '}
-                            <Text
-                              style={
-                                styles.differenceStrong
-                              }
-                            >
-                              {formatMoney(
-                                Math.abs(
-                                  amountDifference
-                                )
-                              )}
-                              원
-                            </Text>{' '}
-                            덜 사용했어요.
-                          </Text>
-                        </>
-                      )}
-                    </View>
-                  )}
-
-                <Text
-                  style={
-                    styles.completeGuide
-                  }
-                >
-                  완료하면 예정 지출에서는 사라지고 실제 지출 내역에 기록돼요.
-                </Text>
 
                 <Pressable
                   style={
-                    styles.saveButton
+                    styles.closeButton
                   }
                   onPress={
-                    completePlannedExpense
+                    closeCompleteModal
                   }
                 >
-                  <Text
+                  <Ionicons
+                    name="close"
+                    size={22}
+                    color="#687386"
+                  />
+                </Pressable>
+              </View>
+
+              {completingExpense && (
+                <>
+                  <View
                     style={
-                      styles.saveButtonText
+                      styles.completeSummary
                     }
                   >
-                    지출로 기록하기
+                    <View>
+                      <Text
+                        style={
+                          styles.completeTitle
+                        }
+                      >
+                        {
+                          completingExpense.title
+                        }
+                      </Text>
+
+                      <Text
+                        style={
+                          styles.completeDate
+                        }
+                      >
+                        {formatDate(
+                          completingExpense.date
+                        )}
+                      </Text>
+                    </View>
+
+                    <View
+                      style={
+                        styles.expectedArea
+                      }
+                    >
+                      <Text
+                        style={
+                          styles.expectedLabel
+                        }
+                      >
+                        예상
+                      </Text>
+
+                      <Text
+                        style={
+                          styles.expectedAmount
+                        }
+                      >
+                        {formatMoney(
+                          completingExpense.amount
+                        )}
+                        원
+                      </Text>
+                    </View>
+                  </View>
+
+                  <Text
+                    style={[
+                      styles.inputLabel,
+                      styles.actualAmountLabel,
+                    ]}
+                  >
+                    실제 사용 금액
                   </Text>
-                </Pressable>
-              </>
-            )}
+
+                  <View
+                    style={
+                      styles.actualAmountBox
+                    }
+                  >
+                    <TextInput
+                      style={
+                        styles.actualAmountInput
+                      }
+                      value={
+                        actualAmount
+                      }
+                      onChangeText={(
+                        text
+                      ) =>
+                        setActualAmount(
+                          formatMoneyInput(
+                            text
+                          )
+                        )
+                      }
+                      keyboardType="numeric"
+                      placeholder="0"
+                      placeholderTextColor="#687386"
+                      returnKeyType="done"
+                    />
+
+                    <Text
+                      style={
+                        styles.unit
+                      }
+                    >
+                      원
+                    </Text>
+                  </View>
+
+                  {actualNumericAmount >
+                    0 && (
+                      <View
+                        style={
+                          styles.differenceBox
+                        }
+                      >
+                        {amountDifference ===
+                          0 ? (
+                          <>
+                            <Ionicons
+                              name="checkmark-circle-outline"
+                              size={18}
+                              color="#3563C9"
+                            />
+
+                            <Text
+                              style={
+                                styles.sameAmountText
+                              }
+                            >
+                              예상한 금액과 같아요.
+                            </Text>
+                          </>
+                        ) : amountDifference >
+                          0 ? (
+                          <>
+                            <Ionicons
+                              name="arrow-up-outline"
+                              size={18}
+                              color="#C56A43"
+                            />
+
+                            <Text
+                              style={
+                                styles.moreAmountText
+                              }
+                            >
+                              예상보다{' '}
+                              <Text
+                                style={
+                                  styles.differenceStrong
+                                }
+                              >
+                                {formatMoney(
+                                  amountDifference
+                                )}
+                                원
+                              </Text>{' '}
+                              더 사용했어요.
+                            </Text>
+                          </>
+                        ) : (
+                          <>
+                            <Ionicons
+                              name="arrow-down-outline"
+                              size={18}
+                              color="#2F7D5A"
+                            />
+
+                            <Text
+                              style={
+                                styles.lessAmountText
+                              }
+                            >
+                              예상보다{' '}
+                              <Text
+                                style={
+                                  styles.differenceStrong
+                                }
+                              >
+                                {formatMoney(
+                                  Math.abs(
+                                    amountDifference
+                                  )
+                                )}
+                                원
+                              </Text>{' '}
+                              덜 사용했어요.
+                            </Text>
+                          </>
+                        )}
+                      </View>
+                    )}
+
+                  <Text
+                    style={
+                      styles.completeGuide
+                    }
+                  >
+                    완료하면 예정 지출에서는 사라지고 실제 지출 내역에 기록돼요.
+                  </Text>
+
+                  <Pressable
+                    style={
+                      styles.saveButton
+                    }
+                    onPress={
+                      completePlannedExpense
+                    }
+                  >
+                    <Text
+                      style={
+                        styles.saveButtonText
+                      }
+                    >
+                      지출로 기록하기
+                    </Text>
+                  </Pressable>
+                </>
+              )}
             </ScrollView>
           </Animated.View>
         </KeyboardAvoidingView>
@@ -2513,13 +2517,13 @@ const styles =
 
     container: {
       paddingHorizontal: 20,
-      paddingTop: 52,
+      paddingTop: 24,
       paddingBottom: 150,
     },
 
     title: {
-      fontSize: 30,
-      lineHeight: 38,
+      fontSize: 24,
+      lineHeight: 32,
       fontFamily: 'Pretendard-ExtraBold',
       color: '#172033',
     },
