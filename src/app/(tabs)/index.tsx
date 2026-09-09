@@ -25,7 +25,6 @@ import {
   View,
 } from 'react-native';
 
-const BUDGET_KEY = 'budget-settings';
 const EXPENSES_KEY = 'expenses';
 const PLANNED_EXPENSES_KEY = 'planned-expenses';
 
@@ -361,13 +360,9 @@ export default function HomeScreen() {
     async () => {
       try {
         const [
-          savedBudget,
           savedExpenses,
           savedPlannedExpenses,
         ] = await Promise.all([
-          AsyncStorage.getItem(
-            BUDGET_KEY
-          ),
           AsyncStorage.getItem(
             EXPENSES_KEY
           ),
@@ -376,33 +371,17 @@ export default function HomeScreen() {
           ),
         ]);
 
-        /*
-         * monthly-budgets에 이번 달 값이 있으면 그대로 사용합니다.
-         * 이번 달 값이 없으면 가장 최근 월의 예산을 자동으로 이어받습니다.
-         *
-         * 아직 월별 예산 데이터가 한 번도 없다면,
-         * 기존 budget-settings의 monthlyBudget을 최초 마이그레이션 값으로 사용합니다.
-         */
-        let legacyBudget = 0;
-
-        if (savedBudget) {
-          const data =
-            JSON.parse(
-              savedBudget
-            );
-
-          legacyBudget =
-            Number(
-              data.monthlyBudget
-            ) || 0;
-        }
-
         const today =
           getNow();
 
+        /*
+         * 예산은 monthly-budgets만 사용합니다.
+         * 이번 달 값이 없으면 가장 최근 월의 예산을
+         * 자동으로 이어받습니다.
+         */
         const budgetForThisMonth =
           await ensureCurrentMonthBudget(
-            legacyBudget,
+            0,
             today
           );
 

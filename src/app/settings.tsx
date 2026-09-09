@@ -1,4 +1,3 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
@@ -19,28 +18,16 @@ import {
   saveBudgetForMonth,
 } from '../utils/monthly-budgets';
 
-const BUDGET_KEY = 'budget-settings';
-
-type BudgetSettings = {
-  monthlyBudget?: number;
-  savingGoal?: number;
-  investmentAmount?: number;
-  fixedExpense?: number;
-  fixedExpenses?: unknown[];
-  spentAmount?: number;
-  budgetMode?: 'simple';
-  [key: string]: any;
-};
-
 export default function SettingsScreen() {
-  const [monthlyBudget, setMonthlyBudget] =
-    useState('');
+  const [
+    monthlyBudget,
+    setMonthlyBudget,
+  ] = useState('');
 
-  const [originalData, setOriginalData] =
-    useState<BudgetSettings>({});
-
-  const [isLoading, setIsLoading] =
-    useState(true);
+  const [
+    isLoading,
+    setIsLoading,
+  ] = useState(true);
 
   useEffect(() => {
     loadSettings();
@@ -50,7 +37,10 @@ export default function SettingsScreen() {
     text: string
   ) => {
     const numbersOnly =
-      text.replace(/[^0-9]/g, '');
+      text.replace(
+        /[^0-9]/g,
+        ''
+      );
 
     if (!numbersOnly) {
       return '';
@@ -58,7 +48,9 @@ export default function SettingsScreen() {
 
     return Number(
       numbersOnly
-    ).toLocaleString('ko-KR');
+    ).toLocaleString(
+      'ko-KR'
+    );
   };
 
   const parseMoney = (
@@ -66,90 +58,47 @@ export default function SettingsScreen() {
   ) => {
     return (
       Number(
-        text.replace(/,/g, '')
+        text.replace(
+          /,/g,
+          ''
+        )
       ) || 0
     );
   };
 
-  const getLegacyBudget = (
-    data: BudgetSettings
-  ) => {
-    if (
-      data.budgetMode === 'simple'
-    ) {
-      return (
-        Number(
-          data.monthlyBudget
-        ) || 0
-      );
-    }
+  const loadSettings =
+    async () => {
+      try {
+        /*
+         * 이번 달 예산을 불러옵니다.
+         *
+         * 현재 달의 예산이 없다면
+         * 가장 최근에 설정했던 월의 예산을
+         * 자동으로 이어받습니다.
+         */
+        const currentBudget =
+          await ensureCurrentMonthBudget(
+            0
+          );
 
-    return Math.max(
-      0,
-      (Number(
-        data.monthlyBudget
-      ) || 0) -
-        (Number(
-          data.savingGoal
-        ) || 0) -
-        (Number(
-          data.investmentAmount
-        ) || 0) -
-        (Number(
-          data.fixedExpense
-        ) || 0)
-    );
-  };
-
-  const loadSettings = async () => {
-    try {
-      const saved =
-        await AsyncStorage.getItem(
-          BUDGET_KEY
+        setMonthlyBudget(
+          currentBudget > 0
+            ? currentBudget.toLocaleString(
+                'ko-KR'
+              )
+            : ''
         );
-
-      const legacyData:
-        BudgetSettings = saved
-        ? JSON.parse(saved)
-        : {};
-
-      setOriginalData(
-        legacyData
-      );
-
-      const fallbackBudget =
-        getLegacyBudget(
-          legacyData
+      } catch (error) {
+        console.error(
+          '예산 불러오기 실패:',
+          error
         );
-
-      /*
-       * 이번 달 예산이 이미 있으면 그 값을 사용하고,
-       * 없다면 가장 최근 월의 예산을 자동으로 이어받습니다.
-       *
-       * 월별 예산 데이터 자체가 아직 한 번도 만들어지지 않았다면
-       * 기존 budget-settings의 값으로 최초 마이그레이션합니다.
-       */
-      const currentBudget =
-        await ensureCurrentMonthBudget(
-          fallbackBudget
+      } finally {
+        setIsLoading(
+          false
         );
-
-      setMonthlyBudget(
-        currentBudget > 0
-          ? currentBudget.toLocaleString(
-              'ko-KR'
-            )
-          : ''
-      );
-    } catch (error) {
-      console.error(
-        '예산 불러오기 실패:',
-        error
-      );
-    } finally {
-      setIsLoading(false);
-    }
-  };
+      }
+    };
 
   const budgetAmount =
     parseMoney(
@@ -160,61 +109,38 @@ export default function SettingsScreen() {
     !isLoading &&
     budgetAmount > 0;
 
-  const saveSettings = async () => {
-    if (!canSave) {
-      return;
-    }
+  const saveSettings =
+    async () => {
+      if (!canSave) {
+        return;
+      }
 
-    try {
-      /*
-       * 1) 현재 달의 예산을 월별 예산 저장소에 기록
-       */
-      await saveBudgetForMonth(
-        budgetAmount
-      );
+      try {
+        /*
+         * 현재 달의 생활비를
+         * monthly-budgets에 저장합니다.
+         *
+         * 예:
+         *
+         * {
+         *   "2026-09": 400000,
+         *   "2026-10": 400000
+         * }
+         */
+        await saveBudgetForMonth(
+          budgetAmount
+        );
 
-      /*
-       * 2) 기존 화면들과의 호환을 위해
-       *    budget-settings에도 현재 예산을 동기화
-       *
-       * 홈 / 계획 / 내역 화면을 모두 월별 예산 방식으로
-       * 변경한 뒤에는 이 호환 저장은 제거할 수 있습니다.
-       */
-      const updatedData:
-        BudgetSettings = {
-        ...originalData,
-
-        budgetMode: 'simple',
-
-        monthlyBudget:
-          budgetAmount,
-
-        savingGoal: 0,
-
-        investmentAmount: 0,
-
-        fixedExpense: 0,
-
-        fixedExpenses: [],
-      };
-
-      await AsyncStorage.setItem(
-        BUDGET_KEY,
-        JSON.stringify(
-          updatedData
-        )
-      );
-
-      router.replace(
-        '/(tabs)'
-      );
-    } catch (error) {
-      console.error(
-        '예산 저장 실패:',
-        error
-      );
-    }
-  };
+        router.replace(
+          '/(tabs)'
+        );
+      } catch (error) {
+        console.error(
+          '예산 저장 실패:',
+          error
+        );
+      }
+    };
 
   return (
     <KeyboardAvoidingView
@@ -248,16 +174,16 @@ export default function SettingsScreen() {
           description="이번 달에 내가 사용하기로 정한 생활비만 입력해주세요."
         />
 
-        <View style={styles.form}>
+        <View
+          style={styles.form}
+        >
           <View
             style={
               styles.inputSection
             }
           >
             <Text
-              style={
-                styles.label
-              }
+              style={styles.label}
             >
               이번 달 생활비 한도
             </Text>
@@ -333,9 +259,7 @@ export default function SettingsScreen() {
               canSave &&
               styles.saveButtonPressed,
           ]}
-          onPress={
-            saveSettings
-          }
+          onPress={saveSettings}
         >
           <Text
             style={[
@@ -362,7 +286,8 @@ const styles =
     },
 
     container: {
-      paddingHorizontal: 20,
+      paddingHorizontal:
+        20,
       paddingTop: 24,
       paddingBottom: 64,
     },
@@ -386,17 +311,21 @@ const styles =
     moneyInputBox: {
       minHeight: 68,
       marginTop: 2,
-      flexDirection: 'row',
-      alignItems: 'center',
+      flexDirection:
+        'row',
+      alignItems:
+        'center',
       backgroundColor:
         '#F1F5FC',
       borderRadius: 18,
-      paddingHorizontal: 16,
+      paddingHorizontal:
+        16,
     },
 
     moneyInput: {
       flex: 1,
-      paddingVertical: 18,
+      paddingVertical:
+        18,
       fontSize: 24,
       lineHeight: 31,
       fontFamily:
@@ -414,11 +343,13 @@ const styles =
     },
 
     helperRow: {
-      flexDirection: 'row',
+      flexDirection:
+        'row',
       alignItems:
         'flex-start',
       gap: 7,
-      paddingHorizontal: 2,
+      paddingHorizontal:
+        2,
       marginTop: 2,
     },
 
@@ -437,8 +368,10 @@ const styles =
       backgroundColor:
         '#3563C9',
       borderRadius: 16,
-      paddingVertical: 17,
-      alignItems: 'center',
+      paddingVertical:
+        17,
+      alignItems:
+        'center',
       justifyContent:
         'center',
     },

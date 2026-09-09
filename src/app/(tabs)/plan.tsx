@@ -33,7 +33,6 @@ import {
 
 const PLANNED_EXPENSES_KEY = 'planned-expenses';
 const EXPENSES_KEY = 'expenses';
-const BUDGET_KEY = 'budget-settings';
 
 /*
  * 평소/배포 시 null.
@@ -127,9 +126,6 @@ type Expense = {
   createdAt: string;
 };
 
-type BudgetSettings = {
-  monthlyBudget?: number;
-};
 
 export default function PlanScreen() {
   const [
@@ -251,35 +247,22 @@ export default function PlanScreen() {
   const loadBudgetSettings =
     async () => {
       try {
-        const [savedBudget, savedExpenses] =
-          await Promise.all([
-            AsyncStorage.getItem(
-              BUDGET_KEY
-            ),
-            AsyncStorage.getItem(
-              EXPENSES_KEY
-            ),
-          ]);
-
-        let legacyBudget = 0;
-
-        if (savedBudget) {
-          const budget:
-            BudgetSettings =
-            JSON.parse(savedBudget);
-
-          legacyBudget =
-            Number(
-              budget.monthlyBudget
-            ) || 0;
-        }
+        const savedExpenses =
+          await AsyncStorage.getItem(
+            EXPENSES_KEY
+          );
 
         const now =
           getNow();
 
+        /*
+         * 예산은 monthly-budgets만 사용합니다.
+         * 이번 달 값이 없다면 가장 최근 월의 예산을
+         * 자동으로 이어받습니다.
+         */
         const currentBudget =
           await ensureCurrentMonthBudget(
-            legacyBudget,
+            0,
             now
           );
 

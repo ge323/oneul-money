@@ -27,7 +27,6 @@ import {
 } from '../../utils/monthly-budgets';
 
 const EXPENSES_KEY = 'expenses';
-const BUDGET_KEY = 'budget-settings';
 const CUSTOM_CATEGORIES_KEY = 'custom-categories';
 
 /*
@@ -53,10 +52,6 @@ type Expense = {
   amount: number;
   category?: string;
   createdAt: string;
-};
-
-type BudgetSettings = {
-  monthlyBudget?: number;
 };
 
 type CustomCategory = {
@@ -414,12 +409,8 @@ export default function HistoryScreen() {
             );
 
           /*
-           * 1) 선택한 달에 저장된 예산이 있으면
-           *    그 달의 예산을 그대로 사용합니다.
-           *
-           * 예:
-           * 2026-09 -> 400,000원
-           * 2026-10 -> 450,000원
+           * 선택한 달에 저장된 예산이 있으면
+           * 해당 월의 예산을 그대로 사용합니다.
            */
           const savedMonthBudget =
             await getBudgetForMonth(
@@ -437,14 +428,14 @@ export default function HistoryScreen() {
           }
 
           /*
-           * 2) 선택한 달이 '실제 현재 달'인데
-           *    아직 monthly-budgets 값이 없다면,
-           *    이전 예산을 자동 승계합니다.
+           * 과거/미래 달을 단순 조회하는 경우에는
+           * 없는 예산을 새로 만들지 않습니다.
            *
-           * 과거 달/미래 달을 단순 조회하는 것만으로
-           * 예산 데이터를 새로 만들지는 않습니다.
+           * 실제 현재 달만 값이 없다면
+           * 가장 최근 월 예산을 자동 승계합니다.
            */
-          const now = getNow();
+          const now =
+            getNow();
 
           const isActualCurrentMonth =
             now.getFullYear() ===
@@ -459,29 +450,9 @@ export default function HistoryScreen() {
             return;
           }
 
-          const savedLegacyBudget =
-            await AsyncStorage.getItem(
-              BUDGET_KEY
-            );
-
-          let legacyBudget = 0;
-
-          if (savedLegacyBudget) {
-            const budget:
-              BudgetSettings =
-              JSON.parse(
-                savedLegacyBudget
-              );
-
-            legacyBudget =
-              Number(
-                budget.monthlyBudget
-              ) || 0;
-          }
-
           const inheritedBudget =
             await ensureCurrentMonthBudget(
-              legacyBudget,
+              0,
               selectedDate
             );
 

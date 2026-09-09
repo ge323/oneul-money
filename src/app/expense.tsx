@@ -45,21 +45,12 @@ LocaleConfig.locales.ko = {
 };
 LocaleConfig.defaultLocale = 'ko';
 
-const BUDGET_KEY = 'budget-settings';
 const EXPENSES_KEY = 'expenses';
 const CUSTOM_CATEGORIES_KEY = 'custom-categories';
 
 type IoniconName =
   ComponentProps<typeof Ionicons>['name'];
 
-type BudgetSettings = {
-  monthlyBudget: number;
-  fixedExpense: number;
-  savingGoal: number;
-  spentAmount: number;
-  payday?: number;
-  paydayType?: 'date' | 'lastDay';
-};
 
 type Category = {
   id: string;
@@ -132,33 +123,6 @@ const ICON_OPTIONS: IoniconName[] = [
   'wine-outline',
   'ticket-outline',
 ];
-
-const getLocalISOString = () => {
-  const date = new Date();
-
-  const pad = (value: number) =>
-    String(value).padStart(2, '0');
-
-  const timezoneOffset = -date.getTimezoneOffset();
-  const sign = timezoneOffset >= 0 ? '+' : '-';
-  const offsetHours = pad(
-    Math.floor(Math.abs(timezoneOffset) / 60)
-  );
-  const offsetMinutes = pad(
-    Math.abs(timezoneOffset) % 60
-  );
-
-  return (
-    `${date.getFullYear()}-` +
-    `${pad(date.getMonth() + 1)}-` +
-    `${pad(date.getDate())}T` +
-    `${pad(date.getHours())}:` +
-    `${pad(date.getMinutes())}:` +
-    `${pad(date.getSeconds())}.` +
-    `${String(date.getMilliseconds()).padStart(3, '0')}` +
-    `${sign}${offsetHours}:${offsetMinutes}`
-  );
-};
 
 export default function ExpenseScreen() {
   const params = useLocalSearchParams<{
@@ -547,47 +511,6 @@ export default function ExpenseScreen() {
       }
     };
 
-  const updateBudgetSpentAmount =
-    async (
-      difference: number
-    ) => {
-      const savedBudget =
-        await AsyncStorage.getItem(
-          BUDGET_KEY
-        );
-
-      if (!savedBudget) {
-        return;
-      }
-
-      const budget: BudgetSettings =
-        JSON.parse(
-          savedBudget
-        );
-
-      const currentSpent =
-        Number(
-          budget.spentAmount
-        ) || 0;
-
-      const updatedBudget = {
-        ...budget,
-
-        spentAmount: Math.max(
-          0,
-          currentSpent +
-          difference
-        ),
-      };
-
-      await AsyncStorage.setItem(
-        BUDGET_KEY,
-        JSON.stringify(
-          updatedBudget
-        )
-      );
-    };
-
   const formatExpenseDateLabel = (
     dateKey: string
   ) => {
@@ -705,9 +628,6 @@ export default function ExpenseScreen() {
         )
       );
 
-      await updateBudgetSpentAmount(
-        numericAmount
-      );
     };
 
   const updateExpense =
@@ -773,13 +693,6 @@ export default function ExpenseScreen() {
         )
       );
 
-      const difference =
-        numericAmount -
-        originalExpense.amount;
-
-      await updateBudgetSpentAmount(
-        difference
-      );
     };
 
   const saveExpense =
