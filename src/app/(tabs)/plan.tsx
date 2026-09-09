@@ -343,6 +343,37 @@ export default function PlanScreen() {
       }월 ${targetDate.getDate()}일`;
   };
 
+  const getDDayLabel = (
+    value: string
+  ) => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const targetDate = new Date(
+      `${value}T00:00:00`
+    );
+    targetDate.setHours(0, 0, 0, 0);
+
+    const difference =
+      targetDate.getTime() -
+      today.getTime();
+
+    const days = Math.round(
+      difference /
+        (1000 * 60 * 60 * 24)
+    );
+
+    if (days <= 0) {
+      return '오늘';
+    }
+
+    if (days === 1) {
+      return '내일';
+    }
+
+    return `D-${days}`;
+  };
+
   const formatDisplayDate = (
     value: string
   ) => {
@@ -1115,7 +1146,7 @@ export default function PlanScreen() {
             styles.description
           }
         >
-          앞으로 쓸 돈을 미리 빼두고 생활비를 관리해보세요.
+          앞으로 쓸 돈을 미리 계획하고 생활비를 관리해보세요.
         </Text>
 
         <View
@@ -1123,13 +1154,33 @@ export default function PlanScreen() {
             styles.summaryCard
           }
         >
-          <Text
+          <View
             style={
-              styles.summaryLabel
+              styles.summaryTopRow
             }
           >
-            예정된 지출
-          </Text>
+            <Text
+              style={
+                styles.summaryLabel
+              }
+            >
+              예정된 지출
+            </Text>
+
+            <View
+              style={
+                styles.summaryCountBadge
+              }
+            >
+              <Text
+                style={
+                  styles.summaryCountText
+                }
+              >
+                {upcomingExpenses.length}건
+              </Text>
+            </View>
+          </View>
 
           <Text
             style={
@@ -1147,11 +1198,7 @@ export default function PlanScreen() {
               styles.summaryDescription
             }
           >
-            앞으로 예정된{' '}
-            {
-              upcomingExpenses.length
-            }
-            건을 홈의 생활비와 오늘 권장 금액에 미리 반영해요.
+            홈의 생활비에 미리 반영했어요.
           </Text>
         </View>
 
@@ -1189,7 +1236,7 @@ export default function PlanScreen() {
               styles.sectionTitle
             }
           >
-            앞으로 쓸 돈
+            예정 지출
           </Text>
 
           {upcomingExpenses.length ===
@@ -1278,15 +1325,37 @@ export default function PlanScreen() {
                           }
                         </Text>
 
-                        <Text
+                        <View
                           style={
-                            styles.expenseDate
+                            styles.expenseMetaRow
                           }
                         >
-                          {formatDate(
-                            expense.date
-                          )}
-                        </Text>
+                          <Text
+                            style={
+                              styles.expenseDate
+                            }
+                          >
+                            {formatDate(
+                              expense.date
+                            )}
+                          </Text>
+
+                          <View
+                            style={
+                              styles.expenseDDayBadge
+                            }
+                          >
+                            <Text
+                              style={
+                                styles.expenseDDayText
+                              }
+                            >
+                              {getDDayLabel(
+                                expense.date
+                              )}
+                            </Text>
+                          </View>
+                        </View>
                       </View>
 
                       <Text
@@ -1520,7 +1589,7 @@ export default function PlanScreen() {
                     styles.sheetDescription
                   }
                 >
-                  앞으로 사용할 돈을 미리 등록해주세요.
+                  예정된 지출 금액과 날짜를 등록해주세요.
                 </Text>
               </View>
 
@@ -2267,13 +2336,16 @@ const styles =
 
     summaryCard: {
       marginTop: 28,
-
-      backgroundColor:
-        '#F1F5FC',
-
+      backgroundColor: '#F1F5FC',
       borderRadius: 22,
+      paddingHorizontal: 20,
+      paddingVertical: 19,
+    },
 
-      padding: 20,
+    summaryTopRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
     },
 
     summaryLabel: {
@@ -2283,8 +2355,22 @@ const styles =
       color: '#566176',
     },
 
+    summaryCountBadge: {
+      paddingHorizontal: 9,
+      paddingVertical: 4,
+      borderRadius: 999,
+      backgroundColor: '#E4ECFB',
+    },
+
+    summaryCountText: {
+      fontSize: 12,
+      lineHeight: 17,
+      fontFamily: 'Pretendard-Bold',
+      color: '#3563C9',
+    },
+
     summaryAmount: {
-      marginTop: 7,
+      marginTop: 8,
       fontSize: 32,
       lineHeight: 40,
       fontFamily: 'Pretendard-ExtraBold',
@@ -2292,9 +2378,9 @@ const styles =
     },
 
     summaryDescription: {
-      marginTop: 8,
-      fontSize: 14,
-      lineHeight: 21,
+      marginTop: 7,
+      fontSize: 13,
+      lineHeight: 19,
       fontFamily: 'Pretendard-Regular',
       color: '#687386',
     },
@@ -2306,11 +2392,11 @@ const styles =
       alignItems: 'center',
       justifyContent: 'center',
       gap: 6,
-      backgroundColor: '#F8FAFC',
+      backgroundColor: '#FBFCFE',
       borderRadius: 16,
       paddingVertical: 15,
       borderWidth: 1,
-      borderColor: '#E4E9F0',
+      borderColor: '#DCE5F5',
     },
 
     addButtonPressed: {
@@ -2326,7 +2412,7 @@ const styles =
     },
 
     list: {
-      marginTop: 32,
+      marginTop: 30,
     },
 
     sectionTitle: {
@@ -2334,7 +2420,7 @@ const styles =
       lineHeight: 26,
       fontFamily: 'Pretendard-ExtraBold',
       color: '#172033',
-      marginBottom: 14,
+      marginBottom: 12,
     },
 
     expenseCard: {
@@ -2390,12 +2476,32 @@ const styles =
       color: '#172033',
     },
 
-    expenseDate: {
+    expenseMetaRow: {
       marginTop: 4,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 7,
+    },
+
+    expenseDate: {
       fontSize: 14,
       lineHeight: 20,
       fontFamily: 'Pretendard-Regular',
       color: '#687386',
+    },
+
+    expenseDDayBadge: {
+      paddingHorizontal: 7,
+      paddingVertical: 2,
+      borderRadius: 999,
+      backgroundColor: '#EEF3FE',
+    },
+
+    expenseDDayText: {
+      fontSize: 11,
+      lineHeight: 16,
+      fontFamily: 'Pretendard-Bold',
+      color: '#3563C9',
     },
 
     expenseAmount: {
