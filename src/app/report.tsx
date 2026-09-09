@@ -1,8 +1,10 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { router, useFocusEffect } from 'expo-router';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import {
+  Animated,
+  Modal,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -15,6 +17,21 @@ import {
 } from 'react-native-gifted-charts';
 
 const EXPENSES_KEY = 'expenses';
+const CUSTOM_CATEGORIES_KEY = 'custom-categories';
+
+/*
+ * 평소/배포 시 null.
+ * 새 달 테스트 예:
+ * new Date(2026, 9, 1) // 2026년 10월 1일
+ */
+const DEV_TEST_DATE: Date | null = null;
+
+const getNow = () => {
+  return DEV_TEST_DATE
+    ? new Date(DEV_TEST_DATE)
+    : new Date();
+};
+
 
 type Period = 'week' | 'month' | 'year';
 
@@ -22,13 +39,26 @@ type Expense = {
   id: string;
   title: string;
   amount: number;
-  category: string;
+  category?: string;
   createdAt: string;
 };
 
 type CategoryInfo = {
   id: string;
   label: string;
+};
+
+type CustomCategory = {
+  id: string;
+  label: string;
+  icon?: string;
+  emoji?: string;
+  custom?: boolean;
+};
+
+type BarDetail = {
+  title: string;
+  expenses: Expense[];
 };
 
 const CATEGORIES: CategoryInfo[] = [
@@ -43,21 +73,66 @@ const CATEGORIES: CategoryInfo[] = [
 
 export default function ReportScreen() {
   const [expenses, setExpenses] = useState<Expense[]>([]);
+  const [customCategories, setCustomCategories] =
+    useState<CustomCategory[]>([]);
   const [period, setPeriod] = useState<Period>('month');
+
+  const [
+    selectedBarDetail,
+    setSelectedBarDetail,
+  ] = useState<BarDetail | null>(null);
+
+  const [
+    isDetailModalVisible,
+    setIsDetailModalVisible,
+  ] = useState(false);
+
+  const sheetTranslateY =
+    useRef(
+      new Animated.Value(500)
+    ).current;
+
+  const backdropOpacity =
+    useRef(
+      new Animated.Value(0)
+    ).current;
 
   useFocusEffect(
     useCallback(() => {
-      loadExpenses();
+      loadData();
     }, [])
   );
 
-  const loadExpenses = async () => {
+  const loadData = async () => {
     try {
-      const saved = await AsyncStorage.getItem(EXPENSES_KEY);
+      const [
+        savedExpenses,
+        savedCustomCategories,
+      ] = await Promise.all([
+        AsyncStorage.getItem(
+          EXPENSES_KEY
+        ),
+        AsyncStorage.getItem(
+          CUSTOM_CATEGORIES_KEY
+        ),
+      ]);
 
-      setExpenses(saved ? JSON.parse(saved) : []);
+      setExpenses(
+        savedExpenses
+          ? JSON.parse(savedExpenses)
+          : []
+      );
+
+      setCustomCategories(
+        savedCustomCategories
+          ? JSON.parse(savedCustomCategories)
+          : []
+      );
     } catch (error) {
-      console.error('지출 불러오기 실패:', error);
+      console.error(
+        '소비 리포트 데이터 불러오기 실패:',
+        error
+      );
     }
   };
 
@@ -74,7 +149,7 @@ export default function ReportScreen() {
   };
 
   const getPeriodExpenses = useMemo(() => {
-    const now = new Date();
+    const now = getNow();
 
     return expenses.filter((expense) => {
       const expenseDate = new Date(expense.createdAt);
@@ -113,6 +188,148 @@ export default function ReportScreen() {
     );
   }, [getPeriodExpenses]);
 
+  const getCategoryLabel = (
+    category?: string
+  ) => {
+    const defaultInfo =
+      CATEGORIES.find(
+        (item) =>
+          item.id === category
+      );
+
+    const customInfo =
+      customCategories.find(
+        (item) =>
+          item.id === category
+      );
+
+    return (
+      defaultInfo?.label ||
+      customInfo?.label ||
+      '기타'
+    );
+  };
+
+  const openBarDetail = (
+    title: string,
+    detailExpenses: Expense[]
+  ) => {
+    if (
+      detailExpenses.length === 0
+    ) {
+      return;
+    }
+
+    const sortedExpenses =
+      [...detailExpenses].sort(
+        (a, b) =>
+          new Date(
+            b.createdAt
+          ).getTime() -
+          new Date(
+            a.createdAt
+          ).getTime()
+      );
+
+    setSelectedBarDetail({
+      title,
+      expenses: sortedExpenses,
+    });
+
+    sheetTranslateY.setValue(
+      500
+    );
+
+    backdropOpacity.setValue(
+      0
+    );
+
+    setIsDetailModalVisible(
+      true
+    );
+
+    requestAnimationFrame(
+      () => {
+        Animated.parallel([
+          Animated.timing(
+            sheetTranslateY,
+            {
+              toValue: 0,
+              duration: 250,
+              useNativeDriver:
+                true,
+            }
+          ),
+
+          Animated.timing(
+            backdropOpacity,
+            {
+              toValue: 1,
+              duration: 100,
+              useNativeDriver:
+                true,
+            }
+          ),
+        ]).start();
+      }
+    );
+  };
+
+  const closeBarDetail = () => {
+    Animated.parallel([
+      Animated.timing(
+        sheetTranslateY,
+        {
+          toValue: 500,
+          duration: 200,
+          useNativeDriver:
+            true,
+        }
+      ),
+
+      Animated.timing(
+        backdropOpacity,
+        {
+          toValue: 0,
+          duration: 60,
+          useNativeDriver:
+            true,
+        }
+      ),
+    ]).start(() => {
+      setIsDetailModalVisible(
+        false
+      );
+
+      setSelectedBarDetail(
+        null
+      );
+    });
+  };
+
+  const formatExpenseDate = (
+    value: string
+  ) => {
+    const date =
+      new Date(value);
+
+    return `${date.getMonth() + 1}월 ${date.getDate()}일`;
+  };
+
+  const formatExpenseTime = (
+    value: string
+  ) => {
+    return new Date(
+      value
+    ).toLocaleTimeString(
+      'ko-KR',
+      {
+        hour: '2-digit',
+        minute: '2-digit',
+      }
+    );
+  };
+
   /*
    * ============================
    * 막대그래프 데이터
@@ -120,7 +337,7 @@ export default function ReportScreen() {
    */
 
   const barData = useMemo(() => {
-    const now = new Date();
+    const now = getNow();
 
     /*
      * 최근 7일
@@ -138,14 +355,28 @@ export default function ReportScreen() {
 
         nextDay.setDate(nextDay.getDate() + 1);
 
-        const total = expenses
-          .filter((expense) => {
-            const date = new Date(expense.createdAt);
+        const detailExpenses =
+          expenses.filter(
+            (expense) => {
+              const date =
+                new Date(
+                  expense.createdAt
+                );
 
-            return date >= target && date < nextDay;
-          })
-          .reduce(
-            (sum, expense) => sum + Number(expense.amount || 0),
+              return (
+                date >= target &&
+                date < nextDay
+              );
+            }
+          );
+
+        const total =
+          detailExpenses.reduce(
+            (sum, expense) =>
+              sum +
+              Number(
+                expense.amount || 0
+              ),
             0
           );
 
@@ -159,10 +390,21 @@ export default function ReportScreen() {
           '토',
         ];
 
+        const detailTitle =
+          `${target.getMonth() + 1}월 ${target.getDate()}일 ${weekdays[target.getDay()]}요일 지출`;
+
         result.push({
           value: total,
-          label: weekdays[target.getDay()],
+          label:
+            weekdays[
+              target.getDay()
+            ],
           frontColor: '#3563C9',
+          onPress: () =>
+            openBarDetail(
+              detailTitle,
+              detailExpenses
+            ),
         });
       }
 
@@ -200,27 +442,49 @@ export default function ReportScreen() {
           lastDay
         );
 
-        const total = expenses
-          .filter((expense) => {
-            const date = new Date(expense.createdAt);
+        const detailExpenses =
+          expenses.filter(
+            (expense) => {
+              const date =
+                new Date(
+                  expense.createdAt
+                );
 
-            return (
-              date.getFullYear() === year &&
-              date.getMonth() === month &&
-              date.getDate() >= startDay &&
-              date.getDate() <= endDay
-            );
-          })
-          .reduce(
+              return (
+                date.getFullYear() ===
+                  year &&
+                date.getMonth() ===
+                  month &&
+                date.getDate() >=
+                  startDay &&
+                date.getDate() <=
+                  endDay
+              );
+            }
+          );
+
+        const total =
+          detailExpenses.reduce(
             (sum, expense) =>
-              sum + Number(expense.amount || 0),
+              sum +
+              Number(
+                expense.amount || 0
+              ),
             0
           );
+
+        const detailTitle =
+          `${month + 1}월 ${week}주차 지출`;
 
         result.push({
           value: total,
           label: `${week}주`,
           frontColor: '#3563C9',
+          onPress: () =>
+            openBarDetail(
+              detailTitle,
+              detailExpenses
+            ),
         });
 
         week += 1;
@@ -235,18 +499,30 @@ export default function ReportScreen() {
     return Array.from(
       { length: 12 },
       (_, index) => {
-        const total = expenses
-          .filter((expense) => {
-            const date = new Date(expense.createdAt);
+        const detailExpenses =
+          expenses.filter(
+            (expense) => {
+              const date =
+                new Date(
+                  expense.createdAt
+                );
 
-            return (
-              date.getFullYear() === now.getFullYear() &&
-              date.getMonth() === index
-            );
-          })
-          .reduce(
+              return (
+                date.getFullYear() ===
+                  now.getFullYear() &&
+                date.getMonth() ===
+                  index
+              );
+            }
+          );
+
+        const total =
+          detailExpenses.reduce(
             (sum, expense) =>
-              sum + Number(expense.amount || 0),
+              sum +
+              Number(
+                expense.amount || 0
+              ),
             0
           );
 
@@ -254,6 +530,11 @@ export default function ReportScreen() {
           value: total,
           label: `${index + 1}`,
           frontColor: '#3563C9',
+          onPress: () =>
+            openBarDetail(
+              `${index + 1}월 지출`,
+              detailExpenses
+            ),
         };
       }
     );
@@ -269,27 +550,51 @@ export default function ReportScreen() {
     const categoryMap: Record<string, number> = {};
 
     getPeriodExpenses.forEach((expense) => {
-      const category = expense.category || 'etc';
+      const category =
+        expense.category || 'etc';
 
       categoryMap[category] =
         (categoryMap[category] || 0) +
-        Number(expense.amount || 0);
+        Number(
+          expense.amount || 0
+        );
     });
 
-    return Object.entries(categoryMap)
-      .map(([category, amount]) => {
-        const info = CATEGORIES.find(
-          (item) => item.id === category
-        );
+    return Object.entries(
+      categoryMap
+    )
+      .map(
+        ([category, amount]) => {
+          const defaultInfo =
+            CATEGORIES.find(
+              (item) =>
+                item.id === category
+            );
 
-        return {
-          id: category,
-          label: info?.label || '기타',
-          amount,
-        };
-      })
-      .sort((a, b) => b.amount - a.amount);
-  }, [getPeriodExpenses]);
+          const customInfo =
+            customCategories.find(
+              (item) =>
+                item.id === category
+            );
+
+          return {
+            id: category,
+            label:
+              defaultInfo?.label ||
+              customInfo?.label ||
+              '기타',
+            amount,
+          };
+        }
+      )
+      .sort(
+        (a, b) =>
+          b.amount - a.amount
+      );
+  }, [
+    getPeriodExpenses,
+    customCategories,
+  ]);
 
   /*
    * gifted-charts PieChart용 데이터
@@ -467,8 +772,6 @@ export default function ReportScreen() {
                 fontSize: 11,
               }}
               noOfSections={4}
-              isAnimated
-              animationDuration={400}
             />
           </View>
         ) : (
@@ -576,6 +879,203 @@ export default function ReportScreen() {
           <EmptyChart />
         )}
       </View>
+
+      <Modal
+        visible={
+          isDetailModalVisible
+        }
+        transparent
+        animationType="none"
+        statusBarTranslucent
+        onRequestClose={
+          closeBarDetail
+        }
+      >
+        <View
+          style={
+            styles.modalRoot
+          }
+        >
+          <Animated.View
+            style={[
+              styles.modalBackdrop,
+
+              {
+                opacity:
+                  backdropOpacity,
+              },
+            ]}
+          >
+            <Pressable
+              style={
+                styles.backdropPressArea
+              }
+              onPress={
+                closeBarDetail
+              }
+            />
+          </Animated.View>
+
+          <Animated.View
+            style={[
+              styles.bottomSheet,
+
+              {
+                transform: [
+                  {
+                    translateY:
+                      sheetTranslateY,
+                  },
+                ],
+              },
+            ]}
+          >
+
+            <View
+              style={
+                styles.sheetHandle
+              }
+            />
+
+            <View
+              style={
+                styles.sheetHeader
+              }
+            >
+              <View
+                style={
+                  styles.sheetTitleArea
+                }
+              >
+                <Text
+                  style={
+                    styles.sheetTitle
+                  }
+                >
+                  {selectedBarDetail?.title}
+                </Text>
+
+                <Text
+                  style={
+                    styles.sheetSummary
+                  }
+                >
+                  총{' '}
+                  {selectedBarDetail?.expenses.length ??
+                    0}
+                  건 ·{' '}
+                  {formatMoney(
+                    selectedBarDetail?.expenses.reduce(
+                      (
+                        sum,
+                        expense
+                      ) =>
+                        sum +
+                        Number(
+                          expense.amount ||
+                            0
+                        ),
+                      0
+                    ) ?? 0
+                  )}
+                  원
+                </Text>
+              </View>
+
+              <Pressable
+                style={
+                  styles.sheetCloseButton
+                }
+                onPress={
+                  closeBarDetail
+                }
+                hitSlop={8}
+              >
+                <Ionicons
+                  name="close"
+                  size={22}
+                  color="#687386"
+                />
+              </Pressable>
+            </View>
+
+            <ScrollView
+              style={
+                styles.sheetList
+              }
+              contentContainerStyle={
+                styles.sheetListContent
+              }
+              showsVerticalScrollIndicator={
+                false
+              }
+            >
+              {selectedBarDetail?.expenses.map(
+                (expense) => (
+                  <View
+                    key={
+                      expense.id
+                    }
+                    style={
+                      styles.sheetExpenseRow
+                    }
+                  >
+                    <View
+                      style={
+                        styles.sheetExpenseLeft
+                      }
+                    >
+                      <Text
+                        style={
+                          styles.sheetExpenseTitle
+                        }
+                        numberOfLines={1}
+                      >
+                        {
+                          expense.title
+                        }
+                      </Text>
+
+                      <Text
+                        style={
+                          styles.sheetExpenseMeta
+                        }
+                      >
+                        {formatExpenseDate(
+                          expense.createdAt
+                        )}
+                        {' · '}
+                        {formatExpenseTime(
+                          expense.createdAt
+                        )}
+                        {' · '}
+                        {getCategoryLabel(
+                          expense.category
+                        )}
+                      </Text>
+                    </View>
+
+                    <Text
+                      style={
+                        styles.sheetExpenseAmount
+                      }
+                    >
+                      {formatMoney(
+                        Number(
+                          expense.amount ||
+                            0
+                        )
+                      )}
+                      원
+                    </Text>
+                  </View>
+                )
+              )}
+            </ScrollView>
+
+          </Animated.View>
+        </View>
+      </Modal>
     </ScrollView>
   );
 }
@@ -878,6 +1378,141 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#98A2B3',
     textAlign: 'right',
+  },
+
+  /* 막대 상세 Bottom Sheet */
+
+  modalRoot: {
+    flex: 1,
+    justifyContent: 'flex-end',
+  },
+
+  modalBackdrop: {
+    position: 'absolute',
+    top: 0,
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor:
+      'rgba(23, 32, 51, 0.38)',
+  },
+
+  backdropPressArea: {
+    flex: 1,
+  },
+
+  bottomSheet: {
+    maxHeight: '90%',
+    overflow: 'hidden',
+    backgroundColor:
+      '#FFFFFF',
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    paddingHorizontal: 24,
+    paddingTop: 12,
+    paddingBottom: 34,
+
+    shadowColor:
+      '#000000',
+
+    shadowOffset: {
+      width: 0,
+      height: -5,
+    },
+
+    shadowOpacity: 0.1,
+    shadowRadius: 18,
+    elevation: 12,
+  },
+
+  sheetHandle: {
+    alignSelf: 'center',
+    width: 44,
+    height: 5,
+    borderRadius: 999,
+    backgroundColor:
+      '#D7DDE6',
+    marginBottom: 22,
+  },
+
+  sheetHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+
+  sheetTitleArea: {
+    flex: 1,
+  },
+
+  sheetTitle: {
+    fontSize: 21,
+    lineHeight: 28,
+    fontFamily: 'Pretendard-ExtraBold',
+    color: '#172033',
+  },
+
+  sheetSummary: {
+    marginTop: 5,
+    fontSize: 13,
+    lineHeight: 19,
+    fontFamily: 'Pretendard-Regular',
+    color: '#687386',
+  },
+
+  sheetCloseButton: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: '#F5F7FA',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  sheetList: {
+    marginTop: 18,
+  },
+
+  sheetListContent: {
+    paddingBottom: 8,
+  },
+
+  sheetExpenseRow: {
+    minHeight: 68,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderBottomWidth: 1,
+    borderBottomColor: '#EEF1F5',
+    paddingVertical: 12,
+  },
+
+  sheetExpenseLeft: {
+    flex: 1,
+    paddingRight: 14,
+  },
+
+  sheetExpenseTitle: {
+    fontSize: 16,
+    lineHeight: 22,
+    fontFamily: 'Pretendard-Bold',
+    color: '#172033',
+  },
+
+  sheetExpenseMeta: {
+    marginTop: 4,
+    fontSize: 12,
+    lineHeight: 18,
+    fontFamily: 'Pretendard-Regular',
+    color: '#8792A2',
+  },
+
+  sheetExpenseAmount: {
+    fontSize: 15,
+    lineHeight: 21,
+    fontFamily: 'Pretendard-ExtraBold',
+    color: '#172033',
   },
 
   /* Empty */

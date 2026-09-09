@@ -37,8 +37,8 @@ const PLANNED_EXPENSES_KEY = 'planned-expenses';
  *
  * JavaScript의 월은 0부터 시작합니다.
  */
-const DEV_TEST_DATE: Date | null = null;
-
+export const DEV_TEST_DATE: Date | null =
+  null;
 const getNow = () => {
   return DEV_TEST_DATE
     ? new Date(DEV_TEST_DATE)
