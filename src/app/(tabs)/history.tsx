@@ -975,8 +975,140 @@ export default function HistoryScreen() {
             styles.description
           }
         >
-          월별 소비 내역을 확인해보세요.
+          이번 달 지출을 한눈에 확인해보세요.
         </Text>
+      </View>
+
+      {/* =====================
+          월 선택
+      ====================== */}
+
+      <View
+        style={
+          styles.monthSelector
+        }
+      >
+        <Pressable
+          style={({ pressed }) => [
+            styles.monthArrowButton,
+            pressed &&
+              styles.monthArrowButtonPressed,
+          ]}
+          onPress={
+            movePreviousMonth
+          }
+          hitSlop={10}
+        >
+          <Ionicons
+            name="chevron-back"
+            size={21}
+            color="#172033"
+          />
+        </Pressable>
+
+        <Pressable
+          style={
+            styles.monthCenter
+          }
+          onPress={
+            goCurrentMonth
+          }
+        >
+          <Text
+            style={
+              styles.monthTitle
+            }
+          >
+            {selectedYear}년{' '}
+            {selectedMonthIndex + 1}
+            월
+          </Text>
+
+          {!isCurrentMonth && (
+            <View
+              style={
+                styles.currentMonthBadge
+              }
+            >
+              <Text
+                style={
+                  styles.currentMonthGuide
+                }
+              >
+                이번 달로 이동
+              </Text>
+            </View>
+          )}
+        </Pressable>
+
+        <Pressable
+          style={({ pressed }) => [
+            styles.monthArrowButton,
+            pressed &&
+              styles.monthArrowButtonPressed,
+          ]}
+          onPress={
+            moveNextMonth
+          }
+          hitSlop={10}
+        >
+          <Ionicons
+            name="chevron-forward"
+            size={21}
+            color="#172033"
+          />
+        </Pressable>
+      </View>
+
+      {/* =====================
+          월 총 지출
+      ====================== */}
+
+      <View
+        style={
+          styles.totalBox
+        }
+      >
+        <View
+          style={
+            styles.totalTopRow
+          }
+        >
+          <Text
+            style={
+              styles.totalLabel
+            }
+          >
+            {selectedMonthIndex + 1}
+            월 총 지출
+          </Text>
+
+          <View
+            style={
+              styles.totalCountBadge
+            }
+          >
+            <Text
+              style={
+                styles.totalCountText
+              }
+            >
+              {monthExpenses.length}건
+            </Text>
+          </View>
+        </View>
+
+        <Text
+          style={
+            styles.totalAmount
+          }
+        >
+          {formatMoney(
+            totalExpense
+          )}
+          원
+        </Text>
+
       </View>
 
       {/* =====================
@@ -984,14 +1116,12 @@ export default function HistoryScreen() {
       ====================== */}
 
       <Pressable
-        style={({
-          pressed,
-        }) => [
-            styles.reportButton,
+        style={({ pressed }) => [
+          styles.reportButton,
 
-            pressed &&
+          pressed &&
             styles.reportButtonPressed,
-          ]}
+        ]}
         onPress={() =>
           router.push(
             '/report'
@@ -1010,7 +1140,7 @@ export default function HistoryScreen() {
           >
             <Ionicons
               name="stats-chart-outline"
-              size={19}
+              size={18}
               color="#3563C9"
             />
           </View>
@@ -1033,7 +1163,7 @@ export default function HistoryScreen() {
                 styles.reportButtonDescription
               }
             >
-              1주, 1개월, 1년 소비 흐름을 확인해보세요.
+              기간별 소비 흐름과 변화를 확인해보세요.
             </Text>
           </View>
         </View>
@@ -1041,124 +1171,9 @@ export default function HistoryScreen() {
         <Ionicons
           name="chevron-forward"
           size={18}
-          color="#687386"
+          color="#98A2B3"
         />
       </Pressable>
-
-      {/* =====================
-          월 선택
-      ====================== */}
-
-      <View
-        style={
-          styles.monthSelector
-        }
-      >
-        <Pressable
-          style={
-            styles.monthArrowButton
-          }
-          onPress={
-            movePreviousMonth
-          }
-          hitSlop={10}
-        >
-          <Ionicons
-            name="chevron-back"
-            size={22}
-            color="#172033"
-          />
-        </Pressable>
-
-        <Pressable
-          style={
-            styles.monthCenter
-          }
-          onPress={
-            goCurrentMonth
-          }
-        >
-          <Text
-            style={
-              styles.monthTitle
-            }
-          >
-            {selectedYear}년{' '}
-            {selectedMonthIndex +
-              1}
-            월
-          </Text>
-
-          {!isCurrentMonth && (
-            <Text
-              style={
-                styles.currentMonthGuide
-              }
-            >
-              누르면 이번 달로 이동
-            </Text>
-          )}
-        </Pressable>
-
-        <Pressable
-          style={
-            styles.monthArrowButton
-          }
-          onPress={
-            moveNextMonth
-          }
-          hitSlop={10}
-        >
-          <Ionicons
-            name="chevron-forward"
-            size={22}
-            color="#172033"
-          />
-        </Pressable>
-      </View>
-
-      {/* =====================
-          월 총 지출
-      ====================== */}
-
-      <View
-        style={
-          styles.totalBox
-        }
-      >
-        <Text
-          style={
-            styles.totalLabel
-          }
-        >
-          {selectedMonthIndex +
-            1}
-          월 총 지출
-        </Text>
-
-        <Text
-          style={
-            styles.totalAmount
-          }
-        >
-          {formatMoney(
-            totalExpense
-          )}
-          원
-        </Text>
-
-        <Text
-          style={
-            styles.totalDescription
-          }
-        >
-          총{' '}
-          {
-            monthExpenses.length
-          }
-          건의 지출을 기록했어요.
-        </Text>
-      </View>
 
       {/* =====================
           검색
@@ -1552,7 +1567,6 @@ export default function HistoryScreen() {
                         styles.dayTotal
                       }
                     >
-                      -
                       {formatMoney(
                         dayTotal
                       )}
@@ -1677,7 +1691,6 @@ export default function HistoryScreen() {
                                     styles.expenseAmount
                                   }
                                 >
-                                  -
                                   {formatMoney(
                                     expense.amount
                                   )}
@@ -1832,67 +1845,55 @@ const styles =
     // ========================
 
     reportButton: {
-      minHeight: 74,
+      minHeight: 68,
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
-      backgroundColor: '#F8FAFC',
-      borderRadius: 18,
-      paddingHorizontal: 15,
-      paddingVertical: 15,
+      backgroundColor: '#FBFCFE',
+      borderRadius: 17,
+      paddingHorizontal: 14,
+      paddingVertical: 13,
       borderWidth: 1,
-      borderColor: '#EDF0F4',
-      marginBottom: 16,
+      borderColor: '#EEF1F5',
+      marginTop: 14,
     },
 
     reportButtonPressed: {
-      backgroundColor:
-        '#F1F5FC',
+      backgroundColor: '#F5F7FA',
     },
 
     reportButtonLeft: {
       flex: 1,
-
       flexDirection: 'row',
-
       alignItems: 'center',
     },
 
     reportIconBox: {
-      width: 42,
-
-      height: 42,
-
-      borderRadius: 14,
-
-      backgroundColor:
-        '#EAF0FB',
-
+      width: 40,
+      height: 40,
+      borderRadius: 13,
+      backgroundColor: '#EEF3FE',
       alignItems: 'center',
-
-      justifyContent:
-        'center',
-
+      justifyContent: 'center',
       marginRight: 11,
     },
 
     reportTextArea: {
       flex: 1,
-
       paddingRight: 8,
     },
 
     reportButtonTitle: {
       fontSize: 16,
       lineHeight: 22,
-      fontFamily: 'Pretendard-ExtraBold',
+      fontFamily: 'Pretendard-Bold',
       color: '#172033',
     },
 
     reportButtonDescription: {
-      marginTop: 5,
-      fontSize: 14,
-      lineHeight: 20,
+      marginTop: 3,
+      fontSize: 13,
+      lineHeight: 19,
       fontFamily: 'Pretendard-Regular',
       color: '#687386',
     },
@@ -1902,36 +1903,34 @@ const styles =
     // ========================
 
     monthSelector: {
-      minHeight: 64,
+      minHeight: 60,
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
       backgroundColor: '#F8FAFC',
       borderRadius: 18,
-      paddingHorizontal: 10,
-      paddingVertical: 10,
+      paddingHorizontal: 8,
+      paddingVertical: 8,
       marginBottom: 14,
     },
 
     monthArrowButton: {
       width: 42,
       height: 42,
-
       borderRadius: 14,
-
       alignItems: 'center',
-      justifyContent:
-        'center',
+      justifyContent: 'center',
+    },
+
+    monthArrowButtonPressed: {
+      backgroundColor: '#EEF1F5',
     },
 
     monthCenter: {
       flex: 1,
-
       minHeight: 44,
-
       alignItems: 'center',
-      justifyContent:
-        'center',
+      justifyContent: 'center',
     },
 
     monthTitle: {
@@ -1941,12 +1940,19 @@ const styles =
       color: '#172033',
     },
 
-    currentMonthGuide: {
+    currentMonthBadge: {
       marginTop: 4,
-      fontSize: 13,
-      lineHeight: 18,
-      fontFamily: 'Pretendard-Medium',
-      color: '#687386',
+      paddingHorizontal: 8,
+      paddingVertical: 2,
+      borderRadius: 999,
+      backgroundColor: '#EEF3FE',
+    },
+
+    currentMonthGuide: {
+      fontSize: 11,
+      lineHeight: 16,
+      fontFamily: 'Pretendard-Bold',
+      color: '#3563C9',
     },
 
     // ========================
@@ -1954,12 +1960,16 @@ const styles =
     // ========================
 
     totalBox: {
-      backgroundColor:
-        '#F1F5FC',
-
+      backgroundColor: '#F1F5FC',
       borderRadius: 20,
+      paddingHorizontal: 20,
+      paddingVertical: 19,
+    },
 
-      padding: 20,
+    totalTopRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
     },
 
     totalLabel: {
@@ -1967,6 +1977,20 @@ const styles =
       lineHeight: 21,
       fontFamily: 'Pretendard-Medium',
       color: '#566176',
+    },
+
+    totalCountBadge: {
+      paddingHorizontal: 9,
+      paddingVertical: 4,
+      borderRadius: 999,
+      backgroundColor: '#E4ECFB',
+    },
+
+    totalCountText: {
+      fontSize: 12,
+      lineHeight: 17,
+      fontFamily: 'Pretendard-Bold',
+      color: '#3563C9',
     },
 
     totalAmount: {
@@ -1977,20 +2001,12 @@ const styles =
       color: '#3563C9',
     },
 
-    totalDescription: {
-      marginTop: 8,
-      fontSize: 14,
-      lineHeight: 20,
-      fontFamily: 'Pretendard-Regular',
-      color: '#687386',
-    },
-
     // ========================
     // 검색
     // ========================
 
     searchSection: {
-      marginTop: 18,
+      marginTop: 22,
     },
 
     searchBox: {
@@ -2161,11 +2177,11 @@ const styles =
     // ========================
 
     list: {
-      marginTop: 30,
+      marginTop: 26,
     },
 
     dateGroup: {
-      marginBottom: 30,
+      marginBottom: 28,
     },
 
     dateHeader: {
@@ -2189,8 +2205,8 @@ const styles =
     dayTotal: {
       fontSize: 14,
       lineHeight: 20,
-      fontFamily: 'Pretendard-SemiBold',
-      color: '#687386',
+      fontFamily: 'Pretendard-Bold',
+      color: '#566176',
     },
 
     dayList: {
@@ -2308,7 +2324,7 @@ const styles =
     expenseAmount: {
       fontSize: 16,
       lineHeight: 22,
-      fontFamily: 'Pretendard-Bold',
+      fontFamily: 'Pretendard-ExtraBold',
       color: '#172033',
     },
 
