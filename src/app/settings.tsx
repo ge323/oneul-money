@@ -1,7 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { router } from 'expo-router';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   KeyboardAvoidingView,
   Platform,
@@ -17,605 +17,290 @@ import AppHeader from '../components/AppHeader';
 
 const BUDGET_KEY = 'budget-settings';
 
-type FixedExpense = {
-  id: string;
-  title: string;
-  amount: number;
+type BudgetSettings = {
+  monthlyBudget?: number;
+  savingGoal?: number;
+  investmentAmount?: number;
+  fixedExpense?: number;
+  fixedExpenses?: unknown[];
+  spentAmount?: number;
+  payday?: number;
+  paydayType?: 'date' | 'lastDay';
+  budgetMode?: 'simple';
+  [key: string]: any;
 };
 
 export default function SettingsScreen() {
-  const [monthlyBudget, setMonthlyBudget] = useState('');
-  const [savingGoal, setSavingGoal] = useState('');
-  const [investmentAmount, setInvestmentAmount] = useState('');
+  const [monthlyBudget, setMonthlyBudget] =
+    useState('');
 
-  const [fixedExpenses, setFixedExpenses] = useState<FixedExpense[]>([]);
-
-  const [fixedTitle, setFixedTitle] = useState('');
-  const [fixedAmount, setFixedAmount] = useState('');
-  const [showFixedForm, setShowFixedForm] = useState(false);
-
-  const [originalData, setOriginalData] = useState<Record<string, any>>({});
+  const [originalData, setOriginalData] =
+    useState<BudgetSettings>({});
 
   useEffect(() => {
     loadSettings();
   }, []);
 
-  const formatMoney = (amount: number) => {
-    return amount.toLocaleString('ko-KR');
-  };
 
   const formatMoneyInput = (text: string) => {
-    const numbersOnly = text.replace(/[^0-9]/g, '');
+    const numbersOnly =
+      text.replace(/[^0-9]/g, '');
 
     if (!numbersOnly) {
       return '';
     }
 
-    return Number(numbersOnly).toLocaleString('ko-KR');
+    return Number(
+      numbersOnly
+    ).toLocaleString('ko-KR');
   };
 
   const parseMoney = (text: string) => {
-    return Number(text.replace(/,/g, '')) || 0;
+    return (
+      Number(
+        text.replace(/,/g, '')
+      ) || 0
+    );
   };
 
   const loadSettings = async () => {
     try {
-      const saved = await AsyncStorage.getItem(BUDGET_KEY);
+      const saved =
+        await AsyncStorage.getItem(
+          BUDGET_KEY
+        );
 
       if (!saved) {
         return;
       }
 
-      const data = JSON.parse(saved);
+      const data: BudgetSettings =
+        JSON.parse(saved);
 
       setOriginalData(data);
 
+      /*
+       * 새 방식으로 저장된 값이면 monthlyBudget을 그대로 사용합니다.
+       *
+       * 예전 방식 데이터라면
+       * "사용 가능 금액 - 저축 - 투자 - 고정지출"을 계산해서
+       * 실제 생활비 한도로 자연스럽게 마이그레이션합니다.
+       */
+      const migratedBudget =
+        data.budgetMode === 'simple'
+          ? Number(
+              data.monthlyBudget
+            ) || 0
+          : Math.max(
+              0,
+              (Number(
+                data.monthlyBudget
+              ) || 0) -
+                (Number(
+                  data.savingGoal
+                ) || 0) -
+                (Number(
+                  data.investmentAmount
+                ) || 0) -
+                (Number(
+                  data.fixedExpense
+                ) || 0)
+            );
+
       setMonthlyBudget(
-        data.monthlyBudget
-          ? Number(data.monthlyBudget).toLocaleString('ko-KR')
+        migratedBudget > 0
+          ? migratedBudget.toLocaleString(
+              'ko-KR'
+            )
           : ''
       );
-
-      setSavingGoal(
-        data.savingGoal
-          ? Number(data.savingGoal).toLocaleString('ko-KR')
-          : ''
-      );
-
-      setInvestmentAmount(
-        data.investmentAmount
-          ? Number(data.investmentAmount).toLocaleString('ko-KR')
-          : ''
-      );
-
-      // 새 구조의 고정지출 목록이 있으면 그대로 사용
-      if (
-        Array.isArray(data.fixedExpenses) &&
-        data.fixedExpenses.length > 0
-      ) {
-        setFixedExpenses(data.fixedExpenses);
-        return;
-      }
-
-      // 기존 fixedExpense 숫자 데이터가 있다면 자동 변환
-      if (Number(data.fixedExpense) > 0) {
-        setFixedExpenses([
-          {
-            id: 'legacy-fixed-expense',
-            title: '기존 고정비',
-            amount: Number(data.fixedExpense),
-          },
-        ]);
-      }
     } catch (error) {
-      console.error('예산 불러오기 실패:', error);
+      console.error(
+        '예산 불러오기 실패:',
+        error
+      );
     }
   };
 
-  const totalFixedExpense = useMemo(() => {
-    return fixedExpenses.reduce(
-      (sum, expense) => sum + expense.amount,
-      0
-    );
-  }, [fixedExpenses]);
+  const budgetAmount =
+    parseMoney(monthlyBudget);
 
-  const availableMonthlyAmount = parseMoney(monthlyBudget);
-  const savingGoalAmount = parseMoney(savingGoal);
-  const investmentAmountValue = parseMoney(investmentAmount);
+  const canSave =
+    budgetAmount > 0;
 
-  const livingBudget = Math.max(
-    0,
-    availableMonthlyAmount -
-      savingGoalAmount -
-      investmentAmountValue -
-      totalFixedExpense
-  );
-
-  const isBudgetOverAllocated =
-    availableMonthlyAmount > 0 &&
-    savingGoalAmount +
-      investmentAmountValue +
-      totalFixedExpense >
-      availableMonthlyAmount;
-
-  const addFixedExpense = () => {
-    const title = fixedTitle.trim();
-    const amount = parseMoney(fixedAmount);
-
-    if (!title || amount <= 0) {
+  const saveSettings = async () => {
+    if (!canSave) {
       return;
     }
 
-    const newExpense: FixedExpense = {
-      id: `${Date.now()}-${Math.random()}`,
-      title,
-      amount,
-    };
-
-    setFixedExpenses((prev) => [
-      ...prev,
-      newExpense,
-    ]);
-
-    setFixedTitle('');
-    setFixedAmount('');
-    setShowFixedForm(false);
-  };
-
-  const deleteFixedExpense = (id: string) => {
-    setFixedExpenses((prev) =>
-      prev.filter((expense) => expense.id !== id)
-    );
-  };
-
-  const saveSettings = async () => {
-    const updatedData = {
-      // payday, paydayType, spentAmount 등
-      // 기존 데이터는 그대로 보존
+    /*
+     * 홈의 기존 계산 코드와 호환되도록
+     * monthlyBudget을 "최종 생활비 한도"로 저장하고,
+     * 더 이상 사용하지 않는 차감 항목은 0으로 정리합니다.
+     *
+     * payday, paydayType, spentAmount 등 기존 데이터는 보존합니다.
+     */
+    const updatedData: BudgetSettings = {
       ...originalData,
 
-      monthlyBudget: parseMoney(monthlyBudget),
-      savingGoal: parseMoney(savingGoal),
-      investmentAmount: parseMoney(investmentAmount),
+      budgetMode: 'simple',
 
-      // 상세 데이터
-      fixedExpenses,
+      monthlyBudget:
+        budgetAmount,
 
-      // 기존 홈 계산 코드와 호환하기 위한 총액
-      fixedExpense: totalFixedExpense,
+      savingGoal: 0,
+
+      investmentAmount: 0,
+
+      fixedExpense: 0,
+
+      fixedExpenses: [],
     };
 
     try {
       await AsyncStorage.setItem(
         BUDGET_KEY,
-        JSON.stringify(updatedData)
+        JSON.stringify(
+          updatedData
+        )
       );
 
       router.replace('/(tabs)');
     } catch (error) {
-      console.error('예산 저장 실패:', error);
+      console.error(
+        '예산 저장 실패:',
+        error
+      );
     }
   };
 
   return (
     <KeyboardAvoidingView
       style={styles.screen}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      behavior={
+        Platform.OS === 'ios'
+          ? 'padding'
+          : 'height'
+      }
       keyboardVerticalOffset={0}
     >
       <ScrollView
         style={styles.screen}
-        contentContainerStyle={styles.container}
-        showsVerticalScrollIndicator={false}
+        contentContainerStyle={
+          styles.container
+        }
+        showsVerticalScrollIndicator={
+          false
+        }
         keyboardShouldPersistTaps="handled"
-        keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
+        keyboardDismissMode={
+          Platform.OS === 'ios'
+            ? 'interactive'
+            : 'on-drag'
+        }
         contentInsetAdjustmentBehavior="automatic"
         automaticallyAdjustKeyboardInsets
-        nestedScrollEnabled
       >
-      <AppHeader
-        title="예산 설정"
-        description="이번 달에 실제로 사용할 돈을 기준으로 생활비를 계산해보세요."
-      />
-
-      <View style={styles.form}>
-        {/* 이번 달 사용 가능 금액 */}
-        <MoneyInput
-          label="이번 달 사용 가능 금액"
-          description="생활비, 고정지출, 저축에 사용할 수 있는 전체 금액이에요."
-          value={monthlyBudget}
-          onChangeText={(text) =>
-            setMonthlyBudget(formatMoneyInput(text))
-          }
-          placeholder="0"
+        <AppHeader
+          title="예산 설정"
+          description="이번 달에 내가 사용하기로 정한 생활비만 입력해주세요."
         />
 
-        <View style={styles.helperBox}>
-          <Ionicons
-            name="information-circle-outline"
-            size={17}
-            color="#687386"
-          />
+        <View style={styles.form}>
+          <View
+            style={
+              styles.inputSection
+            }
+          >
+            <Text style={styles.label}>
+              이번 달 생활비 한도
+            </Text>
 
-          <Text style={styles.helperText}>
-            월급이 아니라 이번 달에 실제로 관리할 금액을 입력해주세요.
-          </Text>
-        </View>
+            <View
+              style={
+                styles.moneyInputBox
+              }
+            >
+              <TextInput
+                style={
+                  styles.moneyInput
+                }
+                value={monthlyBudget}
+                onChangeText={(
+                  text
+                ) =>
+                  setMonthlyBudget(
+                    formatMoneyInput(
+                      text
+                    )
+                  )
+                }
+                placeholder="0"
+                placeholderTextColor="#98A2B3"
+                keyboardType="numeric"
+                returnKeyType="done"
+                selectionColor="#3563C9"
+              />
 
-        {/* 저축 목표 */}
-        <MoneyInput
-          label="저축 목표"
-          description="이번 달 사용하지 않고 따로 모아둘 금액이에요."
-          value={savingGoal}
-          onChangeText={(text) =>
-            setSavingGoal(formatMoneyInput(text))
-          }
-          placeholder="0"
-        />
-
-        {/* 투자 금액 */}
-        <MoneyInput
-          label="투자 금액"
-          description="이번 달 투자에 사용할 금액이에요."
-          value={investmentAmount}
-          onChangeText={(text) =>
-            setInvestmentAmount(formatMoneyInput(text))
-          }
-          placeholder="0"
-        />
-
-        {/* 고정지출 */}
-        <View style={styles.fixedSection}>
-          <View style={styles.fixedHeader}>
-            <View>
-              <Text style={styles.sectionTitle}>
-                고정지출
-              </Text>
-
-              <Text style={styles.sectionDescription}>
-                월세, 통신비처럼 꼭 나가는 비용만 등록하면 돼요. 등록하지 않아도 괜찮아요.
+              <Text
+                style={
+                  styles.unitText
+                }
+              >
+                원
               </Text>
             </View>
-          </View>
 
-          {/* 등록된 고정지출 */}
-          {fixedExpenses.length > 0 && (
-            <View style={styles.fixedList}>
-              {fixedExpenses.map((expense) => (
-                <View
-                  key={expense.id}
-                  style={styles.fixedItem}
-                >
-                  <View style={styles.fixedItemLeft}>
-                    <View style={styles.fixedIcon}>
-                      <Ionicons
-                        name="repeat-outline"
-                        size={18}
-                        color="#3563C9"
-                      />
-                    </View>
-
-                    <Text style={styles.fixedItemTitle}>
-                      {expense.title}
-                    </Text>
-                  </View>
-
-                  <View style={styles.fixedItemRight}>
-                    <Text style={styles.fixedItemAmount}>
-                      {formatMoney(expense.amount)}원
-                    </Text>
-
-                    <Pressable
-                      style={styles.deleteButton}
-                      onPress={() =>
-                        deleteFixedExpense(expense.id)
-                      }
-                      hitSlop={8}
-                    >
-                      <Ionicons
-                        name="close"
-                        size={19}
-                        color="#687386"
-                      />
-                    </Pressable>
-                  </View>
-                </View>
-              ))}
-            </View>
-          )}
-
-          {fixedExpenses.length === 0 && (
-            <View style={styles.emptyFixed}>
-              <Text style={styles.emptyFixedText}>
-                아직 등록한 고정지출이 없어요.
-              </Text>
-            </View>
-          )}
-
-          {/* 고정지출 추가 버튼 */}
-          {!showFixedForm && (
-            <Pressable
-              style={({ pressed }) => [
-                styles.openAddFixedButton,
-                pressed && styles.openAddFixedButtonPressed,
-              ]}
-              onPress={() => setShowFixedForm(true)}
+            <View
+              style={
+                styles.helperRow
+              }
             >
               <Ionicons
-                name="add"
-                size={18}
-                color="#3563C9"
+                name="information-circle-outline"
+                size={16}
+                color="#7292D8"
               />
 
-              <Text style={styles.openAddFixedButtonText}>
-                고정지출 추가
-              </Text>
-            </Pressable>
-          )}
-
-          {/* 고정지출 추가 폼 */}
-          {showFixedForm && (
-            <View style={styles.addBox}>
-              <View style={styles.addBoxHeader}>
-                <Text style={styles.addTitle}>
-                  고정지출 추가
-                </Text>
-
-                <Pressable
-                  style={styles.addBoxCloseButton}
-                  onPress={() => {
-                    setShowFixedForm(false);
-                    setFixedTitle('');
-                    setFixedAmount('');
-                  }}
-                  hitSlop={8}
-                >
-                  <Ionicons
-                    name="close"
-                    size={19}
-                    color="#687386"
-                  />
-                </Pressable>
-              </View>
-
-              <TextInput
-                style={styles.titleInput}
-                value={fixedTitle}
-                onChangeText={setFixedTitle}
-                placeholder="예: 월세, 통신비, 보험료"
-                placeholderTextColor="#687386"
-                returnKeyType="next"
-              />
-
-              <View style={styles.amountInputBox}>
-                <TextInput
-                  style={styles.amountInput}
-                  value={fixedAmount}
-                  onChangeText={(text) =>
-                    setFixedAmount(formatMoneyInput(text))
-                  }
-                  placeholder="0"
-                  placeholderTextColor="#687386"
-                  keyboardType="numeric"
-                  returnKeyType="done"
-                />
-
-                <Text style={styles.unitText}>
-                  원
-                </Text>
-              </View>
-
-              <Pressable
-                style={({ pressed }) => [
-                  styles.addButton,
-                  pressed && styles.addButtonPressed,
-                ]}
-                onPress={addFixedExpense}
+              <Text
+                style={
+                  styles.helperText
+                }
               >
-                <Ionicons
-                  name="add"
-                  size={20}
-                  color="#3563C9"
-                />
-
-                <Text style={styles.addButtonText}>
-                  추가하기
-                </Text>
-              </Pressable>
+                예: 이번 달에 40만 원만 쓰고 싶다면 400,000원
+              </Text>
             </View>
-          )}
-
-          {/* 총 고정지출 */}
-          <View style={styles.totalFixedRow}>
-            <Text style={styles.totalFixedLabel}>
-              총 고정지출
-            </Text>
-
-            <Text style={styles.totalFixedAmount}>
-              {formatMoney(totalFixedExpense)}원
-            </Text>
-          </View>
-        </View>
-      </View>
-
-      {/* 이번 달 생활비 */}
-      <View style={styles.livingBudgetCard}>
-        <View style={styles.livingBudgetHeader}>
-          <View>
-            <Text style={styles.livingBudgetLabel}>
-              이번 달 생활비
-            </Text>
-
-            <Text style={styles.livingBudgetDescription}>
-              사용 가능 금액에서 저축, 투자, 고정지출을 제외한 금액이에요.
-            </Text>
           </View>
 
-          <View style={styles.livingBudgetIcon}>
-            <Ionicons
-              name="wallet-outline"
-              size={20}
-              color="#3563C9"
-            />
-          </View>
         </View>
 
-        <Text
-          style={[
-            styles.livingBudgetAmount,
-            isBudgetOverAllocated &&
-              styles.livingBudgetAmountDanger,
+        <Pressable
+          disabled={!canSave}
+          style={({ pressed }) => [
+            styles.saveButton,
+
+            !canSave &&
+              styles.saveButtonDisabled,
+
+            pressed &&
+              canSave &&
+              styles.saveButtonPressed,
           ]}
+          onPress={saveSettings}
         >
-          {formatMoney(livingBudget)}원
-        </Text>
+          <Text
+            style={[
+              styles.saveButtonText,
 
-        <View style={styles.calculationBox}>
-          <CalculationRow
-            label="사용 가능 금액"
-            value={availableMonthlyAmount}
-            formatMoney={formatMoney}
-          />
-
-          <CalculationRow
-            label="저축 목표"
-            value={savingGoalAmount}
-            formatMoney={formatMoney}
-            minus
-          />
-
-          <CalculationRow
-            label="투자 금액"
-            value={investmentAmountValue}
-            formatMoney={formatMoney}
-            minus
-          />
-
-          <CalculationRow
-            label="고정지출"
-            value={totalFixedExpense}
-            formatMoney={formatMoney}
-            minus
-          />
-        </View>
-
-        {isBudgetOverAllocated && (
-          <View style={styles.warningBox}>
-            <Ionicons
-              name="alert-circle-outline"
-              size={17}
-              color="#C94A4A"
-            />
-
-            <Text style={styles.warningText}>
-              저축 목표, 투자 금액, 고정지출의 합이 사용 가능 금액보다 커요. 금액을 다시 확인해주세요.
-            </Text>
-          </View>
-        )}
-      </View>
-
-      <Pressable
-        style={({ pressed }) => [
-          styles.saveButton,
-          isBudgetOverAllocated &&
-            styles.saveButtonDisabled,
-          pressed &&
-            !isBudgetOverAllocated &&
-            styles.saveButtonPressed,
-        ]}
-        onPress={
-          isBudgetOverAllocated
-            ? undefined
-            : saveSettings
-        }
-        disabled={isBudgetOverAllocated}
-      >
-        <Text style={styles.saveButtonText}>
-          저장하기
-        </Text>
-      </Pressable>
+              !canSave &&
+                styles.saveButtonTextDisabled,
+            ]}
+          >
+            저장하기
+          </Text>
+        </Pressable>
       </ScrollView>
     </KeyboardAvoidingView>
-  );
-}
-
-type MoneyInputProps = {
-  label: string;
-  description?: string;
-  optional?: boolean;
-  value: string;
-  onChangeText: (text: string) => void;
-  placeholder: string;
-};
-
-function MoneyInput({
-  label,
-  description,
-  optional = false,
-  value,
-  onChangeText,
-  placeholder,
-}: MoneyInputProps) {
-  return (
-    <View style={styles.inputGroup}>
-      <View style={styles.labelRow}>
-        <Text style={styles.label}>
-          {label}
-        </Text>
-
-        {optional && (
-          <Text style={styles.optionalText}>
-            선택
-          </Text>
-        )}
-      </View>
-
-      {description && (
-        <Text style={styles.inputDescription}>
-          {description}
-        </Text>
-      )}
-
-      <View style={styles.moneyInputBox}>
-        <TextInput
-          style={styles.moneyInput}
-          value={value}
-          onChangeText={onChangeText}
-          placeholder={placeholder}
-          placeholderTextColor="#687386"
-          keyboardType="numeric"
-          returnKeyType="done"
-        />
-
-        <Text style={styles.unitText}>
-          원
-        </Text>
-      </View>
-    </View>
-  );
-}
-
-function CalculationRow({
-  label,
-  value,
-  formatMoney,
-  minus = false,
-}: {
-  label: string;
-  value: number;
-  formatMoney: (amount: number) => string;
-  minus?: boolean;
-}) {
-  return (
-    <View style={styles.calculationRow}>
-      <Text style={styles.calculationLabel}>
-        {minus ? `- ${label}` : label}
-      </Text>
-
-      <Text style={styles.calculationValue}>
-        {formatMoney(value)}원
-      </Text>
-    </View>
   );
 }
 
@@ -628,413 +313,80 @@ const styles = StyleSheet.create({
   container: {
     paddingHorizontal: 20,
     paddingTop: 24,
-    paddingBottom: 140,
+    paddingBottom: 64,
   },
 
   form: {
-    gap: 28,
+    marginTop: 4,
   },
 
-  inputGroup: {
-    gap: 10,
-  },
-
-  labelRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  inputSection: {
+    gap: 12,
   },
 
   label: {
-    fontSize: 17,
-    lineHeight: 24,
+    fontSize: 18,
+    lineHeight: 25,
     fontFamily: 'Pretendard-Bold',
     color: '#172033',
   },
 
-  optionalText: {
+
+  moneyInputBox: {
+    minHeight: 68,
+    marginTop: 2,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F1F5FC',
+    borderRadius: 18,
+    paddingHorizontal: 16,
+  },
+
+  moneyInput: {
+    flex: 1,
+    paddingVertical: 18,
+    fontSize: 24,
+    lineHeight: 31,
+    fontFamily: 'Pretendard-ExtraBold',
+    color: '#3563C9',
+  },
+
+  unitText: {
     marginLeft: 8,
-    fontSize: 13,
-    lineHeight: 18,
-    fontFamily: 'Pretendard-SemiBold',
-    color: '#687386',
+    fontSize: 16,
+    lineHeight: 22,
+    fontFamily: 'Pretendard-Bold',
+    color: '#566176',
   },
 
-  inputDescription: {
-    fontSize: 14,
-    lineHeight: 21,
-    fontFamily: 'Pretendard-Regular',
-    color: '#687386',
-  },
-
-  helperBox: {
-    marginTop: -14,
+  helperRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
+    gap: 7,
     paddingHorizontal: 2,
+    marginTop: 2,
   },
 
   helperText: {
     flex: 1,
-    marginLeft: 7,
     fontSize: 13,
     lineHeight: 19,
     fontFamily: 'Pretendard-Regular',
     color: '#687386',
   },
 
-  moneyInputBox: {
-    minHeight: 62,
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#F5F7FA',
-    borderRadius: 16,
-    paddingHorizontal: 16,
-  },
 
-  moneyInput: {
-    flex: 1,
-    paddingVertical: 17,
-    fontSize: 18,
-    lineHeight: 24,
-    fontFamily: 'Pretendard-SemiBold',
-    color: '#172033',
-  },
 
-  unitText: {
-    marginLeft: 8,
-    fontSize: 16,
-    fontFamily: 'Pretendard-SemiBold',
-    color: '#566176',
-  },
 
-  fixedSection: {
-    marginTop: 4,
-  },
 
-  fixedHeader: {
-    marginBottom: 14,
-  },
 
-  sectionTitleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
 
-  sectionTitle: {
-    fontSize: 19,
-    lineHeight: 26,
-    fontFamily: 'Pretendard-ExtraBold',
-    color: '#172033',
-  },
 
-  sectionDescription: {
-    marginTop: 6,
-    fontSize: 14,
-    lineHeight: 21,
-    fontFamily: 'Pretendard-Regular',
-    color: '#687386',
-  },
 
-  fixedList: {
-    borderRadius: 18,
-    backgroundColor: '#F8FAFC',
-    paddingHorizontal: 16,
-  },
 
-  fixedItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    minHeight: 70,
-    borderBottomWidth: 1,
-    borderBottomColor: '#EEF1F5',
-  },
-
-  fixedItemLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-  },
-
-  fixedIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 12,
-    backgroundColor: '#EEF3FB',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 11,
-  },
-
-  fixedItemTitle: {
-    flex: 1,
-    fontSize: 16,
-    lineHeight: 22,
-    fontFamily: 'Pretendard-SemiBold',
-    color: '#172033',
-  },
-
-  fixedItemRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginLeft: 10,
-  },
-
-  fixedItemAmount: {
-    fontSize: 16,
-    lineHeight: 22,
-    fontFamily: 'Pretendard-Bold',
-    color: '#172033',
-  },
-
-  deleteButton: {
-    width: 32,
-    height: 32,
-    marginLeft: 4,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-
-  emptyFixed: {
-    alignItems: 'center',
-    paddingVertical: 24,
-    backgroundColor: '#F8FAFC',
-    borderRadius: 18,
-  },
-
-  emptyFixedText: {
-    fontSize: 14,
-    lineHeight: 20,
-    fontFamily: 'Pretendard-Regular',
-    color: '#687386',
-  },
-
-  openAddFixedButton: {
-    marginTop: 12,
-    minHeight: 52,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 5,
-    borderRadius: 14,
-    backgroundColor: '#FBFCFE',
-    borderWidth: 1,
-    borderColor: '#DCE5F5',
-  },
-
-  openAddFixedButtonPressed: {
-    backgroundColor: '#F1F5FC',
-  },
-
-  openAddFixedButtonText: {
-    fontSize: 15,
-    lineHeight: 21,
-    fontFamily: 'Pretendard-Bold',
-    color: '#3563C9',
-  },
-
-  addBox: {
-    marginTop: 12,
-    backgroundColor: '#F1F5FC',
-    borderRadius: 18,
-    padding: 16,
-    gap: 10,
-  },
-
-  addBoxHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-
-  addBoxCloseButton: {
-    width: 30,
-    height: 30,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-
-  addTitle: {
-    fontSize: 16,
-    lineHeight: 22,
-    fontFamily: 'Pretendard-Bold',
-    color: '#172033',
-    marginBottom: 2,
-  },
-
-  titleInput: {
-    minHeight: 56,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 14,
-    paddingHorizontal: 15,
-    paddingVertical: 15,
-    fontSize: 16,
-    lineHeight: 22,
-    color: '#172033',
-  },
-
-  amountInputBox: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 14,
-    paddingHorizontal: 15,
-  },
-
-  amountInput: {
-    flex: 1,
-    paddingVertical: 15,
-    fontSize: 17,
-    lineHeight: 23,
-    fontFamily: 'Pretendard-SemiBold',
-    color: '#172033',
-  },
-
-  addButton: {
-    marginTop: 2,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 5,
-    borderRadius: 14,
-    backgroundColor: '#FFFFFF',
-    paddingVertical: 13,
-  },
-
-  addButtonPressed: {
-    backgroundColor: '#E7EEFC',
-  },
-
-  addButtonText: {
-    fontSize: 15,
-    lineHeight: 21,
-    fontFamily: 'Pretendard-Bold',
-    color: '#3563C9',
-  },
-
-  totalFixedRow: {
-    marginTop: 13,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 4,
-    paddingVertical: 8,
-  },
-
-  totalFixedLabel: {
-    fontSize: 14,
-    lineHeight: 20,
-    fontFamily: 'Pretendard-SemiBold',
-    color: '#566176',
-  },
-
-  totalFixedAmount: {
-    fontSize: 17,
-    lineHeight: 23,
-    fontFamily: 'Pretendard-ExtraBold',
-    color: '#3563C9',
-  },
-
-  livingBudgetCard: {
-    marginTop: 28,
-    backgroundColor: '#F1F5FC',
-    borderRadius: 22,
-    padding: 20,
-  },
-
-  livingBudgetHeader: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
-  },
-
-  livingBudgetLabel: {
-    fontSize: 18,
-    lineHeight: 24,
-    fontFamily: 'Pretendard-ExtraBold',
-    color: '#172033',
-  },
-
-  livingBudgetDescription: {
-    maxWidth: 300,
-    marginTop: 6,
-    fontSize: 14,
-    lineHeight: 21,
-    fontFamily: 'Pretendard-Regular',
-    color: '#687386',
-  },
-
-  livingBudgetIcon: {
-    width: 38,
-    height: 38,
-    marginLeft: 12,
-    borderRadius: 12,
-    backgroundColor: '#EAF0FB',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-
-  livingBudgetAmount: {
-    marginTop: 17,
-    fontSize: 32,
-    lineHeight: 40,
-    fontFamily: 'Pretendard-ExtraBold',
-    color: '#3563C9',
-  },
-
-  livingBudgetAmountDanger: {
-    color: '#C94A4A',
-  },
-
-  calculationBox: {
-    marginTop: 16,
-    paddingTop: 14,
-    borderTopWidth: 1,
-    borderTopColor: '#E9EDF3',
-    gap: 9,
-  },
-
-  calculationRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-
-  calculationLabel: {
-    fontSize: 14,
-    lineHeight: 20,
-    fontFamily: 'Pretendard-Regular',
-    color: '#687386',
-  },
-
-  calculationValue: {
-    fontSize: 14,
-    lineHeight: 20,
-    fontFamily: 'Pretendard-Bold',
-    color: '#566176',
-  },
-
-  warningBox: {
-    marginTop: 14,
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    backgroundColor: '#FFF3F3',
-    borderRadius: 13,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-  },
-
-  warningText: {
-    flex: 1,
-    marginLeft: 8,
-    fontSize: 14,
-    lineHeight: 21,
-    fontFamily: 'Pretendard-Medium',
-    color: '#A33E3E',
-  },
 
   saveButton: {
-    marginTop: 30,
+    marginTop: 28,
     minHeight: 58,
     backgroundColor: '#3563C9',
     borderRadius: 16,
@@ -1043,12 +395,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
 
-  saveButtonPressed: {
-    backgroundColor: '#294FA5',
+  saveButtonDisabled: {
+    backgroundColor: '#E3E8F0',
   },
 
-  saveButtonDisabled: {
-    backgroundColor: '#B8C5DE',
+  saveButtonPressed: {
+    backgroundColor: '#294FA5',
   },
 
   saveButtonText: {
@@ -1056,5 +408,9 @@ const styles = StyleSheet.create({
     fontSize: 17,
     lineHeight: 23,
     fontFamily: 'Pretendard-Bold',
+  },
+
+  saveButtonTextDisabled: {
+    color: '#98A2B3',
   },
 });
