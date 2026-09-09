@@ -227,7 +227,7 @@ export default function SettingsScreen() {
           onChangeText={(text) =>
             setMonthlyBudget(formatMoneyInput(text))
           }
-          placeholder="1,920,000"
+          placeholder="0"
         />
 
         <View style={styles.helperBox}>

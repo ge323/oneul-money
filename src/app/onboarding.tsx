@@ -110,8 +110,41 @@ export default function OnboardingScreen() {
     setCurrentIndex,
   ] = useState(0);
 
-  const isCompactHeight =
-    screenHeight < 760;
+  const contentOffsetY =
+    Math.min(
+      34,
+      Math.max(
+        18,
+        screenHeight * 0.03
+      )
+    );
+
+  const visualTopGap =
+    Math.min(
+      22,
+      Math.max(
+        14,
+        screenHeight * 0.018
+      )
+    );
+
+  const bottomPadding =
+    Math.min(
+      42,
+      Math.max(
+        28,
+        screenHeight * 0.035
+      )
+    );
+
+  const dotsBottomGap =
+    Math.min(
+      14,
+      Math.max(
+        10,
+        screenHeight * 0.012
+      )
+    );
 
   const finishOnboarding =
     async () => {
@@ -207,9 +240,13 @@ export default function OnboardingScreen() {
     ) {
       return (
         <View
-          style={
-            styles.simulatorVisualArea
-          }
+          style={[
+            styles.simulatorVisualArea,
+            {
+              marginTop:
+                visualTopGap,
+            },
+          ]}
         >
           <View
             style={
@@ -408,9 +445,13 @@ export default function OnboardingScreen() {
 
     return (
       <View
-        style={
-          styles.imageArea
-        }
+        style={[
+          styles.imageArea,
+          {
+            marginTop:
+              visualTopGap,
+          },
+        ]}
       >
         {item.image && (
           <Image
@@ -546,6 +587,12 @@ export default function OnboardingScreen() {
         ref={
           flatListRef
         }
+        style={
+          styles.pager
+        }
+        contentContainerStyle={
+          styles.pagerContent
+        }
         data={
           pages
         }
@@ -585,10 +632,6 @@ export default function OnboardingScreen() {
           <Pressable
             style={[
               styles.page,
-
-              isCompactHeight &&
-                styles.pageCompact,
-
               {
                 width:
                   screenWidth,
@@ -603,15 +646,25 @@ export default function OnboardingScreen() {
               }
             }}
           >
+            <View
+              style={[
+                styles.contentGroup,
+                {
+                  transform: [
+                    {
+                      translateY:
+                        contentOffsetY,
+                    },
+                  ],
+                },
+              ]}
+            >
             {/* 제목 */}
 
             <View
-              style={[
-                styles.textArea,
-
-                isCompactHeight &&
-                  styles.textAreaCompact,
-              ]}
+              style={
+                styles.textArea
+              }
             >
               <Text
                 style={
@@ -649,6 +702,7 @@ export default function OnboardingScreen() {
             {renderVisual(
               item
             )}
+            </View>
           </Pressable>
         )}
       />
@@ -656,16 +710,24 @@ export default function OnboardingScreen() {
       {/* 하단 */}
 
       <View
-        style={
-          styles.bottomArea
-        }
+        style={[
+          styles.bottomArea,
+          {
+            paddingBottom:
+              bottomPadding,
+          },
+        ]}
       >
         {/* 페이지 점 */}
 
         <View
-          style={
-            styles.dots
-          }
+          style={[
+            styles.dots,
+            {
+              marginBottom:
+                dotsBottomGap,
+            },
+          ]}
         >
           {pages.map(
             (
@@ -806,25 +868,28 @@ const styles =
        페이지
     ======================== */
 
-    page: {
+    pager: {
       flex: 1,
-
-      paddingHorizontal: 24,
     },
 
-    pageCompact: {
-      paddingHorizontal: 20,
+    pagerContent: {
+      flexGrow: 1,
+    },
+
+    page: {
+      flex: 1,
+      height: '100%',
+      paddingHorizontal: 24,
+      justifyContent: 'center',
+    },
+
+    contentGroup: {
+      width: '100%',
+      alignItems: 'center',
     },
 
     textArea: {
-      alignItems:
-        'center',
-
-      marginTop: 16,
-    },
-
-    textAreaCompact: {
-      marginTop: 8,
+      alignItems: 'center',
     },
 
     title: {
@@ -871,16 +936,8 @@ const styles =
     ======================== */
 
     imageArea: {
-      flex: 1,
-
-      alignItems:
-        'center',
-
-      justifyContent:
-        'center',
-
-      marginTop: 4,
-
+      alignItems: 'center',
+      justifyContent: 'center',
       position: 'relative',
     },
 
@@ -913,15 +970,9 @@ const styles =
     ======================== */
 
     simulatorVisualArea: {
-      flex: 1,
-
       alignItems: 'center',
-
-      justifyContent:
-        'center',
-
+      justifyContent: 'center',
       position: 'relative',
-
       paddingTop: 8,
     },
 
@@ -1181,9 +1232,9 @@ const styles =
     simulatorMascot: {
       position: 'absolute',
 
-      right: -10,
+      right: -35,
 
-      bottom: 45,
+      bottom: 55,
 
       zIndex: 3,
     },
@@ -1194,22 +1245,13 @@ const styles =
 
     bottomArea: {
       paddingHorizontal: 22,
-
-      paddingBottom: 18,
     },
 
     dots: {
       flexDirection: 'row',
-
-      justifyContent:
-        'center',
-
-      alignItems:
-        'center',
-
+      justifyContent: 'center',
+      alignItems: 'center',
       gap: 7,
-
-      marginBottom: 18,
     },
 
     dot: {
