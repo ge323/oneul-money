@@ -15,13 +15,15 @@ export default function SettingsTabScreen() {
       </Text>
 
       <Text style={styles.description}>
-        예산과 월급일을 관리해보세요.
+        이번 달 생활비를 관리해보세요.
       </Text>
 
       <View style={styles.menu}>
         <Pressable
           style={styles.menuItem}
-          onPress={() => router.push('/settings')}
+          onPress={() =>
+            router.push('/settings')
+          }
         >
           <View style={styles.iconBox}>
             <Ionicons
@@ -37,36 +39,7 @@ export default function SettingsTabScreen() {
             </Text>
 
             <Text style={styles.menuDescription}>
-              월 예산, 고정비, 저축 목표를 설정해요.
-            </Text>
-          </View>
-
-          <Ionicons
-            name="chevron-forward"
-            size={20}
-            color="#98A2B3"
-          />
-        </Pressable>
-
-        <Pressable
-          style={styles.menuItem}
-          onPress={() => router.push('/payday')}
-        >
-          <View style={styles.iconBox}>
-            <Ionicons
-              name="calendar-outline"
-              size={22}
-              color="#3563C9"
-            />
-          </View>
-
-          <View style={styles.menuTextArea}>
-            <Text style={styles.menuTitle}>
-              월급일 설정
-            </Text>
-
-            <Text style={styles.menuDescription}>
-              월급일 또는 말일 지급을 설정해요.
+              이번 달에 사용할 생활비 한도를 설정해요.
             </Text>
           </View>
 
@@ -103,7 +76,6 @@ const styles = StyleSheet.create({
 
   menu: {
     marginTop: 28,
-    gap: 12,
   },
 
   menuItem: {

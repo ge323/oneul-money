@@ -27,6 +27,10 @@ import {
   LocaleConfig,
 } from 'react-native-calendars';
 
+import {
+  ensureCurrentMonthBudget,
+} from '../../utils/monthly-budgets';
+
 const PLANNED_EXPENSES_KEY = 'planned-expenses';
 const EXPENSES_KEY = 'expenses';
 const BUDGET_KEY = 'budget-settings';
@@ -113,11 +117,6 @@ type Expense = {
 
 type BudgetSettings = {
   monthlyBudget?: number;
-  fixedExpense?: number;
-  savingGoal?: number;
-  spentAmount?: number;
-  payday?: number;
-  paydayType?: 'date' | 'lastDay';
 };
 
 export default function PlanScreen() {
@@ -125,6 +124,12 @@ export default function PlanScreen() {
     plannedExpenses,
     setPlannedExpenses,
   ] = useState<PlannedExpense[]>([]);
+
+  const [monthlyLivingBudget, setMonthlyLivingBudget] =
+    useState(0);
+
+  const [monthlySpent, setMonthlySpent] =
+    useState(0);
 
   const [
     showPlanModal,
@@ -202,6 +207,7 @@ export default function PlanScreen() {
   useFocusEffect(
     useCallback(() => {
       loadPlannedExpenses();
+      loadBudgetSettings();
 
       setOpenedMenuId(
         null
@@ -227,6 +233,88 @@ export default function PlanScreen() {
           '예정 지출 불러오기 실패:',
           error
         );
+      }
+    };
+
+  const loadBudgetSettings =
+    async () => {
+      try {
+        const [savedBudget, savedExpenses] =
+          await Promise.all([
+            AsyncStorage.getItem(
+              BUDGET_KEY
+            ),
+            AsyncStorage.getItem(
+              EXPENSES_KEY
+            ),
+          ]);
+
+        let legacyBudget = 0;
+
+        if (savedBudget) {
+          const budget:
+            BudgetSettings =
+            JSON.parse(savedBudget);
+
+          legacyBudget =
+            Number(
+              budget.monthlyBudget
+            ) || 0;
+        }
+
+        const currentBudget =
+          await ensureCurrentMonthBudget(
+            legacyBudget
+          );
+
+        setMonthlyLivingBudget(
+          currentBudget
+        );
+
+        const expenses:
+          Expense[] = savedExpenses
+          ? JSON.parse(
+              savedExpenses
+            )
+          : [];
+
+        const now = new Date();
+
+        const spentThisMonth =
+          expenses.reduce(
+            (sum, expense) => {
+              const expenseDate =
+                new Date(
+                  expense.createdAt
+                );
+
+              const isThisMonth =
+                expenseDate.getFullYear() ===
+                  now.getFullYear() &&
+                expenseDate.getMonth() ===
+                  now.getMonth();
+
+              return isThisMonth
+                ? sum +
+                    (Number(
+                      expense.amount
+                    ) || 0)
+                : sum;
+            },
+            0
+          );
+
+        setMonthlySpent(
+          spentThisMonth
+        );
+      } catch (error) {
+        console.error(
+          '생활비 설정 불러오기 실패:',
+          error
+        );
+
+        setMonthlyLivingBudget(0);
+        setMonthlySpent(0);
       }
     };
 
@@ -999,36 +1087,6 @@ export default function PlanScreen() {
           )
         );
 
-        const savedBudget =
-          await AsyncStorage.getItem(
-            BUDGET_KEY
-          );
-
-        if (savedBudget) {
-          const budget:
-            BudgetSettings =
-            JSON.parse(
-              savedBudget
-            );
-
-          const updatedBudget = {
-            ...budget,
-
-            spentAmount:
-              (Number(
-                budget.spentAmount
-              ) || 0) +
-              numericActualAmount,
-          };
-
-          await AsyncStorage.setItem(
-            BUDGET_KEY,
-            JSON.stringify(
-              updatedBudget
-            )
-          );
-        }
-
         const updatedPlanned =
           plannedExpenses.filter(
             (item) =>
@@ -1099,12 +1157,58 @@ export default function PlanScreen() {
       plannedExpenses,
     ]);
 
+  const currentMonthPlannedExpenses =
+    useMemo(() => {
+      const now = new Date();
+
+      return upcomingExpenses.filter(
+        (item) => {
+          const expenseDate =
+            new Date(
+              `${item.date}T00:00:00`
+            );
+
+          return (
+            expenseDate.getFullYear() ===
+              now.getFullYear() &&
+            expenseDate.getMonth() ===
+              now.getMonth()
+          );
+        }
+      );
+    }, [upcomingExpenses]);
+
   const totalPlanned =
-    upcomingExpenses.reduce(
+    currentMonthPlannedExpenses.reduce(
       (sum, item) =>
         sum + item.amount,
       0
     );
+
+  const remainingLivingBudget =
+    Math.max(
+      monthlyLivingBudget -
+        monthlySpent,
+      0
+    );
+
+  const remainingAfterPlanned =
+    Math.max(
+      remainingLivingBudget -
+        totalPlanned,
+      0
+    );
+
+  const plannedUsageRate =
+    remainingLivingBudget > 0
+      ? Math.min(
+          totalPlanned /
+            remainingLivingBudget,
+          1
+        )
+      : totalPlanned > 0
+        ? 1
+        : 0;
 
   const actualNumericAmount =
     parseMoney(
@@ -1146,7 +1250,7 @@ export default function PlanScreen() {
             styles.description
           }
         >
-          앞으로 쓸 돈을 미리 계획하고 생활비를 관리해보세요.
+          앞으로 쓸 돈을 미리 등록하고 이번 달 생활비를 관리해보세요.
         </Text>
 
         <View
@@ -1164,7 +1268,7 @@ export default function PlanScreen() {
                 styles.summaryLabel
               }
             >
-              예정된 지출
+              이번 달 예정 지출
             </Text>
 
             <View
@@ -1177,7 +1281,7 @@ export default function PlanScreen() {
                   styles.summaryCountText
                 }
               >
-                {upcomingExpenses.length}건
+                {currentMonthPlannedExpenses.length}건
               </Text>
             </View>
           </View>
@@ -1198,8 +1302,105 @@ export default function PlanScreen() {
               styles.summaryDescription
             }
           >
-            홈의 생활비에 미리 반영했어요.
+            예정 지출을 생활비에 미리 반영했어요.
           </Text>
+
+          {totalPlanned > 0 && (
+            <>
+          <View
+            style={
+              styles.budgetDivider
+            }
+          />
+
+          <View
+            style={
+              styles.budgetRow
+            }
+          >
+            <View>
+              <Text
+                style={
+                  styles.budgetCaption
+                }
+              >
+                현재 남은 생활비
+              </Text>
+
+              <Text
+                style={
+                  styles.budgetValue
+                }
+              >
+                {formatMoney(
+                  remainingLivingBudget
+                )}
+                원
+              </Text>
+            </View>
+
+            <Ionicons
+              name="arrow-forward"
+              size={18}
+              color="#8A96A8"
+            />
+
+            <View
+              style={
+                styles.budgetRight
+              }
+            >
+              <Text
+                style={
+                  styles.budgetCaption
+                }
+              >
+                예정 지출 반영 후
+              </Text>
+
+              <Text
+                style={
+                  styles.budgetAfterValue
+                }
+              >
+                {formatMoney(
+                  remainingAfterPlanned
+                )}
+                원
+              </Text>
+            </View>
+          </View>
+
+          {totalPlanned > 0 && (
+            <View
+              style={
+                styles.progressTrack
+              }
+            >
+              <View
+                style={[
+                  styles.progressFill,
+                  {
+                    width: `${plannedUsageRate * 100}%`,
+                  },
+                ]}
+              />
+            </View>
+          )}
+
+          {totalPlanned >
+            remainingLivingBudget &&
+            totalPlanned > 0 && (
+              <Text
+                style={
+                  styles.budgetWarning
+                }
+              >
+                예정 지출이 현재 남은 생활비보다 커요.
+              </Text>
+            )}
+            </>
+          )}
         </View>
 
         <Pressable
@@ -2383,6 +2584,69 @@ const styles =
       lineHeight: 19,
       fontFamily: 'Pretendard-Regular',
       color: '#687386',
+    },
+
+    budgetDivider: {
+      height: 1,
+      backgroundColor: '#DCE5F5',
+      marginTop: 16,
+      marginBottom: 14,
+    },
+
+    budgetRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      gap: 12,
+    },
+
+    budgetCaption: {
+      fontSize: 12,
+      lineHeight: 17,
+      fontFamily: 'Pretendard-Medium',
+      color: '#687386',
+    },
+
+    budgetValue: {
+      marginTop: 3,
+      fontSize: 16,
+      lineHeight: 22,
+      fontFamily: 'Pretendard-Bold',
+      color: '#172033',
+    },
+
+    budgetRight: {
+      alignItems: 'flex-end',
+    },
+
+    budgetAfterValue: {
+      marginTop: 3,
+      fontSize: 17,
+      lineHeight: 23,
+      fontFamily: 'Pretendard-ExtraBold',
+      color: '#3563C9',
+    },
+
+    progressTrack: {
+      height: 6,
+      marginTop: 15,
+      borderRadius: 999,
+      backgroundColor: '#DCE5F5',
+      overflow: 'hidden',
+    },
+
+    progressFill: {
+      height: '100%',
+      borderRadius: 999,
+      backgroundColor: '#3563C9',
+    },
+
+    budgetWarning: {
+      marginTop: 9,
+      fontSize: 12,
+      lineHeight: 18,
+      fontFamily: 'Pretendard-SemiBold',
+      color: '#C56A43',
     },
 
     addButton: {

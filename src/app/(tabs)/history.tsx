@@ -4,6 +4,7 @@ import { router, useFocusEffect } from 'expo-router';
 import type { ComponentProps } from 'react';
 import {
   useCallback,
+  useEffect,
   useMemo,
   useRef,
   useState,
@@ -19,6 +20,11 @@ import {
   TextInput,
   View,
 } from 'react-native';
+
+import {
+  ensureCurrentMonthBudget,
+  getBudgetForMonth,
+} from '../../utils/monthly-budgets';
 
 const EXPENSES_KEY = 'expenses';
 const BUDGET_KEY = 'budget-settings';
@@ -36,12 +42,7 @@ type Expense = {
 };
 
 type BudgetSettings = {
-  monthlyBudget: number;
-  fixedExpense: number;
-  savingGoal: number;
-  spentAmount: number;
-  payday?: number;
-  paydayType?: 'date' | 'lastDay';
+  monthlyBudget?: number;
 };
 
 type CustomCategory = {
@@ -150,6 +151,11 @@ const getLocalDateKey = (value: Date | string) => {
 export default function HistoryScreen() {
   const [expenses, setExpenses] =
     useState<Expense[]>([]);
+
+  const [
+    monthlyLivingBudget,
+    setMonthlyLivingBudget,
+  ] = useState(0);
 
   const [
     customCategories,
@@ -360,6 +366,79 @@ export default function HistoryScreen() {
 
   const selectedMonthIndex =
     selectedMonth.getMonth();
+
+  useEffect(() => {
+    const loadSelectedMonthBudget =
+      async () => {
+        try {
+          const now = new Date();
+
+          const isCurrent =
+            now.getFullYear() ===
+              selectedYear &&
+            now.getMonth() ===
+              selectedMonthIndex;
+
+          if (isCurrent) {
+            const savedBudget =
+              await AsyncStorage.getItem(
+                BUDGET_KEY
+              );
+
+            let legacyBudget = 0;
+
+            if (savedBudget) {
+              const budget:
+                BudgetSettings =
+                JSON.parse(
+                  savedBudget
+                );
+
+              legacyBudget =
+                Number(
+                  budget.monthlyBudget
+                ) || 0;
+            }
+
+            const currentBudget =
+              await ensureCurrentMonthBudget(
+                legacyBudget
+              );
+
+            setMonthlyLivingBudget(
+              currentBudget
+            );
+
+            return;
+          }
+
+          const budget =
+            await getBudgetForMonth(
+              new Date(
+                selectedYear,
+                selectedMonthIndex,
+                1
+              )
+            );
+
+          setMonthlyLivingBudget(
+            budget
+          );
+        } catch (error) {
+          console.error(
+            '선택한 달의 생활비 불러오기 실패:',
+            error
+          );
+
+          setMonthlyLivingBudget(0);
+        }
+      };
+
+    loadSelectedMonthBudget();
+  }, [
+    selectedYear,
+    selectedMonthIndex,
+  ]);
 
   /*
    * =========================
@@ -810,40 +889,6 @@ export default function HistoryScreen() {
           )
         );
 
-        const savedBudget =
-          await AsyncStorage.getItem(
-            BUDGET_KEY
-          );
-
-        if (savedBudget) {
-          const budget:
-            BudgetSettings =
-            JSON.parse(
-              savedBudget
-            );
-
-          const updatedBudget = {
-            ...budget,
-
-            spentAmount:
-              Math.max(
-                0,
-
-                (Number(
-                  budget.spentAmount
-                ) || 0) -
-                expense.amount
-              ),
-          };
-
-          await AsyncStorage.setItem(
-            BUDGET_KEY,
-            JSON.stringify(
-              updatedBudget
-            )
-          );
-        }
-
         setExpenses(
           updatedExpenses
         );
@@ -935,6 +980,31 @@ export default function HistoryScreen() {
     selectedYear &&
     now.getMonth() ===
     selectedMonthIndex;
+
+  const budgetUsageRate =
+    monthlyLivingBudget > 0
+      ? totalExpense /
+        monthlyLivingBudget
+      : 0;
+
+  const budgetUsagePercent =
+    Math.round(
+      budgetUsageRate * 100
+    );
+
+  const budgetProgressWidth =
+    Math.min(
+      Math.max(
+        budgetUsageRate * 100,
+        0
+      ),
+      100
+    );
+
+  const isBudgetOver =
+    monthlyLivingBudget > 0 &&
+    totalExpense >
+      monthlyLivingBudget;
 
   return (
     <ScrollView
@@ -1109,6 +1179,60 @@ export default function HistoryScreen() {
           원
         </Text>
 
+        {monthlyLivingBudget >
+            0 && (
+            <>
+              <View
+                style={
+                  styles.budgetUsageHeader
+                }
+              >
+                <Text
+                  style={
+                    styles.budgetUsageText
+                  }
+                >
+                  생활비{' '}
+                  {formatMoney(
+                    monthlyLivingBudget
+                  )}
+                  원 중{' '}
+                  {budgetUsagePercent}% 사용
+                </Text>
+
+                {isBudgetOver && (
+                  <Text
+                    style={
+                      styles.budgetOverText
+                    }
+                  >
+                    한도 초과
+                  </Text>
+                )}
+              </View>
+
+              {totalExpense > 0 && (
+                <View
+                  style={
+                    styles.budgetProgressTrack
+                  }
+                >
+                  <View
+                    style={[
+                      styles.budgetProgressFill,
+
+                      isBudgetOver &&
+                        styles.budgetProgressFillOver,
+
+                      {
+                        width: `${budgetProgressWidth}%`,
+                      },
+                    ]}
+                  />
+                </View>
+              )}
+            </>
+          )}
       </View>
 
       {/* =====================
@@ -1999,6 +2123,47 @@ const styles =
       lineHeight: 40,
       fontFamily: 'Pretendard-ExtraBold',
       color: '#3563C9',
+    },
+
+    budgetUsageHeader: {
+      marginTop: 12,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      gap: 10,
+    },
+
+    budgetUsageText: {
+      flex: 1,
+      fontSize: 13,
+      lineHeight: 19,
+      fontFamily: 'Pretendard-Medium',
+      color: '#687386',
+    },
+
+    budgetOverText: {
+      fontSize: 12,
+      lineHeight: 17,
+      fontFamily: 'Pretendard-Bold',
+      color: '#C65353',
+    },
+
+    budgetProgressTrack: {
+      height: 6,
+      marginTop: 8,
+      borderRadius: 999,
+      backgroundColor: '#DCE5F5',
+      overflow: 'hidden',
+    },
+
+    budgetProgressFill: {
+      height: '100%',
+      borderRadius: 999,
+      backgroundColor: '#3563C9',
+    },
+
+    budgetProgressFillOver: {
+      backgroundColor: '#D86666',
     },
 
     // ========================

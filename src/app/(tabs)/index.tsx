@@ -1,5 +1,8 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import {
+  ensureCurrentMonthBudget,
+} from '../../utils/monthly-budgets';
 import { router, useFocusEffect } from 'expo-router';
 import {
   useCallback,
@@ -26,6 +29,23 @@ const BUDGET_KEY = 'budget-settings';
 const EXPENSES_KEY = 'expenses';
 const PLANNED_EXPENSES_KEY = 'planned-expenses';
 
+/*
+ * 실제 배포/평소 개발:
+ *   null
+ *
+ * 새 달 초기화 테스트 예시:
+ *   new Date(2026, 9, 1)  // 2026년 10월 1일
+ *
+ * JavaScript의 월은 0부터 시작합니다.
+ */
+const DEV_TEST_DATE: Date | null = null;
+
+const getNow = () => {
+  return DEV_TEST_DATE
+    ? new Date(DEV_TEST_DATE)
+    : new Date();
+};
+
 type Expense = {
   id: string;
   title: string;
@@ -42,20 +62,6 @@ type PlannedExpense = {
   createdAt: string;
 };
 
-type BudgetSettings = {
-  monthlyBudget: number;
-  payday?: number;
-  paydayType?: 'date' | 'lastDay';
-  budgetMode?: 'simple';
-};
-
-const DEFAULT_SETTINGS: BudgetSettings = {
-  monthlyBudget: 0,
-  payday: 25,
-  paydayType: 'date',
-  budgetMode: 'simple',
-};
-
 export default function HomeScreen() {
   const {
     width: screenWidth,
@@ -70,10 +76,10 @@ export default function HomeScreen() {
       ? 16
       : 20;
 
-  const [settings, setSettings] =
-    useState<BudgetSettings>(
-      DEFAULT_SETTINGS
-    );
+  const [
+    currentMonthBudget,
+    setCurrentMonthBudget,
+  ] = useState(0);
 
   const [
     showSimulator,
@@ -120,6 +126,31 @@ export default function HomeScreen() {
     setHomeDataLoaded,
   ] = useState(false);
 
+  const [
+    showMonthlyNotice,
+    setShowMonthlyNotice,
+  ] = useState(false);
+
+  const [
+    monthlyNoticeText,
+    setMonthlyNoticeText,
+  ] = useState('');
+
+  const monthlyNoticeOpacity =
+    useRef(
+      new Animated.Value(0)
+    ).current;
+
+  const monthlyNoticeTranslateY =
+    useRef(
+      new Animated.Value(22)
+    ).current;
+
+  const monthlyNoticeTimer =
+    useRef<ReturnType<
+      typeof setTimeout
+    > | null>(null);
+
   const dailyBudgetAnim = useRef(
     new Animated.Value(0)
   ).current;
@@ -147,6 +178,151 @@ export default function HomeScreen() {
       new Animated.Value(0)
     ).current;
 
+  const getCurrentMonthNoticeKey =
+    () => {
+      const today = getNow();
+
+      const year =
+        today.getFullYear();
+
+      const month =
+        String(
+          today.getMonth() + 1
+        ).padStart(2, '0');
+
+      return `monthly-budget-notice-${year}-${month}`;
+    };
+
+  const getCurrentMonthLabel =
+    () => {
+      return `${
+        getNow().getMonth() + 1
+      }월`;
+    };
+
+  const hideMonthlyNotice =
+    () => {
+      if (
+        monthlyNoticeTimer.current
+      ) {
+        clearTimeout(
+          monthlyNoticeTimer.current
+        );
+
+        monthlyNoticeTimer.current =
+          null;
+      }
+
+      Animated.parallel([
+        Animated.timing(
+          monthlyNoticeOpacity,
+          {
+            toValue: 0,
+            duration: 220,
+            useNativeDriver: true,
+          }
+        ),
+
+        Animated.timing(
+          monthlyNoticeTranslateY,
+          {
+            toValue: 22,
+            duration: 220,
+            useNativeDriver: true,
+          }
+        ),
+      ]).start(() => {
+        setShowMonthlyNotice(
+          false
+        );
+      });
+    };
+
+  const showMonthlyBudgetNotice =
+    async (
+      budget: number
+    ) => {
+      if (budget <= 0) {
+        return;
+      }
+
+      try {
+        const noticeKey =
+          getCurrentMonthNoticeKey();
+
+        const alreadyShown =
+          await AsyncStorage.getItem(
+            noticeKey
+          );
+
+        if (alreadyShown) {
+          return;
+        }
+
+        setMonthlyNoticeText(
+          `지난달과 같은 ${budget.toLocaleString(
+            'ko-KR'
+          )}원으로 시작할게요.`
+        );
+
+        monthlyNoticeOpacity.setValue(
+          0
+        );
+
+        monthlyNoticeTranslateY.setValue(
+          22
+        );
+
+        setShowMonthlyNotice(true);
+
+        /*
+         * 한 달에 한 번만 보여주도록
+         * 표시 직전에 바로 저장합니다.
+         */
+        await AsyncStorage.setItem(
+          noticeKey,
+          'true'
+        );
+
+        requestAnimationFrame(
+          () => {
+            Animated.parallel([
+              Animated.timing(
+                monthlyNoticeOpacity,
+                {
+                  toValue: 1,
+                  duration: 260,
+                  useNativeDriver:
+                    true,
+                }
+              ),
+
+              Animated.timing(
+                monthlyNoticeTranslateY,
+                {
+                  toValue: 0,
+                  duration: 260,
+                  useNativeDriver:
+                    true,
+                }
+              ),
+            ]).start();
+
+            monthlyNoticeTimer.current =
+              setTimeout(
+                hideMonthlyNotice,
+                3200
+              );
+          }
+        );
+      } catch (error) {
+        console.error(
+          '월 시작 안내 표시 실패:',
+          error
+        );
+      }
+    };
+
   useFocusEffect(
     useCallback(() => {
       let isActive = true;
@@ -166,6 +342,17 @@ export default function HomeScreen() {
 
       return () => {
         isActive = false;
+
+        if (
+          monthlyNoticeTimer.current
+        ) {
+          clearTimeout(
+            monthlyNoticeTimer.current
+          );
+
+          monthlyNoticeTimer.current =
+            null;
+        }
       };
     }, [])
   );
@@ -189,32 +376,43 @@ export default function HomeScreen() {
           ),
         ]);
 
+        /*
+         * monthly-budgets에 이번 달 값이 있으면 그대로 사용합니다.
+         * 이번 달 값이 없으면 가장 최근 월의 예산을 자동으로 이어받습니다.
+         *
+         * 아직 월별 예산 데이터가 한 번도 없다면,
+         * 기존 budget-settings의 monthlyBudget을 최초 마이그레이션 값으로 사용합니다.
+         */
+        let legacyBudget = 0;
+
         if (savedBudget) {
           const data =
             JSON.parse(
               savedBudget
             );
 
-          setSettings({
-            monthlyBudget:
-              Number(
-                data.monthlyBudget
-              ) || 0,
-
-            payday:
-              Number(
-                data.payday
-              ) || 25,
-
-            paydayType:
-              data.paydayType ||
-              'date',
-
-            budgetMode:
-              data.budgetMode ||
-              'simple',
-          });
+          legacyBudget =
+            Number(
+              data.monthlyBudget
+            ) || 0;
         }
+
+        const today =
+          getNow();
+
+        const budgetForThisMonth =
+          await ensureCurrentMonthBudget(
+            legacyBudget,
+            today
+          );
+
+        setCurrentMonthBudget(
+          budgetForThisMonth
+        );
+
+        await showMonthlyBudgetNotice(
+          budgetForThisMonth
+        );
 
         const parsedExpenses:
           Expense[] =
@@ -223,9 +421,6 @@ export default function HomeScreen() {
                 savedExpenses
               )
             : [];
-
-        const today =
-          new Date();
 
         const todayTotal =
           parsedExpenses.reduce(
@@ -325,9 +520,16 @@ export default function HomeScreen() {
                   `${expense.date}T00:00:00`
                 );
 
+              const isThisMonth =
+                expenseDate.getFullYear() ===
+                  today.getFullYear() &&
+                expenseDate.getMonth() ===
+                  today.getMonth();
+
               if (
                 expenseDate <
-                todayStart
+                  todayStart ||
+                !isThisMonth
               ) {
                 return sum;
               }
@@ -356,7 +558,7 @@ export default function HomeScreen() {
   const getRemainingDays =
     () => {
       const today =
-        new Date();
+        getNow();
 
       const lastDay =
         new Date(
@@ -411,7 +613,7 @@ export default function HomeScreen() {
     Math.max(
       0,
 
-      settings.monthlyBudget -
+      currentMonthBudget -
         monthlySpent -
         plannedAmount
     );
@@ -885,10 +1087,10 @@ export default function HomeScreen() {
             'alert-circle' as const,
 
           title:
-            '지금 사기엔 부담돼요',
+            '지금 구매하면 부담돼요',
 
           message:
-            '이번 달 남은 생활비를 넘어서는 금액이에요.',
+            '안전하게 남겨둔 여유금까지 사용해야 하는 금액이에요.',
         };
       }
 
@@ -906,7 +1108,7 @@ export default function HomeScreen() {
             '조금 고민해보는 게 좋아요',
 
           message:
-            '구매하면 앞으로 하루에 쓸 수 있는 금액이 크게 줄어요.',
+            '구매 후 하루에 사용할 수 있는 금액이 크게 줄어요.',
         };
       }
 
@@ -917,10 +1119,10 @@ export default function HomeScreen() {
           'checkmark-circle' as const,
 
         title:
-          '이 정도는 괜찮아요',
+          '생활비 안에서는 괜찮아요',
 
         message:
-          '구매 후에도 하루에 쓸 수 있는 금액이 충분해요.',
+          '안전 여유금을 남기고도 이번 달 사용할 생활비가 있어요.',
       };
     };
 
@@ -1064,7 +1266,7 @@ export default function HomeScreen() {
                   }
                 >
                   {formatMoney(
-                    settings.monthlyBudget
+                    currentMonthBudget
                   )}
                   원
                 </Text>
@@ -1279,6 +1481,61 @@ export default function HomeScreen() {
           </View>
         </View>
       </ScrollView>
+
+      {showMonthlyNotice && (
+        <Animated.View
+          pointerEvents="none"
+          style={[
+            styles.monthlyNotice,
+
+            {
+              opacity:
+                monthlyNoticeOpacity,
+
+              transform: [
+                {
+                  translateY:
+                    monthlyNoticeTranslateY,
+                },
+              ],
+            },
+          ]}
+        >
+          <View
+            style={
+              styles.monthlyNoticeIconBox
+            }
+          >
+            <Ionicons
+              name="sparkles-outline"
+              size={20}
+              color="#3563C9"
+            />
+          </View>
+
+          <View
+            style={
+              styles.monthlyNoticeTextArea
+            }
+          >
+            <Text
+              style={
+                styles.monthlyNoticeTitle
+              }
+            >
+              {getCurrentMonthLabel()} 생활비가 시작됐어요
+            </Text>
+
+            <Text
+              style={
+                styles.monthlyNoticeDescription
+              }
+            >
+              {monthlyNoticeText}
+            </Text>
+          </View>
+        </Animated.View>
+      )}
 
       {/* =========================
           서비스 메뉴
@@ -1547,7 +1804,7 @@ export default function HomeScreen() {
                     styles.sheetDescription
                   }
                 >
-                  금액을 입력하면 구매 후 하루에 쓸 수 있는 금액을 알려드려요.
+                  금액을 입력하면 구매 후 하루 예산을 알려드려요.
                 </Text>
               </View>
 
@@ -1729,7 +1986,7 @@ export default function HomeScreen() {
                           )}
                           원
                         </Text>
-                        씩 적게 써야 해요.
+                        씩 덜 사용할 수 있어요.
                       </Text>
                     </View>
                   )}
@@ -2214,6 +2471,65 @@ const styles =
     },
 
     simulatorDescription: {
+      marginTop: 3,
+      fontSize: 13,
+      lineHeight: 19,
+      fontFamily: 'Pretendard-Regular',
+      color: '#687386',
+    },
+
+    /* ========================
+       Monthly notice
+    ======================== */
+
+    monthlyNotice: {
+      position: 'absolute',
+      left: 20,
+      right: 20,
+      bottom: 92,
+      maxWidth: 480,
+      alignSelf: 'center',
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: '#FFFFFF',
+      borderWidth: 1,
+      borderColor: '#E6ECF5',
+      borderRadius: 18,
+      paddingHorizontal: 16,
+      paddingVertical: 14,
+      shadowColor: '#000000',
+      shadowOffset: {
+        width: 0,
+        height: 5,
+      },
+      shadowOpacity: 0.12,
+      shadowRadius: 14,
+      elevation: 10,
+      zIndex: 500,
+    },
+
+    monthlyNoticeIconBox: {
+      width: 40,
+      height: 40,
+      borderRadius: 13,
+      backgroundColor: '#EEF3FE',
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginRight: 12,
+    },
+
+    monthlyNoticeTextArea: {
+      flex: 1,
+    },
+
+    monthlyNoticeTitle: {
+      fontSize: 15,
+      lineHeight: 21,
+      fontFamily: 'Pretendard-Bold',
+      color: '#172033',
+    },
+
+    monthlyNoticeDescription: {
       marginTop: 3,
       fontSize: 13,
       lineHeight: 19,

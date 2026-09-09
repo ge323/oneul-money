@@ -14,6 +14,10 @@ import {
 } from 'react-native';
 
 import AppHeader from '../components/AppHeader';
+import {
+  ensureCurrentMonthBudget,
+  saveBudgetForMonth,
+} from '../utils/monthly-budgets';
 
 const BUDGET_KEY = 'budget-settings';
 
@@ -24,8 +28,6 @@ type BudgetSettings = {
   fixedExpense?: number;
   fixedExpenses?: unknown[];
   spentAmount?: number;
-  payday?: number;
-  paydayType?: 'date' | 'lastDay';
   budgetMode?: 'simple';
   [key: string]: any;
 };
@@ -37,12 +39,16 @@ export default function SettingsScreen() {
   const [originalData, setOriginalData] =
     useState<BudgetSettings>({});
 
+  const [isLoading, setIsLoading] =
+    useState(true);
+
   useEffect(() => {
     loadSettings();
   }, []);
 
-
-  const formatMoneyInput = (text: string) => {
+  const formatMoneyInput = (
+    text: string
+  ) => {
     const numbersOnly =
       text.replace(/[^0-9]/g, '');
 
@@ -55,11 +61,43 @@ export default function SettingsScreen() {
     ).toLocaleString('ko-KR');
   };
 
-  const parseMoney = (text: string) => {
+  const parseMoney = (
+    text: string
+  ) => {
     return (
       Number(
         text.replace(/,/g, '')
       ) || 0
+    );
+  };
+
+  const getLegacyBudget = (
+    data: BudgetSettings
+  ) => {
+    if (
+      data.budgetMode === 'simple'
+    ) {
+      return (
+        Number(
+          data.monthlyBudget
+        ) || 0
+      );
+    }
+
+    return Math.max(
+      0,
+      (Number(
+        data.monthlyBudget
+      ) || 0) -
+        (Number(
+          data.savingGoal
+        ) || 0) -
+        (Number(
+          data.investmentAmount
+        ) || 0) -
+        (Number(
+          data.fixedExpense
+        ) || 0)
     );
   };
 
@@ -70,46 +108,35 @@ export default function SettingsScreen() {
           BUDGET_KEY
         );
 
-      if (!saved) {
-        return;
-      }
+      const legacyData:
+        BudgetSettings = saved
+        ? JSON.parse(saved)
+        : {};
 
-      const data: BudgetSettings =
-        JSON.parse(saved);
+      setOriginalData(
+        legacyData
+      );
 
-      setOriginalData(data);
+      const fallbackBudget =
+        getLegacyBudget(
+          legacyData
+        );
 
       /*
-       * 새 방식으로 저장된 값이면 monthlyBudget을 그대로 사용합니다.
+       * 이번 달 예산이 이미 있으면 그 값을 사용하고,
+       * 없다면 가장 최근 월의 예산을 자동으로 이어받습니다.
        *
-       * 예전 방식 데이터라면
-       * "사용 가능 금액 - 저축 - 투자 - 고정지출"을 계산해서
-       * 실제 생활비 한도로 자연스럽게 마이그레이션합니다.
+       * 월별 예산 데이터 자체가 아직 한 번도 만들어지지 않았다면
+       * 기존 budget-settings의 값으로 최초 마이그레이션합니다.
        */
-      const migratedBudget =
-        data.budgetMode === 'simple'
-          ? Number(
-              data.monthlyBudget
-            ) || 0
-          : Math.max(
-              0,
-              (Number(
-                data.monthlyBudget
-              ) || 0) -
-                (Number(
-                  data.savingGoal
-                ) || 0) -
-                (Number(
-                  data.investmentAmount
-                ) || 0) -
-                (Number(
-                  data.fixedExpense
-                ) || 0)
-            );
+      const currentBudget =
+        await ensureCurrentMonthBudget(
+          fallbackBudget
+        );
 
       setMonthlyBudget(
-        migratedBudget > 0
-          ? migratedBudget.toLocaleString(
+        currentBudget > 0
+          ? currentBudget.toLocaleString(
               'ko-KR'
             )
           : ''
@@ -119,13 +146,18 @@ export default function SettingsScreen() {
         '예산 불러오기 실패:',
         error
       );
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const budgetAmount =
-    parseMoney(monthlyBudget);
+    parseMoney(
+      monthlyBudget
+    );
 
   const canSave =
+    !isLoading &&
     budgetAmount > 0;
 
   const saveSettings = async () => {
@@ -133,31 +165,39 @@ export default function SettingsScreen() {
       return;
     }
 
-    /*
-     * 홈의 기존 계산 코드와 호환되도록
-     * monthlyBudget을 "최종 생활비 한도"로 저장하고,
-     * 더 이상 사용하지 않는 차감 항목은 0으로 정리합니다.
-     *
-     * payday, paydayType, spentAmount 등 기존 데이터는 보존합니다.
-     */
-    const updatedData: BudgetSettings = {
-      ...originalData,
-
-      budgetMode: 'simple',
-
-      monthlyBudget:
-        budgetAmount,
-
-      savingGoal: 0,
-
-      investmentAmount: 0,
-
-      fixedExpense: 0,
-
-      fixedExpenses: [],
-    };
-
     try {
+      /*
+       * 1) 현재 달의 예산을 월별 예산 저장소에 기록
+       */
+      await saveBudgetForMonth(
+        budgetAmount
+      );
+
+      /*
+       * 2) 기존 화면들과의 호환을 위해
+       *    budget-settings에도 현재 예산을 동기화
+       *
+       * 홈 / 계획 / 내역 화면을 모두 월별 예산 방식으로
+       * 변경한 뒤에는 이 호환 저장은 제거할 수 있습니다.
+       */
+      const updatedData:
+        BudgetSettings = {
+        ...originalData,
+
+        budgetMode: 'simple',
+
+        monthlyBudget:
+          budgetAmount,
+
+        savingGoal: 0,
+
+        investmentAmount: 0,
+
+        fixedExpense: 0,
+
+        fixedExpenses: [],
+      };
+
       await AsyncStorage.setItem(
         BUDGET_KEY,
         JSON.stringify(
@@ -165,7 +205,9 @@ export default function SettingsScreen() {
         )
       );
 
-      router.replace('/(tabs)');
+      router.replace(
+        '/(tabs)'
+      );
     } catch (error) {
       console.error(
         '예산 저장 실패:',
@@ -212,7 +254,11 @@ export default function SettingsScreen() {
               styles.inputSection
             }
           >
-            <Text style={styles.label}>
+            <Text
+              style={
+                styles.label
+              }
+            >
               이번 달 생활비 한도
             </Text>
 
@@ -225,7 +271,9 @@ export default function SettingsScreen() {
                 style={
                   styles.moneyInput
                 }
-                value={monthlyBudget}
+                value={
+                  monthlyBudget
+                }
                 onChangeText={(
                   text
                 ) =>
@@ -271,7 +319,6 @@ export default function SettingsScreen() {
               </Text>
             </View>
           </View>
-
         </View>
 
         <Pressable
@@ -286,7 +333,9 @@ export default function SettingsScreen() {
               canSave &&
               styles.saveButtonPressed,
           ]}
-          onPress={saveSettings}
+          onPress={
+            saveSettings
+          }
         >
           <Text
             style={[
@@ -304,113 +353,115 @@ export default function SettingsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
-  },
+const styles =
+  StyleSheet.create({
+    screen: {
+      flex: 1,
+      backgroundColor:
+        '#FFFFFF',
+    },
 
-  container: {
-    paddingHorizontal: 20,
-    paddingTop: 24,
-    paddingBottom: 64,
-  },
+    container: {
+      paddingHorizontal: 20,
+      paddingTop: 24,
+      paddingBottom: 64,
+    },
 
-  form: {
-    marginTop: 4,
-  },
+    form: {
+      marginTop: 4,
+    },
 
-  inputSection: {
-    gap: 12,
-  },
+    inputSection: {
+      gap: 12,
+    },
 
-  label: {
-    fontSize: 18,
-    lineHeight: 25,
-    fontFamily: 'Pretendard-Bold',
-    color: '#172033',
-  },
+    label: {
+      fontSize: 18,
+      lineHeight: 25,
+      fontFamily:
+        'Pretendard-Bold',
+      color: '#172033',
+    },
 
+    moneyInputBox: {
+      minHeight: 68,
+      marginTop: 2,
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor:
+        '#F1F5FC',
+      borderRadius: 18,
+      paddingHorizontal: 16,
+    },
 
-  moneyInputBox: {
-    minHeight: 68,
-    marginTop: 2,
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#F1F5FC',
-    borderRadius: 18,
-    paddingHorizontal: 16,
-  },
+    moneyInput: {
+      flex: 1,
+      paddingVertical: 18,
+      fontSize: 24,
+      lineHeight: 31,
+      fontFamily:
+        'Pretendard-ExtraBold',
+      color: '#3563C9',
+    },
 
-  moneyInput: {
-    flex: 1,
-    paddingVertical: 18,
-    fontSize: 24,
-    lineHeight: 31,
-    fontFamily: 'Pretendard-ExtraBold',
-    color: '#3563C9',
-  },
+    unitText: {
+      marginLeft: 8,
+      fontSize: 16,
+      lineHeight: 22,
+      fontFamily:
+        'Pretendard-Bold',
+      color: '#566176',
+    },
 
-  unitText: {
-    marginLeft: 8,
-    fontSize: 16,
-    lineHeight: 22,
-    fontFamily: 'Pretendard-Bold',
-    color: '#566176',
-  },
+    helperRow: {
+      flexDirection: 'row',
+      alignItems:
+        'flex-start',
+      gap: 7,
+      paddingHorizontal: 2,
+      marginTop: 2,
+    },
 
-  helperRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 7,
-    paddingHorizontal: 2,
-    marginTop: 2,
-  },
+    helperText: {
+      flex: 1,
+      fontSize: 13,
+      lineHeight: 19,
+      fontFamily:
+        'Pretendard-Regular',
+      color: '#687386',
+    },
 
-  helperText: {
-    flex: 1,
-    fontSize: 13,
-    lineHeight: 19,
-    fontFamily: 'Pretendard-Regular',
-    color: '#687386',
-  },
+    saveButton: {
+      marginTop: 28,
+      minHeight: 58,
+      backgroundColor:
+        '#3563C9',
+      borderRadius: 16,
+      paddingVertical: 17,
+      alignItems: 'center',
+      justifyContent:
+        'center',
+    },
 
+    saveButtonDisabled: {
+      backgroundColor:
+        '#E3E8F0',
+    },
 
+    saveButtonPressed: {
+      backgroundColor:
+        '#294FA5',
+    },
 
+    saveButtonText: {
+      color: '#FFFFFF',
+      fontSize: 17,
+      lineHeight: 23,
+      fontFamily:
+        'Pretendard-Bold',
+    },
 
-
-
-
-
-
-
-
-  saveButton: {
-    marginTop: 28,
-    minHeight: 58,
-    backgroundColor: '#3563C9',
-    borderRadius: 16,
-    paddingVertical: 17,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-
-  saveButtonDisabled: {
-    backgroundColor: '#E3E8F0',
-  },
-
-  saveButtonPressed: {
-    backgroundColor: '#294FA5',
-  },
-
-  saveButtonText: {
-    color: '#FFFFFF',
-    fontSize: 17,
-    lineHeight: 23,
-    fontFamily: 'Pretendard-Bold',
-  },
-
-  saveButtonTextDisabled: {
-    color: '#98A2B3',
-  },
-});
+    saveButtonTextDisabled: {
+      color: '#98A2B3',
+    },
+  });
