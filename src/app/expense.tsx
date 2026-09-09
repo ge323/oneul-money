@@ -376,9 +376,9 @@ export default function ExpenseScreen() {
 
   const amountInputWidth =
     Math.min(
-      250,
+      280,
       Math.max(
-        36,
+        70,
         (amount || '0').length * 19
       )
     );
