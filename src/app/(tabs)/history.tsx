@@ -158,6 +158,11 @@ export default function HistoryScreen() {
   ] = useState(0);
 
   const [
+    budgetRefreshKey,
+    setBudgetRefreshKey,
+  ] = useState(0);
+
+  const [
     customCategories,
     setCustomCategories,
   ] = useState<CustomCategory[]>([]);
@@ -251,6 +256,11 @@ export default function HistoryScreen() {
   useFocusEffect(
     useCallback(() => {
       loadData();
+
+      setBudgetRefreshKey(
+        (prev) => prev + 1
+      );
+
       setOpenedMenuId(null);
     }, [])
   );
@@ -371,58 +381,87 @@ export default function HistoryScreen() {
     const loadSelectedMonthBudget =
       async () => {
         try {
-          const now = new Date();
+          const selectedDate =
+            new Date(
+              selectedYear,
+              selectedMonthIndex,
+              1
+            );
 
-          const isCurrent =
-            now.getFullYear() ===
-              selectedYear &&
-            now.getMonth() ===
-              selectedMonthIndex;
+          /*
+           * 1) 선택한 달에 저장된 예산이 있으면
+           *    그 달의 예산을 그대로 사용합니다.
+           *
+           * 예:
+           * 2026-09 -> 400,000원
+           * 2026-10 -> 450,000원
+           */
+          const savedMonthBudget =
+            await getBudgetForMonth(
+              selectedDate
+            );
 
-          if (isCurrent) {
-            const savedBudget =
-              await AsyncStorage.getItem(
-                BUDGET_KEY
-              );
-
-            let legacyBudget = 0;
-
-            if (savedBudget) {
-              const budget:
-                BudgetSettings =
-                JSON.parse(
-                  savedBudget
-                );
-
-              legacyBudget =
-                Number(
-                  budget.monthlyBudget
-                ) || 0;
-            }
-
-            const currentBudget =
-              await ensureCurrentMonthBudget(
-                legacyBudget
-              );
-
+          if (
+            savedMonthBudget > 0
+          ) {
             setMonthlyLivingBudget(
-              currentBudget
+              savedMonthBudget
             );
 
             return;
           }
 
-          const budget =
-            await getBudgetForMonth(
-              new Date(
-                selectedYear,
-                selectedMonthIndex,
-                1
-              )
+          /*
+           * 2) 선택한 달이 '실제 현재 달'인데
+           *    아직 monthly-budgets 값이 없다면,
+           *    이전 예산을 자동 승계합니다.
+           *
+           * 과거 달/미래 달을 단순 조회하는 것만으로
+           * 예산 데이터를 새로 만들지는 않습니다.
+           */
+          const now = new Date();
+
+          const isActualCurrentMonth =
+            now.getFullYear() ===
+              selectedYear &&
+            now.getMonth() ===
+              selectedMonthIndex;
+
+          if (
+            !isActualCurrentMonth
+          ) {
+            setMonthlyLivingBudget(0);
+            return;
+          }
+
+          const savedLegacyBudget =
+            await AsyncStorage.getItem(
+              BUDGET_KEY
+            );
+
+          let legacyBudget = 0;
+
+          if (savedLegacyBudget) {
+            const budget:
+              BudgetSettings =
+              JSON.parse(
+                savedLegacyBudget
+              );
+
+            legacyBudget =
+              Number(
+                budget.monthlyBudget
+              ) || 0;
+          }
+
+          const inheritedBudget =
+            await ensureCurrentMonthBudget(
+              legacyBudget,
+              selectedDate
             );
 
           setMonthlyLivingBudget(
-            budget
+            inheritedBudget
           );
         } catch (error) {
           console.error(
@@ -438,6 +477,7 @@ export default function HistoryScreen() {
   }, [
     selectedYear,
     selectedMonthIndex,
+    budgetRefreshKey,
   ]);
 
   /*
@@ -1045,7 +1085,7 @@ export default function HistoryScreen() {
             styles.description
           }
         >
-          이번 달 지출을 한눈에 확인해보세요.
+          월별 지출을 한눈에 확인해보세요.
         </Text>
       </View>
 
