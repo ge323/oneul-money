@@ -35,6 +35,18 @@ const PLANNED_EXPENSES_KEY = 'planned-expenses';
 const EXPENSES_KEY = 'expenses';
 const BUDGET_KEY = 'budget-settings';
 
+/*
+ * 평소/배포 시 null.
+ * 새 달 테스트 예: new Date(2026, 9, 1) // 2026년 10월 1일
+ */
+const DEV_TEST_DATE: Date | null = null;
+
+const getNow = () => {
+  return DEV_TEST_DATE
+    ? new Date(DEV_TEST_DATE)
+    : new Date();
+};
+
 /* =========================
    달력 한국어 설정
 ========================= */
@@ -262,9 +274,13 @@ export default function PlanScreen() {
             ) || 0;
         }
 
+        const now =
+          getNow();
+
         const currentBudget =
           await ensureCurrentMonthBudget(
-            legacyBudget
+            legacyBudget,
+            now
           );
 
         setMonthlyLivingBudget(
@@ -277,8 +293,6 @@ export default function PlanScreen() {
               savedExpenses
             )
           : [];
-
-        const now = new Date();
 
         const spentThisMonth =
           expenses.reduce(
@@ -390,7 +404,7 @@ export default function PlanScreen() {
 
   const getTodayString = () => {
     return toDateString(
-      new Date()
+      getNow()
     );
   };
 
@@ -434,7 +448,7 @@ export default function PlanScreen() {
   const getDDayLabel = (
     value: string
   ) => {
-    const today = new Date();
+    const today = getNow();
     today.setHours(0, 0, 0, 0);
 
     const targetDate = new Date(
@@ -501,7 +515,7 @@ export default function PlanScreen() {
 
   const selectTomorrow = () => {
     const tomorrow =
-      new Date();
+      getNow();
 
     tomorrow.setDate(
       tomorrow.getDate() + 1
@@ -516,7 +530,7 @@ export default function PlanScreen() {
 
   const selectWeekend = () => {
     const target =
-      new Date();
+      getNow();
 
     const currentDay =
       target.getDay();
@@ -802,7 +816,7 @@ export default function PlanScreen() {
             date,
 
             createdAt:
-              toLocalDateTimeString(new Date()),
+              toLocalDateTimeString(getNow()),
           };
 
           updated = [
@@ -1072,7 +1086,7 @@ export default function PlanScreen() {
             'etc',
 
           createdAt:
-            toLocalDateTimeString(new Date()),
+            toLocalDateTimeString(getNow()),
         };
 
         const updatedExpenses = [
@@ -1121,7 +1135,7 @@ export default function PlanScreen() {
   const upcomingExpenses =
     useMemo(() => {
       const today =
-        new Date();
+        getNow();
 
       today.setHours(
         0,
@@ -1159,7 +1173,7 @@ export default function PlanScreen() {
 
   const currentMonthPlannedExpenses =
     useMemo(() => {
-      const now = new Date();
+      const now = getNow();
 
       return upcomingExpenses.filter(
         (item) => {

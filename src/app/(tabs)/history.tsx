@@ -30,6 +30,20 @@ const EXPENSES_KEY = 'expenses';
 const BUDGET_KEY = 'budget-settings';
 const CUSTOM_CATEGORIES_KEY = 'custom-categories';
 
+/*
+ * 평소/배포 시에는 null.
+ *
+ * 새 달 테스트 예:
+ * new Date(2026, 9, 1) // 2026년 10월 1일
+ */
+const DEV_TEST_DATE: Date | null = null;
+
+const getNow = () => {
+  return DEV_TEST_DATE
+    ? new Date(DEV_TEST_DATE)
+    : new Date();
+};
+
 type IoniconName =
   ComponentProps<typeof Ionicons>['name'];
 
@@ -244,7 +258,7 @@ export default function HistoryScreen() {
     selectedMonth,
     setSelectedMonth,
   ] = useState(() => {
-    const today = new Date();
+    const today = getNow();
 
     return new Date(
       today.getFullYear(),
@@ -255,6 +269,17 @@ export default function HistoryScreen() {
 
   useFocusEffect(
     useCallback(() => {
+      const today =
+        getNow();
+
+      setSelectedMonth(
+        new Date(
+          today.getFullYear(),
+          today.getMonth(),
+          1
+        )
+      );
+
       loadData();
 
       setBudgetRefreshKey(
@@ -358,7 +383,7 @@ export default function HistoryScreen() {
   };
 
   const goCurrentMonth = () => {
-    const today = new Date();
+    const today = getNow();
 
     setSelectedMonth(
       new Date(
@@ -419,7 +444,7 @@ export default function HistoryScreen() {
            * 과거 달/미래 달을 단순 조회하는 것만으로
            * 예산 데이터를 새로 만들지는 않습니다.
            */
-          const now = new Date();
+          const now = getNow();
 
           const isActualCurrentMonth =
             now.getFullYear() ===
@@ -1013,7 +1038,7 @@ export default function HistoryScreen() {
     });
   };
 
-  const now = new Date();
+  const now = getNow();
 
   const isCurrentMonth =
     now.getFullYear() ===
