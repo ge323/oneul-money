@@ -1104,7 +1104,7 @@ export default function HomeScreen() {
                 styles.dailyMessage
               }
             >
-              정도까지가 적당해요
+              써도 괜찮아요
             </Text>
 
             <View
@@ -1162,15 +1162,28 @@ export default function HomeScreen() {
                 </Text>
               </View>
             </View>
+
+            <View style={styles.reserveInlineRow}>
+              <Ionicons
+                name="information-circle-outline"
+                size={13}
+                color="#7292D8"
+              />
+
+              <Text style={styles.reserveInlineText}>
+                여유금 10%를 남겨두고 계산했어요.
+              </Text>
+            </View>
           </View>
 
-          {/* 오늘 사용 현황 */}
+          {/* 오늘 사용 현황 + 남은 생활비 */}
 
-          <View
-            style={
-              styles.todaySummary
-            }
-          >
+          <View style={styles.budgetSummaryCard}>
+            <View
+              style={
+                styles.todaySummary
+              }
+            >
             <View
               style={
                 styles.todaySummaryTop
@@ -1241,11 +1254,11 @@ export default function HomeScreen() {
                 }
               </Text>
             </View>
-          </View>
+            </View>
 
-          {/* 남은 생활비 */}
+            {/* 남은 생활비 */}
 
-          <View style={styles.remainingSection}>
+            <View style={styles.remainingSection}>
             <View style={styles.remainingTopRow}>
               <Text style={styles.remainingLabel}>
                 남은 생활비
@@ -1269,6 +1282,7 @@ export default function HomeScreen() {
                 </Text>
               </View>
             )}
+            </View>
           </View>
 
           {/* 행동 영역 */}
@@ -1326,44 +1340,7 @@ export default function HomeScreen() {
               />
             </Pressable>
 
-            <Pressable
-              style={({
-                pressed,
-              }) => [
-                styles.expenseButton,
-
-                pressed &&
-                  styles.expenseButtonPressed,
-              ]}
-              onPress={() =>
-                router.push(
-                  '/expense'
-                )
-              }
-            >
-              <Ionicons
-                name="add"
-                size={20}
-                color="#FFFFFF"
-              />
-
-              <Text
-                style={
-                  styles.expenseButtonText
-                }
-              >
-                지출 기록하기
-              </Text>
-            </Pressable>
           </View>
-
-          <Text
-            style={
-              styles.reserveGuide
-            }
-          >
-            남은 생활비의 10%는 여유금으로 남겨두고 계산해요.
-          </Text>
         </View>
       </ScrollView>
 
@@ -2098,14 +2075,37 @@ const styles =
       color: '#3563C9',
     },
 
+    reserveInlineRow: {
+      marginTop: 12,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 5,
+    },
+
+    reserveInlineText: {
+      fontSize: 12,
+      lineHeight: 18,
+      fontFamily: 'Pretendard-Regular',
+      color: '#687386',
+    },
+
     /* ========================
        Today summary
     ======================== */
 
+    budgetSummaryCard: {
+      marginTop: 16,
+      paddingHorizontal: 16,
+      backgroundColor: '#F8FAFD',
+      borderWidth: 1,
+      borderColor: '#EEF2F7',
+      borderRadius: 18,
+    },
+
     todaySummary: {
-      marginTop: 18,
-      paddingHorizontal: 2,
-      paddingBottom: 18,
+      paddingTop: 16,
+      paddingBottom: 16,
       borderBottomWidth: 1,
       borderBottomColor: '#E9EDF3',
     },
@@ -2193,11 +2193,8 @@ const styles =
 
     remainingSection: {
       minHeight: 72,
-      paddingHorizontal: 2,
-      paddingTop: 17,
-      paddingBottom: 17,
-      borderBottomWidth: 1,
-      borderBottomColor: '#E9EDF3',
+      paddingTop: 16,
+      paddingBottom: 16,
     },
 
     remainingTopRow: {
@@ -2241,7 +2238,6 @@ const styles =
 
     actionSection: {
       marginTop: 16,
-      gap: 12,
     },
 
     simulatorButton: {
@@ -2277,52 +2273,6 @@ const styles =
       marginTop: 3,
       fontSize: 13,
       lineHeight: 19,
-      fontFamily: 'Pretendard-Regular',
-      color: '#687386',
-    },
-
-    expenseButton: {
-      marginTop: 25,
-      minHeight: 56,
-      flexDirection: 'row',
-
-      alignItems: 'center',
-
-      justifyContent:
-        'center',
-
-      gap: 4,
-
-      backgroundColor:
-        '#3563C9',
-
-      borderRadius: 16,
-    },
-
-    expenseButtonPressed: {
-      backgroundColor:
-        '#294FA5',
-
-      transform: [
-        {
-          scale: 0.99,
-        },
-      ],
-    },
-
-    expenseButtonText: {
-      color: '#FFFFFF',
-      fontSize: 17,
-      lineHeight: 23,
-      fontFamily: 'Pretendard-ExtraBold',
-    },
-
-    reserveGuide: {
-      marginTop: 14,
-      paddingHorizontal: 10,
-      textAlign: 'center',
-      fontSize: 12,
-      lineHeight: 18,
       fontFamily: 'Pretendard-Regular',
       color: '#687386',
     },
