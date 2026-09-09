@@ -179,6 +179,11 @@ export default function ExpenseScreen() {
   const [amount, setAmount] =
     useState('');
 
+  const [
+    isAmountFocused,
+    setIsAmountFocused,
+  ] = useState(false);
+
   const [category, setCategory] =
     useState('food');
 
@@ -398,6 +403,21 @@ export default function ExpenseScreen() {
       ) || 0
     );
   };
+
+  const numericAmount =
+    parseMoney(amount);
+
+  const canSave =
+    numericAmount > 0;
+
+  const amountInputWidth =
+    Math.min(
+      250,
+      Math.max(
+        36,
+        (amount || '0').length * 19
+      )
+    );
 
   const openCategoryModal =
     () => {
@@ -829,140 +849,90 @@ export default function ExpenseScreen() {
           description={
             isEditMode
               ? '기록한 지출 정보를 수정해보세요.'
-              : '오늘 사용한 금액을 기록해보세요.'
+              : '사용한 금액을 기록해보세요.'
           }
         />
 
         <View style={styles.form}>
-          <View
-            style={
-              styles.inputGroup
-            }
-          >
-            <Text
-              style={styles.label}
-            >
+          {/* 금액 */}
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>
               얼마를 썼나요?
             </Text>
 
             <View
-              style={
-                styles.amountInputBox
-              }
+              style={[
+                styles.amountInputBox,
+                isAmountFocused &&
+                  styles.amountInputBoxFocused,
+              ]}
             >
-              <TextInput
-                style={
-                  styles.amountInput
-                }
-                value={amount}
-                onChangeText={(
-                  text
-                ) =>
-                  setAmount(
-                    formatMoneyInput(
-                      text
+              <View style={styles.amountValueRow}>
+                <TextInput
+                  style={[
+                    styles.amountInput,
+                    {
+                      width:
+                        amountInputWidth,
+                    },
+                  ]}
+                  value={amount}
+                  onChangeText={(text) =>
+                    setAmount(
+                      formatMoneyInput(
+                        text
+                      )
                     )
-                  )
-                }
-                placeholder="0"
-                placeholderTextColor="#687386"
-                keyboardType="numeric"
-              />
+                  }
+                  onFocus={() =>
+                    setIsAmountFocused(
+                      true
+                    )
+                  }
+                  onBlur={() =>
+                    setIsAmountFocused(
+                      false
+                    )
+                  }
+                  placeholder="0"
+                  placeholderTextColor="#98A2B3"
+                  keyboardType="numeric"
+                  returnKeyType="done"
+                  selectionColor="#3563C9"
+                />
 
-              <Text
-                style={styles.unit}
-              >
-                원
-              </Text>
+                <Text style={styles.unit}>
+                  원
+                </Text>
+              </View>
             </View>
           </View>
 
-          <View
-            style={
-              styles.inputGroup
-            }
-          >
-            <Text
-              style={styles.label}
-            >
+          {/* 사용처 */}
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>
               어디에 썼나요?
             </Text>
 
             <TextInput
               style={styles.input}
               value={title}
-              onChangeText={
-                setTitle
-              }
-              placeholder="예: 점심"
-              placeholderTextColor="#687386"
+              onChangeText={setTitle}
+              placeholder="예: 점심, 아이스 아메리카노"
+              placeholderTextColor="#98A2B3"
               returnKeyType="done"
+              maxLength={30}
+              selectionColor="#3563C9"
             />
           </View>
 
-          <View
-            style={
-              styles.inputGroup
-            }
-          >
-            <Text
-              style={styles.label}
-            >
-              날짜
-            </Text>
-
-            <Pressable
-              style={({ pressed }) => [
-                styles.dateSelectButton,
-                pressed &&
-                styles.dateSelectButtonPressed,
-              ]}
-              onPress={() =>
-                setShowDateModal(true)
-              }
-            >
-              <View
-                style={styles.dateSelectLeft}
-              >
-                <Ionicons
-                  name="calendar-outline"
-                  size={20}
-                  color="#687386"
-                />
-
-                <Text
-                  style={styles.dateSelectText}
-                >
-                  {formatExpenseDateLabel(
-                    expenseDate
-                  )}
-                </Text>
-              </View>
-
-              <Ionicons
-                name="chevron-forward"
-                size={18}
-                color="#98A2B3"
-              />
-            </Pressable>
-          </View>
-
-          <View
-            style={
-              styles.inputGroup
-            }
-          >
-            <Text
-              style={styles.label}
-            >
+          {/* 카테고리 */}
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>
               카테고리
             </Text>
 
-            <View
-              style={
-                styles.categoryContainer
-              }
-            >
+            <View style={styles.categoryContainer}>
               {allCategories.map(
                 (item) => {
                   const isSelected =
@@ -972,11 +942,14 @@ export default function ExpenseScreen() {
                   return (
                     <Pressable
                       key={item.id}
-                      style={[
+                      style={({ pressed }) => [
                         styles.categoryButton,
 
                         isSelected &&
-                        styles.categoryButtonSelected,
+                          styles.categoryButtonSelected,
+
+                        pressed &&
+                          styles.categoryButtonPressed,
                       ]}
                       onPress={() =>
                         setCategory(
@@ -985,9 +958,7 @@ export default function ExpenseScreen() {
                       }
                     >
                       <Ionicons
-                        name={
-                          item.icon
-                        }
+                        name={item.icon}
                         size={18}
                         color={
                           isSelected
@@ -1001,12 +972,10 @@ export default function ExpenseScreen() {
                           styles.categoryText,
 
                           isSelected &&
-                          styles.categoryTextSelected,
+                            styles.categoryTextSelected,
                         ]}
                       >
-                        {
-                          item.label
-                        }
+                        {item.label}
                       </Text>
                     </Pressable>
                   );
@@ -1014,9 +983,12 @@ export default function ExpenseScreen() {
               )}
 
               <Pressable
-                style={[
+                style={({ pressed }) => [
                   styles.categoryButton,
                   styles.addCategoryButton,
+
+                  pressed &&
+                    styles.categoryButtonPressed,
                 ]}
                 onPress={
                   openCategoryModal
@@ -1038,21 +1010,80 @@ export default function ExpenseScreen() {
               </Pressable>
             </View>
           </View>
+
+          {/* 날짜 */}
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>
+              날짜
+            </Text>
+
+            <Pressable
+              style={({ pressed }) => [
+                styles.dateSelectButton,
+
+                pressed &&
+                  styles.dateSelectButtonPressed,
+              ]}
+              onPress={() =>
+                setShowDateModal(true)
+              }
+            >
+              <View
+                style={styles.dateSelectLeft}
+              >
+                <View
+                  style={
+                    styles.dateIconBox
+                  }
+                >
+                  <Ionicons
+                    name="calendar-outline"
+                    size={18}
+                    color="#3563C9"
+                  />
+                </View>
+
+                <Text
+                  style={
+                    styles.dateSelectText
+                  }
+                >
+                  {formatExpenseDateLabel(
+                    expenseDate
+                  )}
+                </Text>
+              </View>
+
+              <Ionicons
+                name="chevron-forward"
+                size={18}
+                color="#98A2B3"
+              />
+            </Pressable>
+          </View>
         </View>
 
         <Pressable
+          disabled={!canSave}
           style={({ pressed }) => [
             styles.saveButton,
 
+            !canSave &&
+              styles.saveButtonDisabled,
+
             pressed &&
-            styles.saveButtonPressed,
+              canSave &&
+              styles.saveButtonPressed,
           ]}
           onPress={saveExpense}
         >
           <Text
-            style={
-              styles.saveButtonText
-            }
+            style={[
+              styles.saveButtonText,
+
+              !canSave &&
+                styles.saveButtonTextDisabled,
+            ]}
           >
             {isEditMode
               ? '수정하기'
@@ -1389,15 +1420,15 @@ const styles =
       flexGrow: 1,
       paddingHorizontal: 20,
       paddingTop: 24,
-      paddingBottom: 140,
+      paddingBottom: 80,
     },
 
     form: {
-      gap: 30,
+      gap: 28,
     },
 
     inputGroup: {
-      gap: 11,
+      gap: 10,
     },
 
     label: {
@@ -1408,39 +1439,110 @@ const styles =
     },
 
     amountInputBox: {
-      flexDirection: 'row',
+      minHeight: 78,
       alignItems: 'center',
-      minHeight: 72,
+      justifyContent: 'center',
       backgroundColor: '#F1F5FC',
       borderRadius: 18,
+      borderWidth: 1,
+      borderColor: 'transparent',
       paddingHorizontal: 18,
     },
 
+    amountInputBoxFocused: {
+      borderColor: '#3563C9',
+      backgroundColor: '#F5F8FE',
+    },
+
+    amountValueRow: {
+      maxWidth: '100%',
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+
     amountInput: {
-      flex: 1,
-      paddingVertical: 18,
-      fontSize: 30,
-      lineHeight: 38,
+      paddingVertical: 16,
+      paddingHorizontal: 0,
+      fontSize: 31,
+      lineHeight: 39,
       fontFamily: 'Pretendard-ExtraBold',
       color: '#3563C9',
+      textAlign: 'center',
     },
 
     unit: {
-      marginLeft: 8,
+      marginLeft: 7,
       fontSize: 17,
+      lineHeight: 23,
       fontFamily: 'Pretendard-Bold',
       color: '#566176',
     },
 
     input: {
       minHeight: 60,
-      backgroundColor: '#F5F7FA',
+      backgroundColor: '#F7F9FC',
       borderRadius: 16,
+      borderWidth: 1,
+      borderColor: '#EEF1F5',
       paddingHorizontal: 16,
       paddingVertical: 17,
       fontSize: 17,
       lineHeight: 23,
+      fontFamily: 'Pretendard-Medium',
       color: '#172033',
+    },
+
+    categoryContainer: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 9,
+    },
+
+    categoryButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      minHeight: 46,
+      gap: 7,
+      backgroundColor: '#F7F9FC',
+      borderWidth: 1,
+      borderColor: 'transparent',
+      borderRadius: 14,
+      paddingHorizontal: 13,
+      paddingVertical: 11,
+    },
+
+    categoryButtonSelected: {
+      backgroundColor: '#EEF3FE',
+      borderColor: '#C9D8FA',
+    },
+
+    categoryButtonPressed: {
+      opacity: 0.68,
+    },
+
+    categoryText: {
+      fontSize: 15,
+      lineHeight: 20,
+      fontFamily: 'Pretendard-SemiBold',
+      color: '#566176',
+    },
+
+    categoryTextSelected: {
+      color: '#3563C9',
+      fontFamily: 'Pretendard-Bold',
+    },
+
+    addCategoryButton: {
+      borderColor: '#DCE5F5',
+      backgroundColor: '#FFFFFF',
+    },
+
+    addCategoryText: {
+      fontSize: 15,
+      lineHeight: 20,
+      fontFamily: 'Pretendard-Bold',
+      color: '#3563C9',
     },
 
     dateSelectButton: {
@@ -1448,9 +1550,11 @@ const styles =
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
-      backgroundColor: '#F5F7FA',
+      backgroundColor: '#F7F9FC',
+      borderWidth: 1,
+      borderColor: '#EEF1F5',
       borderRadius: 16,
-      paddingHorizontal: 16,
+      paddingHorizontal: 14,
     },
 
     dateSelectButtonPressed: {
@@ -1458,16 +1562,62 @@ const styles =
     },
 
     dateSelectLeft: {
+      flex: 1,
       flexDirection: 'row',
       alignItems: 'center',
       gap: 10,
+      paddingRight: 10,
+    },
+
+    dateIconBox: {
+      width: 34,
+      height: 34,
+      borderRadius: 10,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: '#EEF3FE',
     },
 
     dateSelectText: {
-      fontSize: 17,
-      lineHeight: 23,
+      flexShrink: 1,
+      fontSize: 16,
+      lineHeight: 22,
       fontFamily: 'Pretendard-SemiBold',
       color: '#172033',
+    },
+
+    saveButton: {
+      marginTop: 34,
+      minHeight: 58,
+      backgroundColor: '#3563C9',
+      borderRadius: 16,
+      paddingVertical: 17,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+
+    saveButtonDisabled: {
+      backgroundColor: '#E3E8F0',
+    },
+
+    saveButtonPressed: {
+      backgroundColor: '#294FA5',
+      transform: [
+        {
+          scale: 0.995,
+        },
+      ],
+    },
+
+    saveButtonText: {
+      color: '#FFFFFF',
+      fontSize: 17,
+      lineHeight: 23,
+      fontFamily: 'Pretendard-Bold',
+    },
+
+    saveButtonTextDisabled: {
+      color: '#98A2B3',
     },
 
     dateModalRoot: {
@@ -1533,78 +1683,6 @@ const styles =
       fontSize: 16,
       fontFamily: 'Pretendard-Bold',
       color: '#3563C9',
-    },
-
-    categoryContainer: {
-      flexDirection: 'row',
-      flexWrap: 'wrap',
-
-      gap: 10,
-    },
-
-    categoryButton: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      minHeight: 48,
-      gap: 7,
-      backgroundColor: '#F5F7FA',
-      borderRadius: 14,
-      paddingHorizontal: 14,
-      paddingVertical: 12,
-    },
-
-    categoryButtonSelected: {
-      backgroundColor:
-        '#E7EEFC',
-    },
-
-    categoryText: {
-      fontSize: 15,
-      lineHeight: 20,
-      fontFamily: 'Pretendard-SemiBold',
-      color: '#566176',
-    },
-
-    categoryTextSelected: {
-      color: '#3563C9',
-      fontFamily: 'Pretendard-Bold',
-    },
-
-    addCategoryButton: {
-      borderWidth: 1,
-
-      borderColor:
-        '#DCE5F5',
-
-      backgroundColor:
-        '#FFFFFF',
-    },
-
-    addCategoryText: {
-      fontSize: 15,
-      fontFamily: 'Pretendard-Bold',
-      color: '#3563C9',
-    },
-
-    saveButton: {
-      marginTop: 34,
-      minHeight: 58,
-      backgroundColor: '#3563C9',
-      borderRadius: 16,
-      paddingVertical: 17,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-
-    saveButtonPressed: {
-      backgroundColor:
-        '#294FA5',
-    },
-
-    saveButtonText: {
-      color: '#FFFFFF',
-      fontSize: 17,
-      fontFamily: 'Pretendard-Bold',
     },
 
     modalRoot: {
