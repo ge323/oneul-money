@@ -1611,7 +1611,7 @@ export default function HomeScreen() {
                     styles.sheetDescription
                   }
                 >
-                  사고 싶은 금액을 입력하면 구매 후 하루 예산을 계산해드려요.
+                  금액을 입력하면 구매 후 하루 예산을 알려드려요.
                 </Text>
               </View>
 
@@ -2415,7 +2415,7 @@ serviceMenuModalRoot: {
     },
 
     bottomSheetScrollContent: {
-      paddingBottom: 42,
+      paddingBottom: 36,
     },
 
     bottomSheet: {
@@ -2645,7 +2645,7 @@ serviceMenuModalRoot: {
     },
 
     statusBox: {
-      marginTop: 20,
+      marginTop: 18,
 
       flexDirection: 'row',
 
@@ -2694,7 +2694,7 @@ serviceMenuModalRoot: {
     },
 
     remainingAfterBox: {
-      marginTop: 14,
+      marginTop: 10,
 
       flexDirection: 'row',
 
@@ -2703,7 +2703,7 @@ serviceMenuModalRoot: {
 
       alignItems: 'center',
 
-      paddingTop: 16,
+      paddingTop: 14,
 
       borderTopWidth: 1,
 
