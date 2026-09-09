@@ -49,7 +49,7 @@ const pages: OnboardingPage[] = [
     highlight: '써도 될까요?',
 
     description:
-      '이번 달 사용할 금액과 고정지출,\n월급일까지의 기간을 계산해\n오늘 쓸 수 있는 금액을 알려드려요.',
+      '이번 달 쓸 생활비만 정해주세요.\n남은 기간과 지출을 계산해\n오늘 쓸 수 있는 금액을 알려드려요.',
 
     visualType: 'mockup',
   },
@@ -71,7 +71,7 @@ const pages: OnboardingPage[] = [
       '더 정확해져요',
 
     description:
-      '지출을 기록하면 남은 생활비를 반영해\n오늘 쓸 수 있는 금액을\n바로 다시 계산해드려요.',
+      '지출을 기록할수록 남은 생활비를 반영해\n오늘 쓸 수 있는 금액을\n바로 다시 계산해드려요.',
 
     visualType: 'mockup',
   },
@@ -88,7 +88,7 @@ const pages: OnboardingPage[] = [
     highlight: '한번 확인해보세요',
 
     description:
-      '사고 싶은 금액을 입력하면\n구매 후 하루 예산이 얼마나 남는지\n미리 확인할 수 있어요.',
+      '사고 싶은 금액을 입력하면\n구매 후 하루에 얼마까지 쓸 수 있는지\n미리 확인할 수 있어요.',
 
     visualType: 'simulator',
   },
@@ -112,10 +112,10 @@ export default function OnboardingScreen() {
 
   const contentOffsetY =
     Math.min(
-      34,
+      60,
       Math.max(
-        18,
-        screenHeight * 0.03
+        20,
+        screenHeight * 0.05
       )
     );
 
@@ -805,9 +805,11 @@ const styles =
     ======================== */
 
     topArea: {
-      minHeight: 52,
+      minHeight: 82,
 
       paddingHorizontal: 18,
+
+      paddingTop: 24,
 
       flexDirection: 'row',
 
@@ -839,12 +841,16 @@ const styles =
     skipButton: {
       minWidth: 56,
 
+      minHeight: 40,
+
       paddingHorizontal: 5,
 
       paddingVertical: 8,
 
       alignItems:
         'flex-end',
+
+      justifyContent: 'center',
     },
 
     skipButtonPlaceholder: {
