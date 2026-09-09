@@ -44,22 +44,16 @@ type PlannedExpense = {
 
 type BudgetSettings = {
   monthlyBudget: number;
-  fixedExpense: number;
-  savingGoal: number;
-  investmentAmount: number;
-  spentAmount: number;
-  payday: number;
+  payday?: number;
   paydayType?: 'date' | 'lastDay';
+  budgetMode?: 'simple';
 };
 
 const DEFAULT_SETTINGS: BudgetSettings = {
-  monthlyBudget: 1000000,
-  fixedExpense: 400000,
-  savingGoal: 200000,
-  investmentAmount: 0,
-  spentAmount: 100000,
+  monthlyBudget: 0,
   payday: 25,
   paydayType: 'date',
+  budgetMode: 'simple',
 };
 
 export default function HomeScreen() {
@@ -99,6 +93,11 @@ export default function HomeScreen() {
   const [
     todaySpent,
     setTodaySpent,
+  ] = useState(0);
+
+  const [
+    monthlySpent,
+    setMonthlySpent,
   ] = useState(0);
 
   const [
@@ -202,26 +201,6 @@ export default function HomeScreen() {
                 data.monthlyBudget
               ) || 0,
 
-            fixedExpense:
-              Number(
-                data.fixedExpense
-              ) || 0,
-
-            savingGoal:
-              Number(
-                data.savingGoal
-              ) || 0,
-
-            investmentAmount:
-              Number(
-                data.investmentAmount
-              ) || 0,
-
-            spentAmount:
-              Number(
-                data.spentAmount
-              ) || 0,
-
             payday:
               Number(
                 data.payday
@@ -230,6 +209,10 @@ export default function HomeScreen() {
             paydayType:
               data.paydayType ||
               'date',
+
+            budgetMode:
+              data.budgetMode ||
+              'simple',
           });
         }
 
@@ -279,6 +262,41 @@ export default function HomeScreen() {
 
         setTodaySpent(
           todayTotal
+        );
+
+        const monthlyTotal =
+          parsedExpenses.reduce(
+            (
+              sum,
+              expense
+            ) => {
+              const expenseDate =
+                new Date(
+                  expense.createdAt
+                );
+
+              const isThisMonth =
+                expenseDate.getFullYear() ===
+                  today.getFullYear() &&
+                expenseDate.getMonth() ===
+                  today.getMonth();
+
+              if (!isThisMonth) {
+                return sum;
+              }
+
+              return (
+                sum +
+                (Number(
+                  expense.amount
+                ) || 0)
+              );
+            },
+            0
+          );
+
+        setMonthlySpent(
+          monthlyTotal
         );
 
         const parsedPlannedExpenses:
@@ -335,118 +353,30 @@ export default function HomeScreen() {
       }
     };
 
-  const getLastDay = (
-    year: number,
-    month: number
-  ) => {
-    return new Date(
-      year,
-      month + 1,
-      0
-    ).getDate();
-  };
-
   const getRemainingDays =
     () => {
       const today =
         new Date();
 
-      const year =
-        today.getFullYear();
-
-      const month =
-        today.getMonth();
-
-      const todayDate =
-        today.getDate();
-
-      let targetDate: Date;
-
-      if (
-        settings.paydayType ===
-        'lastDay'
-      ) {
-        const thisMonthLastDay =
-          getLastDay(
-            year,
-            month
-          );
-
-        if (
-          todayDate <
-          thisMonthLastDay
-        ) {
-          targetDate =
-            new Date(
-              year,
-              month,
-              thisMonthLastDay
-            );
-        } else {
-          const nextMonthLastDay =
-            getLastDay(
-              year,
-              month + 1
-            );
-
-          targetDate =
-            new Date(
-              year,
-              month + 1,
-              nextMonthLastDay
-            );
-        }
-      } else {
-        const thisMonthPayday =
-          Math.min(
-            settings.payday,
-            getLastDay(
-              year,
-              month
-            )
-          );
-
-        if (
-          todayDate <
-          thisMonthPayday
-        ) {
-          targetDate =
-            new Date(
-              year,
-              month,
-              thisMonthPayday
-            );
-        } else {
-          const nextMonthPayday =
-            Math.min(
-              settings.payday,
-              getLastDay(
-                year,
-                month + 1
-              )
-            );
-
-          targetDate =
-            new Date(
-              year,
-              month + 1,
-              nextMonthPayday
-            );
-        }
-      }
+      const lastDay =
+        new Date(
+          today.getFullYear(),
+          today.getMonth() + 1,
+          0
+        );
 
       const todayStart =
         new Date(
-          year,
-          month,
-          todayDate
+          today.getFullYear(),
+          today.getMonth(),
+          today.getDate()
         );
 
       const difference =
-        targetDate.getTime() -
+        lastDay.getTime() -
         todayStart.getTime();
 
-      const days =
+      const daysUntilEnd =
         Math.ceil(
           difference /
             (
@@ -457,8 +387,12 @@ export default function HomeScreen() {
             )
         );
 
+      /*
+       * 오늘을 포함해서 남은 기간으로 나눕니다.
+       * 예: 오늘이 9월 15일이고 30일까지라면 16일.
+       */
       return Math.max(
-        days,
+        daysUntilEnd + 1,
         1
       );
     };
@@ -472,16 +406,13 @@ export default function HomeScreen() {
 
   const SAFETY_RESERVE_RATE = 0.1;
 
-  // 실제 지출뿐 아니라 앞으로 예정된 지출도 미리 빼둔 생활비
+  // 사용자가 정한 생활비 한도에서 실제 지출과 예정 지출을 차감합니다.
   const remainingBudget =
     Math.max(
       0,
 
       settings.monthlyBudget -
-        settings.fixedExpense -
-        settings.savingGoal -
-        settings.investmentAmount -
-        settings.spentAmount -
+        monthlySpent -
         plannedAmount
     );
 
@@ -492,7 +423,7 @@ export default function HomeScreen() {
         SAFETY_RESERVE_RATE
     );
 
-  // 실제로 다음 월급일까지 나눠 사용할 수 있는 생활비
+  // 실제로 이번 달 남은 기간 동안 나눠 사용할 수 있는 생활비
   const usableRemainingBudget =
     Math.max(
       0,
@@ -917,7 +848,7 @@ export default function HomeScreen() {
         safetyReserve
     );
 
-  // 구매 후 하루 권장 생활비
+  // 구매 후 하루 사용 가능 금액
   const dailyBudgetAfterPurchase =
     remainingDays > 0
       ? Math.floor(
@@ -954,10 +885,10 @@ export default function HomeScreen() {
             'alert-circle' as const,
 
           title:
-            '지금 구매하면 부담돼요',
+            '지금 사기엔 부담돼요',
 
           message:
-            '안전하게 남겨둔 여유금까지 사용해야 하는 금액이에요.',
+            '이번 달 남은 생활비를 넘어서는 금액이에요.',
         };
       }
 
@@ -975,7 +906,7 @@ export default function HomeScreen() {
             '조금 고민해보는 게 좋아요',
 
           message:
-            '구매 후 하루에 사용할 수 있는 금액이 크게 줄어요.',
+            '구매하면 앞으로 하루에 쓸 수 있는 금액이 크게 줄어요.',
         };
       }
 
@@ -986,10 +917,10 @@ export default function HomeScreen() {
           'checkmark-circle' as const,
 
         title:
-          '생활비 안에서는 괜찮아요',
+          '이 정도는 괜찮아요',
 
         message:
-          '안전 여유금을 남기고도 월급일까지 사용할 생활비가 있어요.',
+          '구매 후에도 하루에 쓸 수 있는 금액이 충분해요.',
       };
     };
 
@@ -1124,7 +1055,7 @@ export default function HomeScreen() {
                     styles.monthSpentLabel
                   }
                 >
-                  이번 달 사용
+                  이번 달 생활비
                 </Text>
 
                 <Text
@@ -1133,9 +1064,17 @@ export default function HomeScreen() {
                   }
                 >
                   {formatMoney(
-                    settings.spentAmount
+                    settings.monthlyBudget
                   )}
                   원
+                </Text>
+
+                <Text
+                  style={
+                    styles.monthSpentSubText
+                  }
+                >
+                  현재까지 {formatMoney(monthlySpent)}원 사용
                 </Text>
               </View>
 
@@ -1155,10 +1094,7 @@ export default function HomeScreen() {
                     styles.dDayText
                   }
                 >
-                  D-
-                  {
-                    remainingDays
-                  }
+                  {remainingDays}일 남음
                 </Text>
               </View>
             </View>
@@ -1611,7 +1547,7 @@ export default function HomeScreen() {
                     styles.sheetDescription
                   }
                 >
-                  금액을 입력하면 구매 후 하루 예산을 알려드려요.
+                  금액을 입력하면 구매 후 하루에 쓸 수 있는 금액을 알려드려요.
                 </Text>
               </View>
 
@@ -1793,7 +1729,7 @@ export default function HomeScreen() {
                           )}
                           원
                         </Text>
-                        씩 덜 사용할 수 있어요.
+                        씩 적게 써야 해요.
                       </Text>
                     </View>
                   )}
@@ -1970,7 +1906,7 @@ const styles =
       borderRadius: 22,
       paddingHorizontal: 22,
       paddingTop: 24,
-      paddingBottom: 17,
+      paddingBottom: 18,
     },
 
     dailyCardCompact: {
@@ -2045,10 +1981,18 @@ const styles =
 
     monthSpentAmount: {
       marginTop: 2,
-      fontSize: 14,
-      lineHeight: 20,
-      fontFamily: 'Pretendard-Bold',
+      fontSize: 15,
+      lineHeight: 21,
+      fontFamily: 'Pretendard-ExtraBold',
       color: '#566176',
+    },
+
+    monthSpentSubText: {
+      marginTop: 2,
+      fontSize: 12,
+      lineHeight: 18,
+      fontFamily: 'Pretendard-Medium',
+      color: '#7F8A9D',
     },
 
     dDayBadge: {
@@ -2061,7 +2005,7 @@ const styles =
       backgroundColor:
         '#E7EEFC',
 
-      paddingHorizontal: 10,
+      paddingHorizontal: 9,
 
       paddingVertical: 6,
 
