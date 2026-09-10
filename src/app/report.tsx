@@ -1,7 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { router, useFocusEffect } from 'expo-router';
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Animated,
   Modal,
@@ -15,9 +15,25 @@ import {
   BarChart,
   PieChart,
 } from 'react-native-gifted-charts';
+import mobileAds, {
+  AdEventType,
+  RewardedAd,
+  RewardedAdEventType,
+  TestIds,
+} from 'react-native-google-mobile-ads';
+
+import { ensureCurrentMonthBudget } from '../utils/monthly-budgets';
 
 const EXPENSES_KEY = 'expenses';
 const CUSTOM_CATEGORIES_KEY = 'custom-categories';
+const INSIGHT_UNLOCK_DATE_KEY = 'report-insight-unlock-date';
+const REWARDED_AD_UNIT_ID = __DEV__
+  ? TestIds.REWARDED
+  : 'ca-app-pub-8353387848033145/5341446224';
+
+const rewardedAd = RewardedAd.createForAdRequest(REWARDED_AD_UNIT_ID, {
+  requestNonPersonalizedAdsOnly: true,
+});
 
 /*
  * 평소/배포 시 null.
@@ -61,6 +77,12 @@ type BarDetail = {
   expenses: Expense[];
 };
 
+type Insight = {
+  id: string;
+  icon: keyof typeof Ionicons.glyphMap;
+  text: string;
+};
+
 const CATEGORIES: CategoryInfo[] = [
   { id: 'food', label: '식비' },
   { id: 'cafe', label: '카페' },
@@ -76,6 +98,10 @@ export default function ReportScreen() {
   const [customCategories, setCustomCategories] =
     useState<CustomCategory[]>([]);
   const [period, setPeriod] = useState<Period>('month');
+  const [isInsightUnlocked, setIsInsightUnlocked] = useState(false);
+  const [monthlyBudget, setMonthlyBudget] = useState(0);
+  const [isRewardedAdLoaded, setIsRewardedAdLoaded] = useState(false);
+  const [isRewardedAdLoading, setIsRewardedAdLoading] = useState(true);
 
   const [
     selectedBarDetail,
@@ -103,17 +129,82 @@ export default function ReportScreen() {
     }, [])
   );
 
+  useEffect(() => {
+    const unsubscribeLoaded = rewardedAd.addAdEventListener(
+      RewardedAdEventType.LOADED,
+      () => {
+        setIsRewardedAdLoaded(true);
+        setIsRewardedAdLoading(false);
+      }
+    );
+
+    const unsubscribeEarned = rewardedAd.addAdEventListener(
+      RewardedAdEventType.EARNED_REWARD,
+      async () => {
+        try {
+          await AsyncStorage.setItem(
+            INSIGHT_UNLOCK_DATE_KEY,
+            getDateKey(getNow())
+          );
+        } catch (error) {
+          console.error('소비 인사이트 잠금 해제 저장 실패:', error);
+        } finally {
+          setIsInsightUnlocked(true);
+        }
+      }
+    );
+
+    const unsubscribeClosed = rewardedAd.addAdEventListener(
+      AdEventType.CLOSED,
+      () => {
+        setIsRewardedAdLoaded(false);
+        setIsRewardedAdLoading(true);
+        rewardedAd.load();
+      }
+    );
+
+    const unsubscribeError = rewardedAd.addAdEventListener(
+      AdEventType.ERROR,
+      (error) => {
+        console.error('보상형 광고 불러오기 실패:', error);
+        setIsRewardedAdLoaded(false);
+        setIsRewardedAdLoading(false);
+      }
+    );
+
+    mobileAds()
+      .initialize()
+      .then(() => rewardedAd.load())
+      .catch((error) => {
+        console.error('Google Mobile Ads 초기화 실패:', error);
+        setIsRewardedAdLoading(false);
+      });
+
+    return () => {
+      unsubscribeLoaded();
+      unsubscribeEarned();
+      unsubscribeClosed();
+      unsubscribeError();
+    };
+  }, []);
+
   const loadData = async () => {
     try {
       const [
         savedExpenses,
         savedCustomCategories,
+        currentBudget,
+        unlockedDate,
       ] = await Promise.all([
         AsyncStorage.getItem(
           EXPENSES_KEY
         ),
         AsyncStorage.getItem(
           CUSTOM_CATEGORIES_KEY
+        ),
+        ensureCurrentMonthBudget(0),
+        AsyncStorage.getItem(
+          INSIGHT_UNLOCK_DATE_KEY
         ),
       ]);
 
@@ -128,6 +219,9 @@ export default function ReportScreen() {
           ? JSON.parse(savedCustomCategories)
           : []
       );
+
+      setMonthlyBudget(currentBudget);
+      setIsInsightUnlocked(unlockedDate === getDateKey(getNow()));
     } catch (error) {
       console.error(
         '소비 리포트 데이터 불러오기 실패:',
@@ -146,6 +240,14 @@ export default function ReportScreen() {
     result.setHours(0, 0, 0, 0);
 
     return result;
+  };
+
+  const getDateKey = (date: Date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+
+    return `${year}-${month}-${day}`;
   };
 
   const getPeriodExpenses = useMemo(() => {
@@ -642,6 +744,180 @@ export default function ReportScreen() {
     return '월별 지출';
   };
 
+  const previousPeriodExpense = useMemo(() => {
+    const now = getNow();
+
+    if (period === 'week') {
+      const currentStart = startOfDay(now);
+      currentStart.setDate(currentStart.getDate() - 6);
+
+      const previousEnd = new Date(currentStart);
+      previousEnd.setMilliseconds(-1);
+
+      const previousStart = new Date(previousEnd);
+      previousStart.setHours(0, 0, 0, 0);
+      previousStart.setDate(previousStart.getDate() - 6);
+
+      return expenses
+        .filter((expense) => {
+          const date = new Date(expense.createdAt);
+          return date >= previousStart && date <= previousEnd;
+        })
+        .reduce((sum, expense) => sum + Number(expense.amount || 0), 0);
+    }
+
+    if (period === 'month') {
+      const previousYear =
+        now.getMonth() === 0 ? now.getFullYear() - 1 : now.getFullYear();
+      const previousMonth = now.getMonth() === 0 ? 11 : now.getMonth() - 1;
+      const comparableDay = Math.min(
+        now.getDate(),
+        new Date(previousYear, previousMonth + 1, 0).getDate()
+      );
+
+      return expenses
+        .filter((expense) => {
+          const date = new Date(expense.createdAt);
+          return (
+            date.getFullYear() === previousYear &&
+            date.getMonth() === previousMonth &&
+            date.getDate() <= comparableDay
+          );
+        })
+        .reduce((sum, expense) => sum + Number(expense.amount || 0), 0);
+    }
+
+    return expenses
+      .filter(
+        (expense) =>
+          new Date(expense.createdAt).getFullYear() === now.getFullYear() - 1
+      )
+      .reduce((sum, expense) => sum + Number(expense.amount || 0), 0);
+  }, [expenses, period]);
+
+  const insights = useMemo<Insight[]>(() => {
+    const result: Insight[] = [];
+
+    if (period === 'month') {
+      const now = getNow();
+      const daysInMonth = new Date(
+        now.getFullYear(),
+        now.getMonth() + 1,
+        0
+      ).getDate();
+      const remainingDays = Math.max(daysInMonth - now.getDate() + 1, 1);
+      const remainingBudget = monthlyBudget - totalExpense;
+
+      if (monthlyBudget > 0 && remainingBudget >= 0) {
+        const dailyAvailable = Math.floor(remainingBudget / remainingDays);
+
+        result.push({
+          id: 'daily-budget',
+          icon: 'wallet-outline',
+          text: `예산을 지키려면 앞으로 하루 평균 ${formatMoney(
+            dailyAvailable
+          )}원까지 사용할 수 있어요.`,
+        });
+      } else if (monthlyBudget > 0) {
+        result.push({
+          id: 'daily-budget',
+          icon: 'alert-circle-outline',
+          text: `이번 달 예산을 ${formatMoney(
+            Math.abs(remainingBudget)
+          )}원 초과했어요. 남은 기간에는 지출을 줄여보세요.`,
+        });
+      } else {
+        result.push({
+          id: 'daily-budget',
+          icon: 'wallet-outline',
+          text: '예산을 설정하면 하루 사용 가능 금액도 알려드릴게요.',
+        });
+      }
+    }
+
+    if (getPeriodExpenses.length > 0 && previousPeriodExpense > 0) {
+      const differenceRate = Math.round(
+        ((totalExpense - previousPeriodExpense) / previousPeriodExpense) * 100
+      );
+
+      result.push({
+        id: 'comparison',
+        icon:
+          differenceRate > 0
+            ? 'trending-up-outline'
+            : differenceRate < 0
+              ? 'trending-down-outline'
+              : 'swap-horizontal-outline',
+        text:
+          differenceRate === 0
+            ? '이전 같은 기간과 비슷하게 쓰고 있어요.'
+            : `이전 같은 기간보다 ${Math.abs(differenceRate)}% ${
+                differenceRate > 0 ? '더' : '덜'
+              } 쓰고 있어요.`,
+      });
+    } else if (getPeriodExpenses.length > 0) {
+      result.push({
+        id: 'comparison',
+        icon: 'analytics-outline',
+        text: '이전 기간 기록이 쌓이면 소비 변화를 알려드릴게요.',
+      });
+    }
+
+    const topCategory = categoryData[0];
+    if (topCategory) {
+      const topRate = Math.round((topCategory.amount / totalExpense) * 100);
+
+      result.push({
+        id: 'category',
+        icon: 'pie-chart-outline',
+        text: `${topCategory.label}에 가장 많이 썼어요. 전체 지출의 ${topRate}%예요.`,
+      });
+    }
+
+    if (period === 'month' && totalExpense > 0) {
+      const now = getNow();
+      const daysInMonth = new Date(
+        now.getFullYear(),
+        now.getMonth() + 1,
+        0
+      ).getDate();
+      const projectedExpense = Math.round(
+        (totalExpense / Math.max(now.getDate(), 1)) * daysInMonth
+      );
+
+      result.push({
+        id: 'projection',
+        icon: 'calendar-outline',
+        text: `지금 속도라면 이번 달 약 ${formatMoney(projectedExpense)}원을 쓸 것으로 보여요.`,
+      });
+    }
+
+    return result.slice(0, 4);
+  }, [
+    categoryData,
+    getPeriodExpenses.length,
+    monthlyBudget,
+    period,
+    previousPeriodExpense,
+    totalExpense,
+  ]);
+
+  const showRewardedAd = async () => {
+    if (!isRewardedAdLoaded) {
+      setIsRewardedAdLoading(true);
+      rewardedAd.load();
+      return;
+    }
+
+    try {
+      await rewardedAd.show();
+    } catch (error) {
+      console.error('보상형 광고 표시 실패:', error);
+      setIsRewardedAdLoaded(false);
+      setIsRewardedAdLoading(false);
+    }
+  };
+
   return (
     <ScrollView
       style={styles.screen}
@@ -715,6 +991,85 @@ export default function ReportScreen() {
         <Text style={styles.summaryDescription}>
           총 {getPeriodExpenses.length}건의 지출이 있어요.
         </Text>
+      </View>
+
+      {/* 소비 인사이트 */}
+
+      <View style={styles.insightCard}>
+        <View style={styles.cardHeader}>
+          <View style={styles.insightTitleArea}>
+            <Text style={styles.cardTitle}>소비 인사이트</Text>
+
+            <Text style={styles.cardDescription}>
+              내 소비 흐름을 간단하게 확인해보세요.
+            </Text>
+          </View>
+
+          <View style={styles.insightIcon}>
+            <Ionicons name="bulb-outline" size={19} color="#D58B16" />
+          </View>
+        </View>
+
+        {isInsightUnlocked ? (
+          insights.length > 0 ? (
+            <View style={styles.insightList}>
+              {insights.map((insight) => (
+                <View key={insight.id} style={styles.insightRow}>
+                  <View style={styles.insightRowIcon}>
+                    <Ionicons name={insight.icon} size={16} color="#3563C9" />
+                  </View>
+
+                  <Text style={styles.insightText}>{insight.text}</Text>
+                </View>
+              ))}
+
+              <Text style={styles.unlockedCaption}>
+                오늘은 광고 없이 다시 확인할 수 있어요.
+              </Text>
+            </View>
+          ) : (
+            <View style={styles.insightEmpty}>
+              <Text style={styles.insightEmptyText}>
+                지출을 기록하면 소비 인사이트를 알려드릴게요.
+              </Text>
+            </View>
+          )
+        ) : (
+          <View style={styles.insightLocked}>
+            <Text style={styles.insightLockedText}>
+              짧은 광고를 보고 오늘의 인사이트를 열어보세요.
+            </Text>
+
+            <Pressable
+              disabled={isRewardedAdLoading}
+              style={({ pressed }) => [
+                styles.insightButton,
+                isRewardedAdLoading && styles.insightButtonDisabled,
+                pressed && styles.insightButtonPressed,
+              ]}
+              onPress={showRewardedAd}
+            >
+              <Ionicons
+                name={
+                  isRewardedAdLoading
+                    ? 'hourglass-outline'
+                    : isRewardedAdLoaded
+                      ? 'play-circle-outline'
+                      : 'refresh-outline'
+                }
+                size={19}
+                color="#FFFFFF"
+              />
+              <Text style={styles.insightButtonText}>
+                {isRewardedAdLoading
+                  ? '광고 준비 중...'
+                  : isRewardedAdLoaded
+                    ? '광고 보고 확인하기'
+                    : '광고 다시 불러오기'}
+              </Text>
+            </Pressable>
+          </View>
+        )}
       </View>
 
       {/* 지출 추이 */}
@@ -1250,6 +1605,117 @@ const styles = StyleSheet.create({
     marginTop: 6,
     fontSize: 12,
     color: '#8792A2',
+  },
+
+  /* 소비 인사이트 */
+
+  insightCard: {
+    marginTop: 18,
+    borderWidth: 1,
+    borderColor: '#F2E6C9',
+    borderRadius: 20,
+    padding: 18,
+    backgroundColor: '#FFFCF5',
+  },
+
+  insightTitleArea: {
+    flex: 1,
+    paddingRight: 12,
+  },
+
+  insightIcon: {
+    width: 34,
+    height: 34,
+    borderRadius: 11,
+    backgroundColor: '#FFF1CF',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  insightLocked: {
+    marginTop: 20,
+  },
+
+  insightLockedText: {
+    fontSize: 13,
+    lineHeight: 20,
+    color: '#687386',
+  },
+
+  insightButton: {
+    minHeight: 48,
+    marginTop: 14,
+    borderRadius: 14,
+    backgroundColor: '#3563C9',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 7,
+  },
+
+  insightButtonPressed: {
+    opacity: 0.86,
+  },
+
+  insightButtonDisabled: {
+    backgroundColor: '#9DB1DD',
+  },
+
+  insightButtonText: {
+    fontSize: 14,
+    fontFamily: 'Pretendard-Bold',
+    color: '#FFFFFF',
+  },
+
+  insightList: {
+    marginTop: 18,
+    gap: 12,
+  },
+
+  insightRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+  },
+
+  insightRowIcon: {
+    width: 28,
+    height: 28,
+    borderRadius: 9,
+    backgroundColor: '#EEF3FC',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 10,
+  },
+
+  insightText: {
+    flex: 1,
+    paddingTop: 3,
+    fontSize: 13,
+    lineHeight: 21,
+    fontFamily: 'Pretendard-SemiBold',
+    color: '#344054',
+  },
+
+  unlockedCaption: {
+    marginTop: 3,
+    fontSize: 11,
+    color: '#98A2B3',
+    textAlign: 'right',
+  },
+
+  insightEmpty: {
+    marginTop: 18,
+    borderRadius: 14,
+    backgroundColor: '#FFFFFF',
+    paddingVertical: 18,
+    paddingHorizontal: 14,
+  },
+
+  insightEmptyText: {
+    fontSize: 13,
+    lineHeight: 20,
+    color: '#8792A2',
+    textAlign: 'center',
   },
 
   /* 카드 */
