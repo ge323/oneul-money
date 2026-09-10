@@ -1,3 +1,5 @@
+import Screen from '../../components/screen';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import {
@@ -62,6 +64,8 @@ type PlannedExpense = {
 };
 
 export default function HomeScreen() {
+  const insets = useSafeAreaInsets();
+
   const {
     width: screenWidth,
     height: screenHeight,
@@ -194,9 +198,8 @@ export default function HomeScreen() {
 
   const getCurrentMonthLabel =
     () => {
-      return `${
-        getNow().getMonth() + 1
-      }월`;
+      return `${getNow().getMonth() + 1
+        }월`;
     };
 
   const hideMonthlyNotice =
@@ -246,6 +249,19 @@ export default function HomeScreen() {
       }
 
       try {
+        const skipOnce =
+          await AsyncStorage.getItem(
+            'skip-monthly-budget-notice-once'
+          );
+
+        if (skipOnce === 'true') {
+          await AsyncStorage.removeItem(
+            'skip-monthly-budget-notice-once'
+          );
+
+          return;
+        }
+
         const noticeKey =
           getCurrentMonthNoticeKey();
 
@@ -274,14 +290,17 @@ export default function HomeScreen() {
 
         setShowMonthlyNotice(true);
 
-        /*
-         * 한 달에 한 번만 보여주도록
-         * 표시 직전에 바로 저장합니다.
-         */
         await AsyncStorage.setItem(
           noticeKey,
           'true'
         );
+
+        if (monthlyNoticeTimer.current) {
+          clearTimeout(
+            monthlyNoticeTimer.current
+          );
+          monthlyNoticeTimer.current = null;
+        }
 
         requestAnimationFrame(
           () => {
@@ -310,7 +329,7 @@ export default function HomeScreen() {
             monthlyNoticeTimer.current =
               setTimeout(
                 hideMonthlyNotice,
-                3200
+                2600
               );
           }
         );
@@ -321,7 +340,6 @@ export default function HomeScreen() {
         );
       }
     };
-
   useFocusEffect(
     useCallback(() => {
       let isActive = true;
@@ -340,18 +358,13 @@ export default function HomeScreen() {
       refreshHome();
 
       return () => {
+        /*
+         * 개발 모드에서는 focus effect가 빠르게 정리됐다가
+         * 다시 실행될 수 있습니다. 여기서 안내 타이머를 지우면
+         * 월 시작 안내가 화면에 남은 채로 멈출 수 있으므로
+         * 타이머는 hideMonthlyNotice가 직접 종료하도록 둡니다.
+         */
         isActive = false;
-
-        if (
-          monthlyNoticeTimer.current
-        ) {
-          clearTimeout(
-            monthlyNoticeTimer.current
-          );
-
-          monthlyNoticeTimer.current =
-            null;
-        }
       };
     }, [])
   );
@@ -397,8 +410,8 @@ export default function HomeScreen() {
           Expense[] =
           savedExpenses
             ? JSON.parse(
-                savedExpenses
-              )
+              savedExpenses
+            )
             : [];
 
         const todayTotal =
@@ -414,11 +427,11 @@ export default function HomeScreen() {
 
               const isToday =
                 expenseDate.getFullYear() ===
-                  today.getFullYear() &&
+                today.getFullYear() &&
                 expenseDate.getMonth() ===
-                  today.getMonth() &&
+                today.getMonth() &&
                 expenseDate.getDate() ===
-                  today.getDate();
+                today.getDate();
 
               if (!isToday) {
                 return sum;
@@ -451,9 +464,9 @@ export default function HomeScreen() {
 
               const isThisMonth =
                 expenseDate.getFullYear() ===
-                  today.getFullYear() &&
+                today.getFullYear() &&
                 expenseDate.getMonth() ===
-                  today.getMonth();
+                today.getMonth();
 
               if (!isThisMonth) {
                 return sum;
@@ -477,8 +490,8 @@ export default function HomeScreen() {
           PlannedExpense[] =
           savedPlannedExpenses
             ? JSON.parse(
-                savedPlannedExpenses
-              )
+              savedPlannedExpenses
+            )
             : [];
 
         const todayStart =
@@ -501,13 +514,13 @@ export default function HomeScreen() {
 
               const isThisMonth =
                 expenseDate.getFullYear() ===
-                  today.getFullYear() &&
+                today.getFullYear() &&
                 expenseDate.getMonth() ===
-                  today.getMonth();
+                today.getMonth();
 
               if (
                 expenseDate <
-                  todayStart ||
+                todayStart ||
                 !isThisMonth
               ) {
                 return sum;
@@ -560,12 +573,12 @@ export default function HomeScreen() {
       const daysUntilEnd =
         Math.ceil(
           difference /
-            (
-              1000 *
-              60 *
-              60 *
-              24
-            )
+          (
+            1000 *
+            60 *
+            60 *
+            24
+          )
         );
 
       /*
@@ -593,15 +606,15 @@ export default function HomeScreen() {
       0,
 
       currentMonthBudget -
-        monthlySpent -
-        plannedAmount
+      monthlySpent -
+      plannedAmount
     );
 
   // 남은 생활비의 10%는 예상치 못한 지출을 위한 안전 여유금으로 보호
   const safetyReserve =
     Math.floor(
       remainingBudget *
-        SAFETY_RESERVE_RATE
+      SAFETY_RESERVE_RATE
     );
 
   // 실제로 이번 달 남은 기간 동안 나눠 사용할 수 있는 생활비
@@ -609,16 +622,16 @@ export default function HomeScreen() {
     Math.max(
       0,
       remainingBudget -
-        safetyReserve
+      safetyReserve
     );
 
   // 오늘 권장 생활비
   const dailyBudget =
     remainingDays > 0
       ? Math.floor(
-          usableRemainingBudget /
-            remainingDays
-        )
+        usableRemainingBudget /
+        remainingDays
+      )
       : 0;
 
   useEffect(() => {
@@ -697,20 +710,20 @@ export default function HomeScreen() {
     Math.max(
       0,
       dailyBudget -
-        todaySpent
+      todaySpent
     );
 
   const todayOverAmount =
     Math.max(
       0,
       todaySpent -
-        dailyBudget
+      dailyBudget
     );
 
   const todayUsageRatio =
     dailyBudget > 0
       ? todaySpent /
-        dailyBudget
+      dailyBudget
       : todaySpent > 0
         ? Infinity
         : 0;
@@ -1018,7 +1031,7 @@ export default function HomeScreen() {
     Math.max(
       0,
       remainingBudget -
-        purchase
+      purchase
     );
 
   // 현재 확보한 안전 여유금은 구매 후에도 그대로 보호
@@ -1026,23 +1039,23 @@ export default function HomeScreen() {
     Math.max(
       0,
       budgetAfterPurchase -
-        safetyReserve
+      safetyReserve
     );
 
   // 구매 후 하루 사용 가능 금액
   const dailyBudgetAfterPurchase =
     remainingDays > 0
       ? Math.floor(
-          usableBudgetAfterPurchase /
-            remainingDays
-        )
+        usableBudgetAfterPurchase /
+        remainingDays
+      )
       : 0;
 
   const dailyDifference =
     Math.max(
       0,
       dailyBudget -
-        dailyBudgetAfterPurchase
+      dailyBudgetAfterPurchase
     );
 
   // 안전 여유금까지 침범해야 하는 구매인지 확인
@@ -1110,356 +1123,356 @@ export default function HomeScreen() {
 
   return (
     <>
-      <ScrollView
-        style={styles.screen}
-        contentContainerStyle={[
-          styles.scrollContent,
-
-          isCompactHeight &&
+      <Screen>
+        <ScrollView
+          style={styles.screen}
+          contentContainerStyle={[
+            styles.scrollContent,
+            isCompactHeight &&
             styles.scrollContentCompact,
-        ]}
-        showsVerticalScrollIndicator={false}
-        bounces={false}
-        keyboardShouldPersistTaps="handled"
-        keyboardDismissMode={
-          Platform.OS === 'ios'
-            ? 'interactive'
-            : 'on-drag'
-        }
-        contentInsetAdjustmentBehavior="automatic"
-      >
-        <View
-          style={[
-            styles.content,
-
-            {
-              paddingHorizontal:
-                horizontalPadding,
-            },
           ]}
+          showsVerticalScrollIndicator={false}
+          bounces={false}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode={
+            Platform.OS === 'ios'
+              ? 'interactive'
+              : 'on-drag'
+          }
         >
-          {/* 상단 헤더 */}
-
           <View
             style={[
-              styles.headerRow,
-              isCompactHeight &&
+              styles.content,
+
+              {
+                paddingHorizontal:
+                  horizontalPadding,
+              },
+            ]}
+          >
+            {/* 상단 헤더 */}
+
+            <View
+              style={[
+                styles.headerRow,
+                isCompactHeight &&
                 styles.headerRowCompact,
-            ]}
-          >
-            <Text style={styles.title}>
-              오늘 얼마 써도 돼?
-            </Text>
-
-            <Pressable
-              style={({ pressed }) => [
-                styles.menuButton,
-                pressed &&
-                  styles.menuButtonPressed,
               ]}
-              onPress={openServiceMenu}
-              hitSlop={8}
             >
-              <Ionicons
-                name="menu-outline"
-                size={25}
-                color="#172033"
-              />
-            </Pressable>
-          </View>
+              <Text style={styles.title}>
+                오늘 얼마 써도 돼?
+              </Text>
 
-          {/* 오늘 권장 생활비 */}
+              <Pressable
+                style={({ pressed }) => [
+                  styles.menuButton,
+                  pressed &&
+                  styles.menuButtonPressed,
+                ]}
+                onPress={openServiceMenu}
+                hitSlop={8}
+              >
+                <Ionicons
+                  name="menu-outline"
+                  size={25}
+                  color="#172033"
+                />
+              </Pressable>
+            </View>
 
-          <View
-            style={[
-              styles.dailyCard,
+            {/* 오늘 권장 생활비 */}
 
-              isCompactHeight &&
+            <View
+              style={[
+                styles.dailyCard,
+
+                isCompactHeight &&
                 styles.dailyCardCompact,
-            ]}
-          >
-            <Text
-              style={
-                styles.dailyLabel
-              }
-            >
-              오늘은
-            </Text>
-
-            <Animated.View
-              style={{
-                transform: [
-                  {
-                    scale:
-                      dailyBudgetScale,
-                  },
-                ],
-              }}
+              ]}
             >
               <Text
-                style={[
-                  styles.dailyAmount,
-
-                  screenWidth < 370 &&
-                    styles.dailyAmountSmall,
-                ]}
+                style={
+                  styles.dailyLabel
+                }
               >
-                {formatMoney(
-                  displayedDailyBudget
-                )}
-                원
+                오늘은
               </Text>
-            </Animated.View>
 
-            <Text
-              style={
-                styles.dailyMessage
-              }
-            >
-              써도 괜찮아요
-            </Text>
-
-            <View
-              style={
-                styles.dailyDivider
-              }
-            />
-
-            <View
-              style={
-                styles.dailyBottomRow
-              }
-            >
-              <View>
+              <Animated.View
+                style={{
+                  transform: [
+                    {
+                      scale:
+                        dailyBudgetScale,
+                    },
+                  ],
+                }}
+              >
                 <Text
-                  style={
-                    styles.monthSpentLabel
-                  }
-                >
-                  이번 달 생활비
-                </Text>
+                  style={[
+                    styles.dailyAmount,
 
-                <Text
-                  style={
-                    styles.monthSpentAmount
-                  }
+                    screenWidth < 370 &&
+                    styles.dailyAmountSmall,
+                  ]}
                 >
                   {formatMoney(
-                    currentMonthBudget
+                    displayedDailyBudget
                   )}
                   원
                 </Text>
+              </Animated.View>
 
-                <Text
-                  style={
-                    styles.monthSpentSubText
-                  }
-                >
-                  현재까지 {formatMoney(monthlySpent)}원 사용
-                </Text>
-              </View>
+              <Text
+                style={
+                  styles.dailyMessage
+                }
+              >
+                써도 괜찮아요
+              </Text>
 
               <View
                 style={
-                  styles.dDayBadge
+                  styles.dailyDivider
+                }
+              />
+
+              <View
+                style={
+                  styles.dailyBottomRow
                 }
               >
-                <Ionicons
-                  name="calendar-outline"
-                  size={13}
-                  color="#3563C9"
-                />
+                <View>
+                  <Text
+                    style={
+                      styles.monthSpentLabel
+                    }
+                  >
+                    이번 달 생활비
+                  </Text>
 
-                <Text
+                  <Text
+                    style={
+                      styles.monthSpentAmount
+                    }
+                  >
+                    {formatMoney(
+                      currentMonthBudget
+                    )}
+                    원
+                  </Text>
+
+                  <Text
+                    style={
+                      styles.monthSpentSubText
+                    }
+                  >
+                    현재까지 {formatMoney(monthlySpent)}원 사용
+                  </Text>
+                </View>
+
+                <View
                   style={
-                    styles.dDayText
+                    styles.dDayBadge
                   }
                 >
-                  {remainingDays}일 남음
-                </Text>
+                  <Ionicons
+                    name="calendar-outline"
+                    size={13}
+                    color="#3563C9"
+                  />
+
+                  <Text
+                    style={
+                      styles.dDayText
+                    }
+                  >
+                    {remainingDays}일 남음
+                  </Text>
+                </View>
               </View>
-            </View>
 
-            <View style={styles.reserveInlineRow}>
-              <Ionicons
-                name="information-circle-outline"
-                size={13}
-                color="#7292D8"
-              />
-
-              <Text style={styles.reserveInlineText}>
-                여유금 10%를 남겨두고 계산했어요.
-              </Text>
-            </View>
-          </View>
-
-          {/* 오늘 사용 현황 + 남은 생활비 */}
-
-          <View style={styles.budgetSummaryCard}>
-            <View
-              style={
-                styles.todaySummary
-              }
-            >
-            <View
-              style={
-                styles.todaySummaryTop
-              }
-            >
-              <Text
-                style={
-                  styles.todaySummaryLabel
-                }
-              >
-                오늘 지출
-              </Text>
-
-              <Text
-                style={
-                  styles.todaySummaryAmount
-                }
-              >
-                {formatMoney(
-                  todaySpent
-                )}
-                원
-              </Text>
-            </View>
-
-            <View
-              style={
-                styles.todaySummaryBottom
-              }
-            >
-              <View
-                style={[
-                  styles.statusDot,
-
-                  todayStatus.type ===
-                    'safe' &&
-                    styles.statusDotSafe,
-
-                  todayStatus.type ===
-                    'warning' &&
-                    styles.statusDotWarning,
-
-                  todayStatus.type ===
-                    'danger' &&
-                    styles.statusDotDanger,
-                ]}
-              />
-
-              <Text
-                style={[
-                  styles.todaySummaryMessage,
-
-                  todayStatus.type ===
-                    'safe' &&
-                    styles.todaySummaryMessageSafe,
-
-                  todayStatus.type ===
-                    'warning' &&
-                    styles.todaySummaryMessageWarning,
-
-                  todayStatus.type ===
-                    'danger' &&
-                    styles.todaySummaryMessageDanger,
-                ]}
-              >
-                {
-                  todayStatus.message
-                }
-              </Text>
-            </View>
-            </View>
-
-            {/* 남은 생활비 */}
-
-            <View style={styles.remainingSection}>
-            <View style={styles.remainingTopRow}>
-              <Text style={styles.remainingLabel}>
-                남은 생활비
-              </Text>
-
-              <Text style={styles.remainingAmount}>
-                {formatMoney(remainingBudget)}원
-              </Text>
-            </View>
-
-            {plannedAmount > 0 && (
-              <View style={styles.plannedNoticeRow}>
+              <View style={styles.reserveInlineRow}>
                 <Ionicons
-                  name="calendar-outline"
+                  name="information-circle-outline"
                   size={13}
                   color="#7292D8"
                 />
 
-                <Text style={styles.plannedNotice}>
-                  예정된 지출 {formatMoney(plannedAmount)}원을 미리 제외했어요.
+                <Text style={styles.reserveInlineText}>
+                  여유금 10%를 남겨두고 계산했어요.
                 </Text>
               </View>
-            )}
             </View>
-          </View>
 
-          {/* 행동 영역 */}
+            {/* 오늘 사용 현황 + 남은 생활비 */}
 
-          <View
-            style={
-              styles.actionSection
-            }
-          >
-            <Pressable
-              style={({
-                pressed,
-              }) => [
-                styles.simulatorButton,
-
-                pressed &&
-                  styles.simulatorButtonPressed,
-              ]}
-              onPress={
-                openSimulator
-              }
-            >
-              <Ionicons
-                name="bag-handle-outline"
-                size={18}
-                color="#3563C9"
-              />
-
+            <View style={styles.budgetSummaryCard}>
               <View
                 style={
-                  styles.simulatorTextArea
+                  styles.todaySummary
                 }
               >
-                <Text
+                <View
                   style={
-                    styles.simulatorTitle
+                    styles.todaySummaryTop
                   }
                 >
-                  이거 사도 돼?
-                </Text>
+                  <Text
+                    style={
+                      styles.todaySummaryLabel
+                    }
+                  >
+                    오늘 지출
+                  </Text>
 
-                <Text
+                  <Text
+                    style={
+                      styles.todaySummaryAmount
+                    }
+                  >
+                    {formatMoney(
+                      todaySpent
+                    )}
+                    원
+                  </Text>
+                </View>
+
+                <View
                   style={
-                    styles.simulatorDescription
+                    styles.todaySummaryBottom
                   }
                 >
-                  구매 후 예산을 미리 확인해보세요.
-                </Text>
+                  <View
+                    style={[
+                      styles.statusDot,
+
+                      todayStatus.type ===
+                      'safe' &&
+                      styles.statusDotSafe,
+
+                      todayStatus.type ===
+                      'warning' &&
+                      styles.statusDotWarning,
+
+                      todayStatus.type ===
+                      'danger' &&
+                      styles.statusDotDanger,
+                    ]}
+                  />
+
+                  <Text
+                    style={[
+                      styles.todaySummaryMessage,
+
+                      todayStatus.type ===
+                      'safe' &&
+                      styles.todaySummaryMessageSafe,
+
+                      todayStatus.type ===
+                      'warning' &&
+                      styles.todaySummaryMessageWarning,
+
+                      todayStatus.type ===
+                      'danger' &&
+                      styles.todaySummaryMessageDanger,
+                    ]}
+                  >
+                    {
+                      todayStatus.message
+                    }
+                  </Text>
+                </View>
               </View>
 
-              <Ionicons
-                name="chevron-forward"
-                size={18}
-                color="#687386"
-              />
-            </Pressable>
+              {/* 남은 생활비 */}
 
+              <View style={styles.remainingSection}>
+                <View style={styles.remainingTopRow}>
+                  <Text style={styles.remainingLabel}>
+                    남은 생활비
+                  </Text>
+
+                  <Text style={styles.remainingAmount}>
+                    {formatMoney(remainingBudget)}원
+                  </Text>
+                </View>
+
+                {plannedAmount > 0 && (
+                  <View style={styles.plannedNoticeRow}>
+                    <Ionicons
+                      name="calendar-outline"
+                      size={13}
+                      color="#7292D8"
+                    />
+
+                    <Text style={styles.plannedNotice}>
+                      예정된 지출 {formatMoney(plannedAmount)}원을 미리 제외했어요.
+                    </Text>
+                  </View>
+                )}
+              </View>
+            </View>
+
+            {/* 행동 영역 */}
+
+            <View
+              style={
+                styles.actionSection
+              }
+            >
+              <Pressable
+                style={({
+                  pressed,
+                }) => [
+                    styles.simulatorButton,
+
+                    pressed &&
+                    styles.simulatorButtonPressed,
+                  ]}
+                onPress={
+                  openSimulator
+                }
+              >
+                <Ionicons
+                  name="bag-handle-outline"
+                  size={18}
+                  color="#3563C9"
+                />
+
+                <View
+                  style={
+                    styles.simulatorTextArea
+                  }
+                >
+                  <Text
+                    style={
+                      styles.simulatorTitle
+                    }
+                  >
+                    이거 사도 돼?
+                  </Text>
+
+                  <Text
+                    style={
+                      styles.simulatorDescription
+                    }
+                  >
+                    구매 후 예산을 미리 확인해보세요.
+                  </Text>
+                </View>
+
+                <Ionicons
+                  name="chevron-forward"
+                  size={18}
+                  color="#687386"
+                />
+              </Pressable>
+
+            </View>
           </View>
-        </View>
-      </ScrollView>
+        </ScrollView>
+      </Screen>
 
       {showMonthlyNotice && (
         <Animated.View
@@ -1547,6 +1560,7 @@ export default function HomeScreen() {
             style={[
               styles.serviceMenuSheet,
               {
+                paddingTop: insets.top + 18,
                 transform: [
                   {
                     translateX:
@@ -1605,7 +1619,7 @@ export default function HomeScreen() {
                 style={[
                   styles.serviceMenuItem,
                   index === array.length - 1 &&
-                    styles.serviceMenuItemLast,
+                  styles.serviceMenuItemLast,
                 ]}
                 onPress={() =>
                   handleServiceMenuPress(item.label)
@@ -1655,7 +1669,7 @@ export default function HomeScreen() {
                 style={[
                   styles.serviceMenuItem,
                   index === array.length - 1 &&
-                    styles.serviceMenuItemLast,
+                  styles.serviceMenuItemLast,
                 ]}
                 onPress={() =>
                   handleServiceMenuPress(item.label)
@@ -1708,7 +1722,7 @@ export default function HomeScreen() {
           behavior={
             Platform.OS === 'ios'
               ? 'padding'
-              : 'height'
+              : undefined
           }
           keyboardVerticalOffset={0}
         >
@@ -1751,313 +1765,317 @@ export default function HomeScreen() {
               contentContainerStyle={styles.bottomSheetScrollContent}
               showsVerticalScrollIndicator={false}
               keyboardShouldPersistTaps="handled"
-              keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
+              keyboardDismissMode={
+                Platform.OS === 'ios'
+                  ? 'interactive'
+                  : 'none'
+              }
               nestedScrollEnabled
-            >
-            <View
-              style={
-                styles.sheetHandle
-              }
-            />
-
-            <View
-              style={
-                styles.sheetHeader
-              }
             >
               <View
                 style={
-                  styles.sheetTitleArea
+                  styles.sheetHandle
                 }
-              >
-                <Text
-                  style={
-                    styles.sheetTitle
-                  }
-                >
-                  이거 사도 돼?
-                </Text>
-
-                <Text
-                  style={
-                    styles.sheetDescription
-                  }
-                >
-                  금액을 입력하면 구매 후 하루 예산을 알려드려요.
-                </Text>
-              </View>
-
-              <Pressable
-                style={
-                  styles.closeButton
-                }
-                onPress={
-                  closeSimulator
-                }
-              >
-                <Ionicons
-                  name="close"
-                  size={23}
-                  color="#687386"
-                />
-              </Pressable>
-            </View>
-
-            <Text
-              style={
-                styles.sheetLabel
-              }
-            >
-              사고 싶은 금액
-            </Text>
-
-            <View
-              style={
-                styles.purchaseInputBox
-              }
-            >
-              <TextInput
-                style={
-                  styles.purchaseInput
-                }
-                value={
-                  purchaseAmount
-                }
-                onChangeText={(
-                  text
-                ) =>
-                  setPurchaseAmount(
-                    formatMoneyInput(
-                      text
-                    )
-                  )
-                }
-                placeholder="0"
-                placeholderTextColor="#687386"
-                keyboardType="numeric"
-                returnKeyType="done"
               />
+
+              <View
+                style={
+                  styles.sheetHeader
+                }
+              >
+                <View
+                  style={
+                    styles.sheetTitleArea
+                  }
+                >
+                  <Text
+                    style={
+                      styles.sheetTitle
+                    }
+                  >
+                    이거 사도 돼?
+                  </Text>
+
+                  <Text
+                    style={
+                      styles.sheetDescription
+                    }
+                  >
+                    금액을 입력하면 구매 후 하루 예산을 알려드려요.
+                  </Text>
+                </View>
+
+                <Pressable
+                  style={
+                    styles.closeButton
+                  }
+                  onPress={
+                    closeSimulator
+                  }
+                >
+                  <Ionicons
+                    name="close"
+                    size={23}
+                    color="#687386"
+                  />
+                </Pressable>
+              </View>
 
               <Text
                 style={
-                  styles.purchaseUnit
+                  styles.sheetLabel
                 }
               >
-                원
+                사고 싶은 금액
               </Text>
-            </View>
 
-            {purchase > 0 && (
-              <>
-                {/* 비교 */}
-
-                <View
+              <View
+                style={
+                  styles.purchaseInputBox
+                }
+              >
+                <TextInput
                   style={
-                    styles.comparisonBox
+                    styles.purchaseInput
+                  }
+                  value={
+                    purchaseAmount
+                  }
+                  onChangeText={(
+                    text
+                  ) =>
+                    setPurchaseAmount(
+                      formatMoneyInput(
+                        text
+                      )
+                    )
+                  }
+                  placeholder="0"
+                  placeholderTextColor="#687386"
+                  keyboardType="numeric"
+                  returnKeyType="done"
+                />
+
+                <Text
+                  style={
+                    styles.purchaseUnit
                   }
                 >
-                  <View
-                    style={
-                      styles.comparisonColumn
-                    }
-                  >
-                    <Text
-                      style={
-                        styles.comparisonLabel
-                      }
-                    >
-                      현재
-                    </Text>
+                  원
+                </Text>
+              </View>
 
-                    <Text
-                      style={
-                        styles.comparisonAmount
-                      }
-                    >
-                      {formatMoney(
-                        dailyBudget
-                      )}
-                      원
-                    </Text>
-
-                    <Text
-                      style={
-                        styles.comparisonSub
-                      }
-                    >
-                      하루 사용 가능
-                    </Text>
-                  </View>
+              {purchase > 0 && (
+                <>
+                  {/* 비교 */}
 
                   <View
                     style={
-                      styles.arrowArea
+                      styles.comparisonBox
                     }
                   >
-                    <Ionicons
-                      name="arrow-forward"
-                      size={22}
-                      color="#687386"
-                    />
-                  </View>
-
-                  <View
-                    style={
-                      styles.comparisonColumn
-                    }
-                  >
-                    <Text
-                      style={
-                        styles.comparisonLabel
-                      }
-                    >
-                      구매 후
-                    </Text>
-
-                    <Text
-                      style={
-                        styles.afterAmount
-                      }
-                    >
-                      {formatMoney(
-                        dailyBudgetAfterPurchase
-                      )}
-                      원
-                    </Text>
-
-                    <Text
-                      style={
-                        styles.comparisonSub
-                      }
-                    >
-                      하루 사용 가능
-                    </Text>
-                  </View>
-                </View>
-
-                {!isOverBudget &&
-                  dailyDifference >
-                    0 && (
                     <View
                       style={
-                        styles.differenceBox
+                        styles.comparisonColumn
+                      }
+                    >
+                      <Text
+                        style={
+                          styles.comparisonLabel
+                        }
+                      >
+                        현재
+                      </Text>
+
+                      <Text
+                        style={
+                          styles.comparisonAmount
+                        }
+                      >
+                        {formatMoney(
+                          dailyBudget
+                        )}
+                        원
+                      </Text>
+
+                      <Text
+                        style={
+                          styles.comparisonSub
+                        }
+                      >
+                        하루 사용 가능
+                      </Text>
+                    </View>
+
+                    <View
+                      style={
+                        styles.arrowArea
                       }
                     >
                       <Ionicons
-                        name="trending-down-outline"
-                        size={18}
+                        name="arrow-forward"
+                        size={22}
                         color="#687386"
                       />
-
-                      <Text
-                        style={
-                          styles.differenceText
-                        }
-                      >
-                        앞으로 하루에{' '}
-                        <Text
-                          style={
-                            styles.differenceStrong
-                          }
-                        >
-                          {formatMoney(
-                            dailyDifference
-                          )}
-                          원
-                        </Text>
-                        씩 덜 사용할 수 있어요.
-                      </Text>
                     </View>
-                  )}
-
-                {simulationStatus && (
-                  <View
-                    style={[
-                      styles.statusBox,
-
-                      simulationStatus.type ===
-                        'safe' &&
-                        styles.statusSafe,
-
-                      simulationStatus.type ===
-                        'warning' &&
-                        styles.statusWarning,
-
-                      simulationStatus.type ===
-                        'danger' &&
-                        styles.statusDanger,
-                    ]}
-                  >
-                    <Ionicons
-                      name={
-                        simulationStatus.icon
-                      }
-                      size={22}
-                      color={
-                        simulationStatus.type ===
-                        'safe'
-                          ? '#2F7D5A'
-                          : simulationStatus.type ===
-                              'warning'
-                            ? '#A26A12'
-                            : '#C94A4A'
-                      }
-                    />
 
                     <View
                       style={
-                        styles.statusTextArea
+                        styles.comparisonColumn
                       }
                     >
                       <Text
                         style={
-                          styles.statusTitle
+                          styles.comparisonLabel
                         }
                       >
-                        {
-                          simulationStatus.title
-                        }
+                        구매 후
                       </Text>
 
                       <Text
                         style={
-                          styles.statusMessage
+                          styles.afterAmount
                         }
                       >
-                        {
-                          simulationStatus.message
+                        {formatMoney(
+                          dailyBudgetAfterPurchase
+                        )}
+                        원
+                      </Text>
+
+                      <Text
+                        style={
+                          styles.comparisonSub
                         }
+                      >
+                        하루 사용 가능
                       </Text>
                     </View>
                   </View>
-                )}
 
-                <View
-                  style={
-                    styles.remainingAfterBox
-                  }
-                >
-                  <Text
-                    style={
-                      styles.remainingAfterLabel
-                    }
-                  >
-                    구매 후 사용 가능한 생활비
-                  </Text>
+                  {!isOverBudget &&
+                    dailyDifference >
+                    0 && (
+                      <View
+                        style={
+                          styles.differenceBox
+                        }
+                      >
+                        <Ionicons
+                          name="trending-down-outline"
+                          size={18}
+                          color="#687386"
+                        />
 
-                  <Text
-                    style={
-                      styles.remainingAfterAmount
-                    }
-                  >
-                    {formatMoney(
-                      usableBudgetAfterPurchase
+                        <Text
+                          style={
+                            styles.differenceText
+                          }
+                        >
+                          앞으로 하루에{' '}
+                          <Text
+                            style={
+                              styles.differenceStrong
+                            }
+                          >
+                            {formatMoney(
+                              dailyDifference
+                            )}
+                            원
+                          </Text>
+                          씩 덜 사용할 수 있어요.
+                        </Text>
+                      </View>
                     )}
-                    원
-                  </Text>
-                </View>
-              </>
-            )}
+
+                  {simulationStatus && (
+                    <View
+                      style={[
+                        styles.statusBox,
+
+                        simulationStatus.type ===
+                        'safe' &&
+                        styles.statusSafe,
+
+                        simulationStatus.type ===
+                        'warning' &&
+                        styles.statusWarning,
+
+                        simulationStatus.type ===
+                        'danger' &&
+                        styles.statusDanger,
+                      ]}
+                    >
+                      <Ionicons
+                        name={
+                          simulationStatus.icon
+                        }
+                        size={22}
+                        color={
+                          simulationStatus.type ===
+                            'safe'
+                            ? '#2F7D5A'
+                            : simulationStatus.type ===
+                              'warning'
+                              ? '#A26A12'
+                              : '#C94A4A'
+                        }
+                      />
+
+                      <View
+                        style={
+                          styles.statusTextArea
+                        }
+                      >
+                        <Text
+                          style={
+                            styles.statusTitle
+                          }
+                        >
+                          {
+                            simulationStatus.title
+                          }
+                        </Text>
+
+                        <Text
+                          style={
+                            styles.statusMessage
+                          }
+                        >
+                          {
+                            simulationStatus.message
+                          }
+                        </Text>
+                      </View>
+                    </View>
+                  )}
+
+                  <View
+                    style={
+                      styles.remainingAfterBox
+                    }
+                  >
+                    <Text
+                      style={
+                        styles.remainingAfterLabel
+                      }
+                    >
+                      구매 후 사용 가능한 생활비
+                    </Text>
+
+                    <Text
+                      style={
+                        styles.remainingAfterAmount
+                      }
+                    >
+                      {formatMoney(
+                        usableBudgetAfterPurchase
+                      )}
+                      원
+                    </Text>
+                  </View>
+                </>
+              )}
             </ScrollView>
           </Animated.View>
         </KeyboardAvoidingView>
@@ -2081,12 +2099,14 @@ const styles =
 
     scrollContent: {
       flexGrow: 1,
-      paddingTop: 46,
+      // Safe Area 아래에 홈 화면 자체의 시각적 상단 여백을 추가합니다.
+      paddingTop: 32,
       paddingBottom: 112,
     },
 
     scrollContentCompact: {
-      paddingTop: 28,
+      // 세로가 짧은 기기에서도 너무 위에 붙지 않도록 여백을 유지합니다.
+      paddingTop: 26,
       paddingBottom: 96,
     },
 
@@ -2112,8 +2132,8 @@ const styles =
 
     title: {
       flex: 1,
-      fontSize: 23,
-      lineHeight: 30,
+      fontSize: 24,
+      lineHeight: 32,
       fontFamily: 'Pretendard-ExtraBold',
       color: '#172033',
     },
@@ -2519,10 +2539,10 @@ const styles =
     /* ========================
        Service menu
     ======================== */
-serviceMenuModalRoot: {
-  flex: 1,
-  alignItems: 'flex-end',
-},
+    serviceMenuModalRoot: {
+      flex: 1,
+      alignItems: 'flex-end',
+    },
 
     serviceMenuBackdrop: {
       position: 'absolute',
@@ -2534,25 +2554,24 @@ serviceMenuModalRoot: {
     },
 
     serviceMenuSheet: {
-  width: '72%',
-  maxWidth: 360,
-  height: '100%',
+      width: '72%',
+      maxWidth: 360,
+      height: '100%',
 
-  backgroundColor: '#FFFFFF',
+      backgroundColor: '#FFFFFF',
 
-  paddingHorizontal: 20,
-  paddingTop: 48,
-  paddingBottom: 28,
+      paddingHorizontal: 20,
+      paddingBottom: 28,
 
-  shadowColor: '#000000',
-  shadowOffset: {
-    width: -4,
-    height: 0,
-  },
-  shadowOpacity: 0.12,
-  shadowRadius: 16,
-  elevation: 14,
-},
+      shadowColor: '#000000',
+      shadowOffset: {
+        width: -4,
+        height: 0,
+      },
+      shadowOpacity: 0.12,
+      shadowRadius: 16,
+      elevation: 14,
+    },
 
     serviceMenuHeader: {
       flexDirection: 'row',
@@ -2658,7 +2677,7 @@ serviceMenuModalRoot: {
     },
 
     bottomSheet: {
-      maxHeight: '90%',
+      maxHeight: '88%',
       overflow: 'hidden',
       backgroundColor:
         '#FFFFFF',

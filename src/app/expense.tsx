@@ -25,7 +25,7 @@ import {
 
 import { Calendar, LocaleConfig } from 'react-native-calendars';
 
-import AppHeader from '../components/AppHeader';
+import Screen from '../components/screen';
 
 LocaleConfig.locales.ko = {
   monthNames: [
@@ -730,281 +730,301 @@ export default function ExpenseScreen() {
 
   return (
     <>
-      <KeyboardAvoidingView
-        style={styles.screen}
-        behavior={
-          Platform.OS === 'ios'
-            ? 'padding'
-            : 'height'
-        }
-        keyboardVerticalOffset={0}
-      >
-        <ScrollView
+      <Screen>
+        <KeyboardAvoidingView
           style={styles.screen}
-          contentContainerStyle={styles.container}
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
-          keyboardDismissMode={
+          behavior={
             Platform.OS === 'ios'
-              ? 'interactive'
-              : 'on-drag'
+              ? 'padding'
+              : undefined
           }
-          contentInsetAdjustmentBehavior="automatic"
-          automaticallyAdjustKeyboardInsets
-          nestedScrollEnabled
+          keyboardVerticalOffset={0}
         >
-        <AppHeader
-          title={
-            isEditMode
-              ? '지출 수정'
-              : '지출 기록'
-          }
-          description={
-            isEditMode
-              ? '기록한 지출 정보를 수정해보세요.'
-              : '사용한 금액을 기록해보세요.'
-          }
-        />
+          <ScrollView
+            style={styles.screen}
+            contentContainerStyle={styles.container}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+            keyboardDismissMode={
+              Platform.OS === 'ios'
+                ? 'interactive'
+                : 'on-drag'
+            }
+            contentInsetAdjustmentBehavior="never"
+            automaticallyAdjustKeyboardInsets={
+              Platform.OS === 'ios'
+            }
+            nestedScrollEnabled
+          >
+            <View style={styles.headerBlock}>
+              <Pressable
+                style={({ pressed }) => [
+                  styles.backButton,
+                  pressed && styles.backButtonPressed,
+                ]}
+                onPress={() => router.back()}
+                hitSlop={8}
+              >
+                <Ionicons
+                  name="chevron-back"
+                  size={26}
+                  color="#172033"
+                />
+              </Pressable>
 
-        <View style={styles.form}>
-          {/* 금액 */}
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>
-              얼마를 썼나요?
-            </Text>
+              <Text style={styles.title}>
+                {isEditMode
+                  ? '지출 수정'
+                  : '지출 기록'}
+              </Text>
 
-            <View
-              style={[
-                styles.amountInputBox,
-                isAmountFocused &&
-                  styles.amountInputBoxFocused,
-              ]}
-            >
-              <View style={styles.amountValueRow}>
-                <TextInput
+              <Text style={styles.description}>
+                {isEditMode
+                  ? '기록한 지출 정보를 수정해보세요.'
+                  : '사용한 금액을 기록해보세요.'}
+              </Text>
+            </View>
+
+            <View style={styles.form}>
+              {/* 금액 */}
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>
+                  얼마를 썼나요?
+                </Text>
+
+                <View
                   style={[
-                    styles.amountInput,
-                    {
-                      width:
-                        amountInputWidth,
-                    },
+                    styles.amountInputBox,
+                    isAmountFocused &&
+                    styles.amountInputBoxFocused,
                   ]}
-                  value={amount}
-                  onChangeText={(text) =>
-                    setAmount(
-                      formatMoneyInput(
-                        text
-                      )
-                    )
-                  }
-                  onFocus={() =>
-                    setIsAmountFocused(
-                      true
-                    )
-                  }
-                  onBlur={() =>
-                    setIsAmountFocused(
-                      false
-                    )
-                  }
-                  placeholder="0"
+                >
+                  <View style={styles.amountValueRow}>
+                    <TextInput
+                      style={[
+                        styles.amountInput,
+                        {
+                          width:
+                            amountInputWidth,
+                        },
+                      ]}
+                      value={amount}
+                      onChangeText={(text) =>
+                        setAmount(
+                          formatMoneyInput(
+                            text
+                          )
+                        )
+                      }
+                      onFocus={() =>
+                        setIsAmountFocused(
+                          true
+                        )
+                      }
+                      onBlur={() =>
+                        setIsAmountFocused(
+                          false
+                        )
+                      }
+                      placeholder="0"
+                      placeholderTextColor="#98A2B3"
+                      keyboardType="numeric"
+                      returnKeyType="done"
+                      selectionColor="#3563C9"
+                    />
+
+                    <Text style={styles.unit}>
+                      원
+                    </Text>
+                  </View>
+                </View>
+              </View>
+
+              {/* 사용처 */}
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>
+                  어디에 썼나요?
+                </Text>
+
+                <TextInput
+                  style={styles.input}
+                  value={title}
+                  onChangeText={setTitle}
+                  placeholder="예: 점심, 아이스 아메리카노"
                   placeholderTextColor="#98A2B3"
-                  keyboardType="numeric"
                   returnKeyType="done"
+                  maxLength={30}
                   selectionColor="#3563C9"
                 />
-
-                <Text style={styles.unit}>
-                  원
-                </Text>
               </View>
-            </View>
-          </View>
 
-          {/* 사용처 */}
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>
-              어디에 썼나요?
-            </Text>
+              {/* 카테고리 */}
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>
+                  카테고리
+                </Text>
 
-            <TextInput
-              style={styles.input}
-              value={title}
-              onChangeText={setTitle}
-              placeholder="예: 점심, 아이스 아메리카노"
-              placeholderTextColor="#98A2B3"
-              returnKeyType="done"
-              maxLength={30}
-              selectionColor="#3563C9"
-            />
-          </View>
+                <View style={styles.categoryContainer}>
+                  {allCategories.map(
+                    (item) => {
+                      const isSelected =
+                        category ===
+                        item.id;
 
-          {/* 카테고리 */}
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>
-              카테고리
-            </Text>
+                      return (
+                        <Pressable
+                          key={item.id}
+                          style={({ pressed }) => [
+                            styles.categoryButton,
 
-            <View style={styles.categoryContainer}>
-              {allCategories.map(
-                (item) => {
-                  const isSelected =
-                    category ===
-                    item.id;
+                            isSelected &&
+                            styles.categoryButtonSelected,
 
-                  return (
-                    <Pressable
-                      key={item.id}
-                      style={({ pressed }) => [
-                        styles.categoryButton,
+                            pressed &&
+                            styles.categoryButtonPressed,
+                          ]}
+                          onPress={() =>
+                            setCategory(
+                              item.id
+                            )
+                          }
+                        >
+                          <Ionicons
+                            name={item.icon}
+                            size={18}
+                            color={
+                              isSelected
+                                ? '#3563C9'
+                                : '#687386'
+                            }
+                          />
 
-                        isSelected &&
-                          styles.categoryButtonSelected,
+                          <Text
+                            style={[
+                              styles.categoryText,
 
-                        pressed &&
-                          styles.categoryButtonPressed,
-                      ]}
-                      onPress={() =>
-                        setCategory(
-                          item.id
-                        )
+                              isSelected &&
+                              styles.categoryTextSelected,
+                            ]}
+                          >
+                            {item.label}
+                          </Text>
+                        </Pressable>
+                      );
+                    }
+                  )}
+
+                  <Pressable
+                    style={({ pressed }) => [
+                      styles.categoryButton,
+                      styles.addCategoryButton,
+
+                      pressed &&
+                      styles.categoryButtonPressed,
+                    ]}
+                    onPress={
+                      openCategoryModal
+                    }
+                  >
+                    <Ionicons
+                      name="add"
+                      size={18}
+                      color="#3563C9"
+                    />
+
+                    <Text
+                      style={
+                        styles.addCategoryText
+                      }
+                    >
+                      추가
+                    </Text>
+                  </Pressable>
+                </View>
+              </View>
+
+              {/* 날짜 */}
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>
+                  날짜
+                </Text>
+
+                <Pressable
+                  style={({ pressed }) => [
+                    styles.dateSelectButton,
+
+                    pressed &&
+                    styles.dateSelectButtonPressed,
+                  ]}
+                  onPress={() =>
+                    setShowDateModal(true)
+                  }
+                >
+                  <View
+                    style={styles.dateSelectLeft}
+                  >
+                    <View
+                      style={
+                        styles.dateIconBox
                       }
                     >
                       <Ionicons
-                        name={item.icon}
+                        name="calendar-outline"
                         size={18}
-                        color={
-                          isSelected
-                            ? '#3563C9'
-                            : '#687386'
-                        }
+                        color="#3563C9"
                       />
+                    </View>
 
-                      <Text
-                        style={[
-                          styles.categoryText,
+                    <Text
+                      style={
+                        styles.dateSelectText
+                      }
+                    >
+                      {formatExpenseDateLabel(
+                        expenseDate
+                      )}
+                    </Text>
+                  </View>
 
-                          isSelected &&
-                            styles.categoryTextSelected,
-                        ]}
-                      >
-                        {item.label}
-                      </Text>
-                    </Pressable>
-                  );
-                }
-              )}
-
-              <Pressable
-                style={({ pressed }) => [
-                  styles.categoryButton,
-                  styles.addCategoryButton,
-
-                  pressed &&
-                    styles.categoryButtonPressed,
-                ]}
-                onPress={
-                  openCategoryModal
-                }
-              >
-                <Ionicons
-                  name="add"
-                  size={18}
-                  color="#3563C9"
-                />
-
-                <Text
-                  style={
-                    styles.addCategoryText
-                  }
-                >
-                  추가
-                </Text>
-              </Pressable>
+                  <Ionicons
+                    name="chevron-forward"
+                    size={18}
+                    color="#98A2B3"
+                  />
+                </Pressable>
+              </View>
             </View>
-          </View>
-
-          {/* 날짜 */}
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>
-              날짜
-            </Text>
 
             <Pressable
+              disabled={!canSave}
               style={({ pressed }) => [
-                styles.dateSelectButton,
+                styles.saveButton,
+
+                !canSave &&
+                styles.saveButtonDisabled,
 
                 pressed &&
-                  styles.dateSelectButtonPressed,
+                canSave &&
+                styles.saveButtonPressed,
               ]}
-              onPress={() =>
-                setShowDateModal(true)
-              }
+              onPress={saveExpense}
             >
-              <View
-                style={styles.dateSelectLeft}
+              <Text
+                style={[
+                  styles.saveButtonText,
+
+                  !canSave &&
+                  styles.saveButtonTextDisabled,
+                ]}
               >
-                <View
-                  style={
-                    styles.dateIconBox
-                  }
-                >
-                  <Ionicons
-                    name="calendar-outline"
-                    size={18}
-                    color="#3563C9"
-                  />
-                </View>
-
-                <Text
-                  style={
-                    styles.dateSelectText
-                  }
-                >
-                  {formatExpenseDateLabel(
-                    expenseDate
-                  )}
-                </Text>
-              </View>
-
-              <Ionicons
-                name="chevron-forward"
-                size={18}
-                color="#98A2B3"
-              />
+                {isEditMode
+                  ? '수정하기'
+                  : '기록하기'}
+              </Text>
             </Pressable>
-          </View>
-        </View>
-
-        <Pressable
-          disabled={!canSave}
-          style={({ pressed }) => [
-            styles.saveButton,
-
-            !canSave &&
-              styles.saveButtonDisabled,
-
-            pressed &&
-              canSave &&
-              styles.saveButtonPressed,
-          ]}
-          onPress={saveExpense}
-        >
-          <Text
-            style={[
-              styles.saveButtonText,
-
-              !canSave &&
-                styles.saveButtonTextDisabled,
-            ]}
-          >
-            {isEditMode
-              ? '수정하기'
-              : '기록하기'}
-          </Text>
-        </Pressable>
-        </ScrollView>
-      </KeyboardAvoidingView>
+          </ScrollView>
+        </KeyboardAvoidingView>
+      </Screen>
 
       <Modal
         visible={showDateModal}
@@ -1129,14 +1149,8 @@ export default function ExpenseScreen() {
           closeCategoryModal
         }
       >
-        <KeyboardAvoidingView
+        <View
           style={styles.modalRoot}
-          behavior={
-            Platform.OS === 'ios'
-              ? 'padding'
-              : 'height'
-          }
-          keyboardVerticalOffset={0}
         >
           <Animated.View
             style={[
@@ -1243,6 +1257,8 @@ export default function ExpenseScreen() {
               placeholderTextColor="#687386"
               maxLength={10}
               returnKeyType="done"
+              blurOnSubmit
+              selectionColor="#3563C9"
             />
 
             <Text
@@ -1315,7 +1331,7 @@ export default function ExpenseScreen() {
               </Text>
             </Pressable>
           </Animated.View>
-        </KeyboardAvoidingView>
+        </View>
       </Modal>
     </>
   );
@@ -1332,8 +1348,42 @@ const styles =
     container: {
       flexGrow: 1,
       paddingHorizontal: 20,
+      // 홈(index) / 지출 내역(history)과 같은 상단 시작 간격
       paddingTop: 24,
       paddingBottom: 80,
+    },
+
+    headerBlock: {
+      marginBottom: 28,
+    },
+
+    backButton: {
+      width: 38,
+      height: 38,
+      marginBottom: 12,
+      marginLeft: -8,
+      borderRadius: 12,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+
+    backButtonPressed: {
+      backgroundColor: '#F3F6FA',
+    },
+
+    title: {
+      fontSize: 24,
+      lineHeight: 32,
+      fontFamily: 'Pretendard-ExtraBold',
+      color: '#172033',
+    },
+
+    description: {
+      marginTop: 4,
+      fontSize: 15,
+      lineHeight: 22,
+      fontFamily: 'Pretendard-Regular',
+      color: '#687386',
     },
 
     form: {

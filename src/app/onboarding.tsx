@@ -110,14 +110,7 @@ export default function OnboardingScreen() {
     setCurrentIndex,
   ] = useState(0);
 
-  const contentOffsetY =
-    Math.min(
-      60,
-      Math.max(
-        20,
-        screenHeight * 0.05
-      )
-    );
+  const contentOffsetY = -30;
 
   const visualTopGap =
     Math.min(
@@ -223,7 +216,7 @@ export default function OnboardingScreen() {
     const newIndex =
       Math.round(
         offsetX /
-          screenWidth
+        screenWidth
       );
 
     setCurrentIndex(
@@ -425,14 +418,14 @@ export default function OnboardingScreen() {
                 width:
                   Math.min(
                     screenWidth *
-                      0.20,
+                    0.20,
                     90
                   ),
 
                 height:
                   Math.min(
                     screenWidth *
-                      0.20,
+                    0.20,
                     90
                   ),
               },
@@ -465,14 +458,14 @@ export default function OnboardingScreen() {
                 width:
                   Math.min(
                     screenWidth *
-                      0.78,
+                    0.78,
                     360
                   ),
 
                 height:
                   Math.min(
                     screenWidth *
-                      0.78,
+                    0.78,
                     360
                   ),
               },
@@ -496,14 +489,14 @@ export default function OnboardingScreen() {
               width:
                 Math.min(
                   screenWidth *
-                    0.25,
+                  0.25,
                   112
                 ),
 
               height:
                 Math.min(
                   screenWidth *
-                    0.25,
+                  0.25,
                   112
                 ),
             },
@@ -659,49 +652,49 @@ export default function OnboardingScreen() {
                 },
               ]}
             >
-            {/* 제목 */}
+              {/* 제목 */}
 
-            <View
-              style={
-                styles.textArea
-              }
-            >
-              <Text
+              <View
                 style={
-                  styles.title
+                  styles.textArea
                 }
               >
-                {
-                  item.title
-                }
-
                 <Text
                   style={
-                    styles.highlight
+                    styles.title
                   }
                 >
                   {
-                    item.highlight
+                    item.title
+                  }
+
+                  <Text
+                    style={
+                      styles.highlight
+                    }
+                  >
+                    {
+                      item.highlight
+                    }
+                  </Text>
+                </Text>
+
+                <Text
+                  style={
+                    styles.description
+                  }
+                >
+                  {
+                    item.description
                   }
                 </Text>
-              </Text>
+              </View>
 
-              <Text
-                style={
-                  styles.description
-                }
-              >
-                {
-                  item.description
-                }
-              </Text>
-            </View>
+              {/* 이미지 / 시뮬레이터 */}
 
-            {/* 이미지 / 시뮬레이터 */}
-
-            {renderVisual(
-              item
-            )}
+              {renderVisual(
+                item
+              )}
             </View>
           </Pressable>
         )}
@@ -742,8 +735,8 @@ export default function OnboardingScreen() {
                   styles.dot,
 
                   currentIndex ===
-                    index &&
-                    styles.activeDot,
+                  index &&
+                  styles.activeDot,
                 ]}
               />
             )
@@ -756,11 +749,11 @@ export default function OnboardingScreen() {
           style={({
             pressed,
           }) => [
-            styles.nextButton,
+              styles.nextButton,
 
-            pressed &&
+              pressed &&
               styles.nextButtonPressed,
-          ]}
+            ]}
           onPress={
             goNext
           }
@@ -771,20 +764,20 @@ export default function OnboardingScreen() {
             }
           >
             {currentIndex ===
-            pages.length - 1
+              pages.length - 1
               ? '시작하기'
               : '다음'}
           </Text>
 
           {currentIndex <
             pages.length -
-              1 && (
-            <Ionicons
-              name="arrow-forward"
-              size={18}
-              color="#FFFFFF"
-            />
-          )}
+            1 && (
+              <Ionicons
+                name="arrow-forward"
+                size={18}
+                color="#FFFFFF"
+              />
+            )}
         </Pressable>
       </View>
     </SafeAreaView>

@@ -1,6 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { router, useFocusEffect } from 'expo-router';
+import Screen from '../../components/screen';
 import type { ComponentProps } from 'react';
 import {
   useCallback,
@@ -439,9 +440,9 @@ export default function HistoryScreen() {
 
           const isActualCurrentMonth =
             now.getFullYear() ===
-              selectedYear &&
+            selectedYear &&
             now.getMonth() ===
-              selectedMonthIndex;
+            selectedMonthIndex;
 
           if (
             !isActualCurrentMonth
@@ -1020,7 +1021,7 @@ export default function HistoryScreen() {
   const budgetUsageRate =
     monthlyLivingBudget > 0
       ? totalExpense /
-        monthlyLivingBudget
+      monthlyLivingBudget
       : 0;
 
   const budgetUsagePercent =
@@ -1040,930 +1041,932 @@ export default function HistoryScreen() {
   const isBudgetOver =
     monthlyLivingBudget > 0 &&
     totalExpense >
-      monthlyLivingBudget;
+    monthlyLivingBudget;
 
   return (
-    <ScrollView
-      style={
-        styles.screen
-      }
-      contentContainerStyle={
-        styles.container
-      }
-      showsVerticalScrollIndicator={false}
-      keyboardShouldPersistTaps="handled"
-      keyboardDismissMode={
-        Platform.OS === 'ios'
-          ? 'interactive'
-          : 'on-drag'
-      }
-      contentInsetAdjustmentBehavior="automatic"
-    >
-      {/* =====================
+    <Screen>
+      <ScrollView
+        style={
+          styles.screen
+        }
+        contentContainerStyle={
+          styles.container
+        }
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode={
+          Platform.OS === 'ios'
+            ? 'interactive'
+            : 'on-drag'
+        }
+        contentInsetAdjustmentBehavior="never"
+      >
+        {/* =====================
           상단
       ====================== */}
 
-      <View
-        style={
-          styles.header
-        }
-      >
-        <Text
+        <View
           style={
-            styles.title
+            styles.header
           }
         >
-          지출 내역
-        </Text>
+          <Text
+            style={
+              styles.title
+            }
+          >
+            지출 내역
+          </Text>
 
-        <Text
-          style={
-            styles.description
-          }
-        >
-          월별 지출을 한눈에 확인해보세요.
-        </Text>
-      </View>
+          <Text
+            style={
+              styles.description
+            }
+          >
+            월별 지출을 한눈에 확인해보세요.
+          </Text>
+        </View>
 
-      {/* =====================
+        {/* =====================
           월 선택
       ====================== */}
 
-      <View
-        style={
-          styles.monthSelector
-        }
-      >
-        <Pressable
-          style={({ pressed }) => [
-            styles.monthArrowButton,
-            pressed &&
-              styles.monthArrowButtonPressed,
-          ]}
-          onPress={
-            movePreviousMonth
-          }
-          hitSlop={10}
-        >
-          <Ionicons
-            name="chevron-back"
-            size={21}
-            color="#172033"
-          />
-        </Pressable>
-
-        <Pressable
-          style={
-            styles.monthCenter
-          }
-          onPress={
-            goCurrentMonth
-          }
-        >
-          <Text
-            style={
-              styles.monthTitle
-            }
-          >
-            {selectedYear}년{' '}
-            {selectedMonthIndex + 1}
-            월
-          </Text>
-
-          {!isCurrentMonth && (
-            <View
-              style={
-                styles.currentMonthBadge
-              }
-            >
-              <Text
-                style={
-                  styles.currentMonthGuide
-                }
-              >
-                이번 달로 이동
-              </Text>
-            </View>
-          )}
-        </Pressable>
-
-        <Pressable
-          style={({ pressed }) => [
-            styles.monthArrowButton,
-            pressed &&
-              styles.monthArrowButtonPressed,
-          ]}
-          onPress={
-            moveNextMonth
-          }
-          hitSlop={10}
-        >
-          <Ionicons
-            name="chevron-forward"
-            size={21}
-            color="#172033"
-          />
-        </Pressable>
-      </View>
-
-      {/* =====================
-          월 총 지출
-      ====================== */}
-
-      <View
-        style={
-          styles.totalBox
-        }
-      >
         <View
           style={
-            styles.totalTopRow
+            styles.monthSelector
           }
         >
-          <Text
-            style={
-              styles.totalLabel
+          <Pressable
+            style={({ pressed }) => [
+              styles.monthArrowButton,
+              pressed &&
+              styles.monthArrowButtonPressed,
+            ]}
+            onPress={
+              movePreviousMonth
             }
+            hitSlop={10}
           >
-            {selectedMonthIndex + 1}
-            월 총 지출
-          </Text>
+            <Ionicons
+              name="chevron-back"
+              size={21}
+              color="#172033"
+            />
+          </Pressable>
 
-          <View
+          <Pressable
             style={
-              styles.totalCountBadge
+              styles.monthCenter
+            }
+            onPress={
+              goCurrentMonth
             }
           >
             <Text
               style={
-                styles.totalCountText
+                styles.monthTitle
               }
             >
-              {monthExpenses.length}건
+              {selectedYear}년{' '}
+              {selectedMonthIndex + 1}
+              월
             </Text>
-          </View>
-        </View>
 
-        <Text
-          style={
-            styles.totalAmount
-          }
-        >
-          {formatMoney(
-            totalExpense
-          )}
-          원
-        </Text>
-
-        {monthlyLivingBudget >
-            0 && (
-            <>
+            {!isCurrentMonth && (
               <View
                 style={
-                  styles.budgetUsageHeader
+                  styles.currentMonthBadge
                 }
               >
                 <Text
                   style={
-                    styles.budgetUsageText
+                    styles.currentMonthGuide
                   }
                 >
-                  생활비{' '}
-                  {formatMoney(
-                    monthlyLivingBudget
-                  )}
-                  원 중{' '}
-                  {budgetUsagePercent}% 사용
+                  이번 달로 이동
                 </Text>
-
-                {isBudgetOver && (
-                  <Text
-                    style={
-                      styles.budgetOverText
-                    }
-                  >
-                    한도 초과
-                  </Text>
-                )}
               </View>
+            )}
+          </Pressable>
 
-              {totalExpense > 0 && (
-                <View
-                  style={
-                    styles.budgetProgressTrack
-                  }
-                >
-                  <View
-                    style={[
-                      styles.budgetProgressFill,
-
-                      isBudgetOver &&
-                        styles.budgetProgressFillOver,
-
-                      {
-                        width: `${budgetProgressWidth}%`,
-                      },
-                    ]}
-                  />
-                </View>
-              )}
-            </>
-          )}
-      </View>
-
-      {/* =====================
-          소비 리포트
-      ====================== */}
-
-      <Pressable
-        style={({ pressed }) => [
-          styles.reportButton,
-
-          pressed &&
-            styles.reportButtonPressed,
-        ]}
-        onPress={() =>
-          router.push(
-            '/report'
-          )
-        }
-      >
-        <View
-          style={
-            styles.reportButtonLeft
-          }
-        >
-          <View
-            style={
-              styles.reportIconBox
+          <Pressable
+            style={({ pressed }) => [
+              styles.monthArrowButton,
+              pressed &&
+              styles.monthArrowButtonPressed,
+            ]}
+            onPress={
+              moveNextMonth
             }
+            hitSlop={10}
           >
             <Ionicons
-              name="stats-chart-outline"
-              size={18}
-              color="#3563C9"
+              name="chevron-forward"
+              size={21}
+              color="#172033"
             />
-          </View>
+          </Pressable>
+        </View>
 
+        {/* =====================
+          월 총 지출
+      ====================== */}
+
+        <View
+          style={
+            styles.totalBox
+          }
+        >
           <View
             style={
-              styles.reportTextArea
+              styles.totalTopRow
             }
           >
             <Text
               style={
-                styles.reportButtonTitle
+                styles.totalLabel
               }
             >
-              소비 리포트
+              {selectedMonthIndex + 1}
+              월 총 지출
             </Text>
 
-            <Text
+            <View
               style={
-                styles.reportButtonDescription
+                styles.totalCountBadge
               }
             >
-              기간별 소비 흐름과 변화를 확인해보세요.
-            </Text>
-          </View>
-        </View>
-
-        <Ionicons
-          name="chevron-forward"
-          size={18}
-          color="#98A2B3"
-        />
-      </Pressable>
-
-      {/* =====================
-          검색
-      ====================== */}
-
-      <View
-        style={
-          styles.searchSection
-        }
-      >
-        <View
-          style={
-            styles.searchBox
-          }
-        >
-          <Ionicons
-            name="search-outline"
-            size={20}
-            color="#687386"
-          />
-
-          <TextInput
-            style={
-              styles.searchInput
-            }
-            value={
-              searchQuery
-            }
-            onChangeText={(
-              value
-            ) => {
-              setSearchQuery(
-                value
-              );
-
-              setOpenedMenuId(
-                null
-              );
-            }}
-            placeholder="지출 내역 검색"
-            placeholderTextColor="#687386"
-            returnKeyType="search"
-          />
-
-          {searchQuery.length >
-            0 && (
-              <Pressable
+              <Text
                 style={
-                  styles.searchClearButton
-                }
-                onPress={() =>
-                  setSearchQuery(
-                    ''
-                  )
+                  styles.totalCountText
                 }
               >
-                <Ionicons
-                  name="close-circle"
-                  size={20}
-                  color="#687386"
-                />
-              </Pressable>
+                {monthExpenses.length}건
+              </Text>
+            </View>
+          </View>
+
+          <Text
+            style={
+              styles.totalAmount
+            }
+          >
+            {formatMoney(
+              totalExpense
+            )}
+            원
+          </Text>
+
+          {monthlyLivingBudget >
+            0 && (
+              <>
+                <View
+                  style={
+                    styles.budgetUsageHeader
+                  }
+                >
+                  <Text
+                    style={
+                      styles.budgetUsageText
+                    }
+                  >
+                    생활비{' '}
+                    {formatMoney(
+                      monthlyLivingBudget
+                    )}
+                    원 중{' '}
+                    {budgetUsagePercent}% 사용
+                  </Text>
+
+                  {isBudgetOver && (
+                    <Text
+                      style={
+                        styles.budgetOverText
+                      }
+                    >
+                      한도 초과
+                    </Text>
+                  )}
+                </View>
+
+                {totalExpense > 0 && (
+                  <View
+                    style={
+                      styles.budgetProgressTrack
+                    }
+                  >
+                    <View
+                      style={[
+                        styles.budgetProgressFill,
+
+                        isBudgetOver &&
+                        styles.budgetProgressFillOver,
+
+                        {
+                          width: `${budgetProgressWidth}%`,
+                        },
+                      ]}
+                    />
+                  </View>
+                )}
+              </>
             )}
         </View>
 
         {/* =====================
-            카테고리 필터
-        ====================== */}
+          소비 리포트
+      ====================== */}
+
+        <Pressable
+          style={({ pressed }) => [
+            styles.reportButton,
+
+            pressed &&
+            styles.reportButtonPressed,
+          ]}
+          onPress={() =>
+            router.push(
+              '/report'
+            )
+          }
+        >
+          <View
+            style={
+              styles.reportButtonLeft
+            }
+          >
+            <View
+              style={
+                styles.reportIconBox
+              }
+            >
+              <Ionicons
+                name="stats-chart-outline"
+                size={18}
+                color="#3563C9"
+              />
+            </View>
+
+            <View
+              style={
+                styles.reportTextArea
+              }
+            >
+              <Text
+                style={
+                  styles.reportButtonTitle
+                }
+              >
+                소비 리포트
+              </Text>
+
+              <Text
+                style={
+                  styles.reportButtonDescription
+                }
+              >
+                기간별 소비 흐름과 변화를 확인해보세요.
+              </Text>
+            </View>
+          </View>
+
+          <Ionicons
+            name="chevron-forward"
+            size={18}
+            color="#98A2B3"
+          />
+        </Pressable>
+
+        {/* =====================
+          검색
+      ====================== */}
 
         <View
-          {...categoryPanResponder.panHandlers}
+          style={
+            styles.searchSection
+          }
         >
-          <ScrollView
-            ref={categoryScrollRef}
-            horizontal
-            nestedScrollEnabled
-            showsHorizontalScrollIndicator={
-              false
-            }
-            contentContainerStyle={
-              styles.categoryFilterContent
-            }
+          <View
             style={
-              styles.categoryFilterScroll
+              styles.searchBox
             }
-            scrollEventThrottle={16}
-            onScroll={(event) => {
-              categoryScrollX.current =
-                event.nativeEvent.contentOffset.x;
-            }}
           >
-            <Pressable
-              style={[
-                styles.filterChip,
+            <Ionicons
+              name="search-outline"
+              size={20}
+              color="#687386"
+            />
 
-                selectedCategory ===
-                'all' &&
-                styles.filterChipSelected,
-              ]}
-              onPress={() => {
-                setSelectedCategory(
-                  'all'
+            <TextInput
+              style={
+                styles.searchInput
+              }
+              value={
+                searchQuery
+              }
+              onChangeText={(
+                value
+              ) => {
+                setSearchQuery(
+                  value
                 );
 
                 setOpenedMenuId(
                   null
                 );
               }}
+              placeholder="지출 내역 검색"
+              placeholderTextColor="#687386"
+              returnKeyType="search"
+            />
+
+            {searchQuery.length >
+              0 && (
+                <Pressable
+                  style={
+                    styles.searchClearButton
+                  }
+                  onPress={() =>
+                    setSearchQuery(
+                      ''
+                    )
+                  }
+                >
+                  <Ionicons
+                    name="close-circle"
+                    size={20}
+                    color="#687386"
+                  />
+                </Pressable>
+              )}
+          </View>
+
+          {/* =====================
+            카테고리 필터
+        ====================== */}
+
+          <View
+            {...categoryPanResponder.panHandlers}
+          >
+            <ScrollView
+              ref={categoryScrollRef}
+              horizontal
+              nestedScrollEnabled
+              showsHorizontalScrollIndicator={
+                false
+              }
+              contentContainerStyle={
+                styles.categoryFilterContent
+              }
+              style={
+                styles.categoryFilterScroll
+              }
+              scrollEventThrottle={16}
+              onScroll={(event) => {
+                categoryScrollX.current =
+                  event.nativeEvent.contentOffset.x;
+              }}
             >
-              <Text
+              <Pressable
                 style={[
-                  styles.filterChipText,
+                  styles.filterChip,
 
                   selectedCategory ===
                   'all' &&
-                  styles.filterChipTextSelected,
+                  styles.filterChipSelected,
                 ]}
+                onPress={() => {
+                  setSelectedCategory(
+                    'all'
+                  );
+
+                  setOpenedMenuId(
+                    null
+                  );
+                }}
               >
-                전체
-              </Text>
-            </Pressable>
+                <Text
+                  style={[
+                    styles.filterChipText,
 
-            {categoryOptions.map(
-              (item) => {
-                const isSelected =
-                  selectedCategory ===
-                  item.id;
+                    selectedCategory ===
+                    'all' &&
+                    styles.filterChipTextSelected,
+                  ]}
+                >
+                  전체
+                </Text>
+              </Pressable>
 
-                return (
-                  <Pressable
-                    key={
-                      item.id
-                    }
-                    style={[
-                      styles.filterChip,
+              {categoryOptions.map(
+                (item) => {
+                  const isSelected =
+                    selectedCategory ===
+                    item.id;
 
-                      isSelected &&
-                      styles.filterChipSelected,
-                    ]}
-                    onPress={() => {
-                      setSelectedCategory(
+                  return (
+                    <Pressable
+                      key={
                         item.id
-                      );
-
-                      setOpenedMenuId(
-                        null
-                      );
-                    }}
-                  >
-                    <Ionicons
-                      name={
-                        item.icon
                       }
-                      size={15}
-                      color={
-                        isSelected
-                          ? '#3563C9'
-                          : '#687386'
-                      }
-                    />
-
-                    <Text
                       style={[
-                        styles.filterChipText,
+                        styles.filterChip,
 
                         isSelected &&
-                        styles.filterChipTextSelected,
+                        styles.filterChipSelected,
                       ]}
+                      onPress={() => {
+                        setSelectedCategory(
+                          item.id
+                        );
+
+                        setOpenedMenuId(
+                          null
+                        );
+                      }}
                     >
-                      {
-                        item.label
-                      }
-                    </Text>
-                  </Pressable>
-                );
-              }
-            )}
-          </ScrollView>
-        </View>
+                      <Ionicons
+                        name={
+                          item.icon
+                        }
+                        size={15}
+                        color={
+                          isSelected
+                            ? '#3563C9'
+                            : '#687386'
+                        }
+                      />
 
-        {/* 결과 요약 */}
+                      <Text
+                        style={[
+                          styles.filterChipText,
 
-        {isFiltering && (
-          <View
-            style={
-              styles.searchResultSummary
-            }
-          >
-            <View>
-              <Text
-                style={
-                  styles.searchResultTitle
+                          isSelected &&
+                          styles.filterChipTextSelected,
+                        ]}
+                      >
+                        {
+                          item.label
+                        }
+                      </Text>
+                    </Pressable>
+                  );
                 }
-              >
-                {searchQuery.trim()
-                  ? `'${searchQuery.trim()}' 검색 결과`
-                  : selectedCategory ===
-                    'all'
-                    ? '검색 결과'
-                    : `${getCategoryLabel(
-                      selectedCategory
-                    )} 지출`}
-              </Text>
+              )}
+            </ScrollView>
+          </View>
 
-              <Text
-                style={
-                  styles.searchResultInfo
-                }
-              >
-                {
-                  filteredExpenses.length
-                }
-                건 ·{' '}
-                {formatMoney(
-                  filteredTotal
-                )}
-                원
-              </Text>
-            </View>
+          {/* 결과 요약 */}
 
-            <Pressable
+          {isFiltering && (
+            <View
               style={
-                styles.resetButton
-              }
-              onPress={
-                clearFilters
+                styles.searchResultSummary
               }
             >
-              <Ionicons
-                name="refresh-outline"
-                size={14}
-                color="#687386"
-              />
+              <View>
+                <Text
+                  style={
+                    styles.searchResultTitle
+                  }
+                >
+                  {searchQuery.trim()
+                    ? `'${searchQuery.trim()}' 검색 결과`
+                    : selectedCategory ===
+                      'all'
+                      ? '검색 결과'
+                      : `${getCategoryLabel(
+                        selectedCategory
+                      )} 지출`}
+                </Text>
 
-              <Text
+                <Text
+                  style={
+                    styles.searchResultInfo
+                  }
+                >
+                  {
+                    filteredExpenses.length
+                  }
+                  건 ·{' '}
+                  {formatMoney(
+                    filteredTotal
+                  )}
+                  원
+                </Text>
+              </View>
+
+              <Pressable
                 style={
-                  styles.resetButtonText
+                  styles.resetButton
+                }
+                onPress={
+                  clearFilters
                 }
               >
-                초기화
-              </Text>
-            </Pressable>
-          </View>
-        )}
-      </View>
+                <Ionicons
+                  name="refresh-outline"
+                  size={14}
+                  color="#687386"
+                />
 
-      {/* =====================
+                <Text
+                  style={
+                    styles.resetButtonText
+                  }
+                >
+                  초기화
+                </Text>
+              </Pressable>
+            </View>
+          )}
+        </View>
+
+        {/* =====================
           지출 목록
       ====================== */}
 
-      <View
-        style={
-          styles.list
-        }
-      >
-        {/* 월 자체에 데이터가 없음 */}
+        <View
+          style={
+            styles.list
+          }
+        >
+          {/* 월 자체에 데이터가 없음 */}
 
-        {monthExpenses.length ===
-          0 ? (
-          <View
-            style={
-              styles.empty
-            }
-          >
+          {monthExpenses.length ===
+            0 ? (
             <View
               style={
-                styles.emptyIcon
+                styles.empty
               }
             >
-              <Ionicons
-                name="receipt-outline"
-                size={30}
-                color="#687386"
-              />
-            </View>
-
-            <Text
-              style={
-                styles.emptyTitle
-              }
-            >
-              이 달에는 지출 내역이 없어요
-            </Text>
-
-            <Text
-              style={
-                styles.emptyText
-              }
-            >
-              지출을 기록하면 날짜별로 정리해서 보여드려요.
-            </Text>
-          </View>
-        ) : groupedExpenses.length ===
-          0 ? (
-          /*
-           * 월 데이터는 있는데
-           * 검색/필터 결과가 없음
-           */
-          <View
-            style={
-              styles.empty
-            }
-          >
-            <View
-              style={
-                styles.emptyIcon
-              }
-            >
-              <Ionicons
-                name="search-outline"
-                size={29}
-                color="#687386"
-              />
-            </View>
-
-            <Text
-              style={
-                styles.emptyTitle
-              }
-            >
-              검색 결과가 없어요
-            </Text>
-
-            <Text
-              style={
-                styles.emptyText
-              }
-            >
-              다른 검색어나 카테고리로 다시 찾아보세요.
-            </Text>
-
-            <Pressable
-              style={
-                styles.emptyResetButton
-              }
-              onPress={
-                clearFilters
-              }
-            >
-              <Text
+              <View
                 style={
-                  styles.emptyResetButtonText
+                  styles.emptyIcon
                 }
               >
-                전체 내역 보기
-              </Text>
-            </Pressable>
-          </View>
-        ) : (
-          groupedExpenses.map(
-            (group) => {
-              const dayTotal =
-                group.expenses.reduce(
-                  (
-                    sum,
-                    expense
-                  ) =>
-                    sum +
-                    expense.amount,
-                  0
-                );
+                <Ionicons
+                  name="receipt-outline"
+                  size={30}
+                  color="#687386"
+                />
+              </View>
 
-              return (
-                <View
-                  key={
-                    group.dateKey
-                  }
+              <Text
+                style={
+                  styles.emptyTitle
+                }
+              >
+                이 달에는 지출 내역이 없어요
+              </Text>
+
+              <Text
+                style={
+                  styles.emptyText
+                }
+              >
+                지출을 기록하면 날짜별로 정리해서 보여드려요.
+              </Text>
+            </View>
+          ) : groupedExpenses.length ===
+            0 ? (
+            /*
+             * 월 데이터는 있는데
+             * 검색/필터 결과가 없음
+             */
+            <View
+              style={
+                styles.empty
+              }
+            >
+              <View
+                style={
+                  styles.emptyIcon
+                }
+              >
+                <Ionicons
+                  name="search-outline"
+                  size={29}
+                  color="#687386"
+                />
+              </View>
+
+              <Text
+                style={
+                  styles.emptyTitle
+                }
+              >
+                검색 결과가 없어요
+              </Text>
+
+              <Text
+                style={
+                  styles.emptyText
+                }
+              >
+                다른 검색어나 카테고리로 다시 찾아보세요.
+              </Text>
+
+              <Pressable
+                style={
+                  styles.emptyResetButton
+                }
+                onPress={
+                  clearFilters
+                }
+              >
+                <Text
                   style={
-                    styles.dateGroup
+                    styles.emptyResetButtonText
                   }
                 >
-                  {/* 날짜 */}
+                  전체 내역 보기
+                </Text>
+              </Pressable>
+            </View>
+          ) : (
+            groupedExpenses.map(
+              (group) => {
+                const dayTotal =
+                  group.expenses.reduce(
+                    (
+                      sum,
+                      expense
+                    ) =>
+                      sum +
+                      expense.amount,
+                    0
+                  );
 
+                return (
                   <View
+                    key={
+                      group.dateKey
+                    }
                     style={
-                      styles.dateHeader
+                      styles.dateGroup
                     }
                   >
-                    <Text
+                    {/* 날짜 */}
+
+                    <View
                       style={
-                        styles.dateTitle
+                        styles.dateHeader
                       }
                     >
-                      {formatGroupDate(
-                        group.date
-                      )}
-                    </Text>
+                      <Text
+                        style={
+                          styles.dateTitle
+                        }
+                      >
+                        {formatGroupDate(
+                          group.date
+                        )}
+                      </Text>
 
-                    <Text
+                      <Text
+                        style={
+                          styles.dayTotal
+                        }
+                      >
+                        {formatMoney(
+                          dayTotal
+                        )}
+                        원
+                      </Text>
+                    </View>
+
+                    {/* 하루 지출 */}
+
+                    <View
                       style={
-                        styles.dayTotal
+                        styles.dayList
                       }
                     >
-                      {formatMoney(
-                        dayTotal
-                      )}
-                      원
-                    </Text>
-                  </View>
+                      {group.expenses.map(
+                        (expense) => {
+                          const isMenuOpen =
+                            openedMenuId ===
+                            expense.id;
 
-                  {/* 하루 지출 */}
-
-                  <View
-                    style={
-                      styles.dayList
-                    }
-                  >
-                    {group.expenses.map(
-                      (expense) => {
-                        const isMenuOpen =
-                          openedMenuId ===
-                          expense.id;
-
-                        return (
-                          <View
-                            key={
-                              expense.id
-                            }
-                            style={[
-                              styles.expenseWrapper,
-
-                              isMenuOpen &&
-                              styles.expenseWrapperOpen,
-                            ]}
-                          >
+                          return (
                             <View
-                              style={
-                                styles.expenseItem
+                              key={
+                                expense.id
                               }
-                            >
-                              {/* 왼쪽 */}
+                              style={[
+                                styles.expenseWrapper,
 
+                                isMenuOpen &&
+                                styles.expenseWrapperOpen,
+                              ]}
+                            >
                               <View
                                 style={
-                                  styles.leftArea
+                                  styles.expenseItem
                                 }
                               >
-                                <View
-                                  style={
-                                    styles.categoryIcon
-                                  }
-                                >
-                                  <Ionicons
-                                    name={getCategoryIcon(
-                                      expense.category
-                                    )}
-                                    size={
-                                      21
-                                    }
-                                    color="#5F6F86"
-                                  />
-                                </View>
+                                {/* 왼쪽 */}
 
                                 <View
                                   style={
-                                    styles.expenseInfo
+                                    styles.leftArea
                                   }
                                 >
-                                  <Text
+                                  <View
                                     style={
-                                      styles.expenseTitle
-                                    }
-                                    numberOfLines={
-                                      1
+                                      styles.categoryIcon
                                     }
                                   >
-                                    {
-                                      expense.title
-                                    }
-                                  </Text>
+                                    <Ionicons
+                                      name={getCategoryIcon(
+                                        expense.category
+                                      )}
+                                      size={
+                                        21
+                                      }
+                                      color="#5F6F86"
+                                    />
+                                  </View>
 
                                   <View
                                     style={
-                                      styles.expenseMetaRow
+                                      styles.expenseInfo
                                     }
                                   >
                                     <Text
                                       style={
-                                        styles.expenseTime
+                                        styles.expenseTitle
+                                      }
+                                      numberOfLines={
+                                        1
                                       }
                                     >
-                                      {formatTime(
-                                        expense.createdAt
-                                      )}
+                                      {
+                                        expense.title
+                                      }
                                     </Text>
 
                                     <View
                                       style={
-                                        styles.metaDot
+                                        styles.expenseMetaRow
                                       }
+                                    >
+                                      <Text
+                                        style={
+                                          styles.expenseTime
+                                        }
+                                      >
+                                        {formatTime(
+                                          expense.createdAt
+                                        )}
+                                      </Text>
+
+                                      <View
+                                        style={
+                                          styles.metaDot
+                                        }
+                                      />
+
+                                      <Text
+                                        style={
+                                          styles.expenseCategoryName
+                                        }
+                                      >
+                                        {getCategoryLabel(
+                                          expense.category
+                                        )}
+                                      </Text>
+                                    </View>
+                                  </View>
+                                </View>
+
+                                {/* 오른쪽 */}
+
+                                <View
+                                  style={
+                                    styles.rightArea
+                                  }
+                                >
+                                  <Text
+                                    style={
+                                      styles.expenseAmount
+                                    }
+                                  >
+                                    {formatMoney(
+                                      expense.amount
+                                    )}
+                                    원
+                                  </Text>
+
+                                  <Pressable
+                                    style={
+                                      styles.menuButton
+                                    }
+                                    onPress={() =>
+                                      setOpenedMenuId(
+                                        isMenuOpen
+                                          ? null
+                                          : expense.id
+                                      )
+                                    }
+                                    hitSlop={
+                                      10
+                                    }
+                                  >
+                                    <Ionicons
+                                      name="ellipsis-vertical"
+                                      size={
+                                        20
+                                      }
+                                      color="#687386"
+                                    />
+                                  </Pressable>
+                                </View>
+                              </View>
+
+                              {/* 수정 / 삭제 */}
+
+                              {isMenuOpen && (
+                                <View
+                                  style={
+                                    styles.menu
+                                  }
+                                >
+                                  <Pressable
+                                    style={
+                                      styles.menuItem
+                                    }
+                                    onPress={() =>
+                                      editExpense(
+                                        expense
+                                      )
+                                    }
+                                  >
+                                    <Ionicons
+                                      name="pencil-outline"
+                                      size={
+                                        18
+                                      }
+                                      color="#172033"
                                     />
 
                                     <Text
                                       style={
-                                        styles.expenseCategoryName
+                                        styles.menuText
                                       }
                                     >
-                                      {getCategoryLabel(
-                                        expense.category
-                                      )}
+                                      수정하기
                                     </Text>
-                                  </View>
+                                  </Pressable>
+
+                                  <View
+                                    style={
+                                      styles.menuDivider
+                                    }
+                                  />
+
+                                  <Pressable
+                                    style={
+                                      styles.menuItem
+                                    }
+                                    onPress={() =>
+                                      confirmDelete(
+                                        expense
+                                      )
+                                    }
+                                  >
+                                    <Ionicons
+                                      name="trash-outline"
+                                      size={
+                                        18
+                                      }
+                                      color="#D84B4B"
+                                    />
+
+                                    <Text
+                                      style={
+                                        styles.deleteText
+                                      }
+                                    >
+                                      삭제하기
+                                    </Text>
+                                  </Pressable>
                                 </View>
-                              </View>
-
-                              {/* 오른쪽 */}
-
-                              <View
-                                style={
-                                  styles.rightArea
-                                }
-                              >
-                                <Text
-                                  style={
-                                    styles.expenseAmount
-                                  }
-                                >
-                                  {formatMoney(
-                                    expense.amount
-                                  )}
-                                  원
-                                </Text>
-
-                                <Pressable
-                                  style={
-                                    styles.menuButton
-                                  }
-                                  onPress={() =>
-                                    setOpenedMenuId(
-                                      isMenuOpen
-                                        ? null
-                                        : expense.id
-                                    )
-                                  }
-                                  hitSlop={
-                                    10
-                                  }
-                                >
-                                  <Ionicons
-                                    name="ellipsis-vertical"
-                                    size={
-                                      20
-                                    }
-                                    color="#687386"
-                                  />
-                                </Pressable>
-                              </View>
+                              )}
                             </View>
-
-                            {/* 수정 / 삭제 */}
-
-                            {isMenuOpen && (
-                              <View
-                                style={
-                                  styles.menu
-                                }
-                              >
-                                <Pressable
-                                  style={
-                                    styles.menuItem
-                                  }
-                                  onPress={() =>
-                                    editExpense(
-                                      expense
-                                    )
-                                  }
-                                >
-                                  <Ionicons
-                                    name="pencil-outline"
-                                    size={
-                                      18
-                                    }
-                                    color="#172033"
-                                  />
-
-                                  <Text
-                                    style={
-                                      styles.menuText
-                                    }
-                                  >
-                                    수정하기
-                                  </Text>
-                                </Pressable>
-
-                                <View
-                                  style={
-                                    styles.menuDivider
-                                  }
-                                />
-
-                                <Pressable
-                                  style={
-                                    styles.menuItem
-                                  }
-                                  onPress={() =>
-                                    confirmDelete(
-                                      expense
-                                    )
-                                  }
-                                >
-                                  <Ionicons
-                                    name="trash-outline"
-                                    size={
-                                      18
-                                    }
-                                    color="#D84B4B"
-                                  />
-
-                                  <Text
-                                    style={
-                                      styles.deleteText
-                                    }
-                                  >
-                                    삭제하기
-                                  </Text>
-                                </Pressable>
-                              </View>
-                            )}
-                          </View>
-                        );
-                      }
-                    )}
+                          );
+                        }
+                      )}
+                    </View>
                   </View>
-                </View>
-              );
-            }
-          )
-        )}
-      </View>
-    </ScrollView>
+                );
+              }
+            )
+          )}
+        </View>
+      </ScrollView>
+    </Screen>
   );
 }
 
@@ -1977,7 +1980,7 @@ const styles =
 
     container: {
       paddingHorizontal: 20,
-      paddingTop: 52,
+      paddingTop: 24,
       paddingBottom: 150,
     },
 
@@ -1986,8 +1989,8 @@ const styles =
     },
 
     title: {
-      fontSize: 30,
-      lineHeight: 38,
+      fontSize: 24,
+      lineHeight: 32,
       fontFamily: 'Pretendard-ExtraBold',
       color: '#172033',
     },
