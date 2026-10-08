@@ -1,21 +1,29 @@
 {
   "cli": {
-    "version": ">= 23.2.0",
-    "appVersionSource": "remote"
+    "version": ">= 16.0.0"
   },
   "build": {
     "development": {
       "developmentClient": true,
-      "distribution": "internal"
+      "distribution": "internal",
+      "env": {
+        "EXPO_PUBLIC_USE_TEST_ADS": "true"
+      }
     },
     "preview": {
-      "distribution": "internal"
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk"
+      },
+      "env": {
+        "EXPO_PUBLIC_USE_TEST_ADS": "true"
+      }
     },
     "production": {
-      "autoIncrement": true
+      "autoIncrement": true,
+      "env": {
+        "EXPO_PUBLIC_USE_TEST_ADS": "false"
+      }
     }
-  },
-  "submit": {
-    "production": {}
   }
 }

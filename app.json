@@ -2,6 +2,7 @@
   "expo": {
     "name": "얼마",
     "slug": "oneul-money",
+    "owner": "ge323",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -29,7 +30,15 @@
           "image": "./assets/images/icon.png",
           "imageWidth": 96
         }
-      ]
+      ],
+      [
+        "react-native-google-mobile-ads",
+        {
+          "androidAppId": "ca-app-pub-3940256099942544~3347511713"
+        }
+      ],
+      "expo-image",
+      "expo-web-browser"
     ],
     "experiments": {
       "typedRoutes": true,
@@ -38,7 +47,7 @@
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "1f5b57bd-b05e-4ddf-8c81-81e98434f6a8"
+        "projectId": "2a836ed7-e6d5-4c99-bcdd-1dd64d63bd5a"
       }
     }
   }
