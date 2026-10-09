@@ -9,7 +9,7 @@
     "scheme": "oneulmoney",
     "userInterfaceStyle": "automatic",
     "android": {
-      "package": "com.ge323.eolma",
+      "package": "com.eolma.app",
       "versionCode": 1,
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/icon.png",
@@ -34,7 +34,7 @@
       [
         "react-native-google-mobile-ads",
         {
-          "androidAppId": "ca-app-pub-3940256099942544~3347511713"
+          "androidAppId": "ca-app-pub-8353387848033145~4348918438"
         }
       ],
       "expo-image",
