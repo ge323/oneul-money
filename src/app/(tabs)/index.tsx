@@ -5,7 +5,10 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import Ionicons from '@expo/vector-icons/Ionicons';
-
+import {
+  getMonthlyFixedTotal,
+  loadFixedExpenses,
+} from '../../utils/fixed-expenses';
 import {
 
   ensureCurrentMonthBudget,
@@ -169,7 +172,7 @@ export default function HomeScreen() {
     setCurrentMonthBudget,
 
   ] = useState(0);
-
+const [fixedExpenseTotal, setFixedExpenseTotal] = useState(0);
 
 
   const [
@@ -764,26 +767,18 @@ export default function HomeScreen() {
       try {
 
         const [
+  savedExpenses,
+  savedPlannedExpenses,
+  fixedExpenses,
+] = await Promise.all([
+  AsyncStorage.getItem(EXPENSES_KEY),
+  AsyncStorage.getItem(PLANNED_EXPENSES_KEY),
+  loadFixedExpenses(),
+]);
 
-          savedExpenses,
-
-          savedPlannedExpenses,
-
-        ] = await Promise.all([
-
-          AsyncStorage.getItem(
-
-            EXPENSES_KEY
-
-          ),
-
-          AsyncStorage.getItem(
-
-            PLANNED_EXPENSES_KEY
-
-          ),
-
-        ]);
+setFixedExpenseTotal(
+  getMonthlyFixedTotal(fixedExpenses)
+);
 
 
 
@@ -1221,21 +1216,13 @@ export default function HomeScreen() {
 
   // 사용자가 정한 생활비 한도에서 실제 지출과 예정 지출을 차감합니다.
 
-  const remainingBudget =
-
-    Math.max(
-
-      0,
-
-
-
-      currentMonthBudget -
-
-      monthlySpent -
-
-      plannedAmount
-
-    );
+  const remainingBudget = Math.max(
+  0,
+  currentMonthBudget -
+    fixedExpenseTotal -
+    monthlySpent -
+    plannedAmount
+);
 
 
 

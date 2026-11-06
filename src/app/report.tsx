@@ -22,7 +22,6 @@ import mobileAds, {
   TestIds,
 } from 'react-native-google-mobile-ads';
 
-import { ensureCurrentMonthBudget } from '../utils/monthly-budgets';
 
 const EXPENSES_KEY = 'expenses';
 const CUSTOM_CATEGORIES_KEY = 'custom-categories';
@@ -83,6 +82,7 @@ type BarDetail = {
 type Insight = {
   id: string;
   icon: keyof typeof Ionicons.glyphMap;
+  title: string;
   text: string;
 };
 
@@ -102,7 +102,6 @@ export default function ReportScreen() {
     useState<CustomCategory[]>([]);
   const [period, setPeriod] = useState<Period>('month');
   const [isInsightUnlocked, setIsInsightUnlocked] = useState(false);
-  const [monthlyBudget, setMonthlyBudget] = useState(0);
   const [isRewardedAdLoaded, setIsRewardedAdLoaded] = useState(false);
   const [isRewardedAdLoading, setIsRewardedAdLoading] = useState(true);
 
@@ -196,7 +195,6 @@ export default function ReportScreen() {
       const [
         savedExpenses,
         savedCustomCategories,
-        currentBudget,
         unlockedDate,
       ] = await Promise.all([
         AsyncStorage.getItem(
@@ -205,7 +203,6 @@ export default function ReportScreen() {
         AsyncStorage.getItem(
           CUSTOM_CATEGORIES_KEY
         ),
-        ensureCurrentMonthBudget(0),
         AsyncStorage.getItem(
           INSIGHT_UNLOCK_DATE_KEY
         ),
@@ -223,7 +220,6 @@ export default function ReportScreen() {
           : []
       );
 
-      setMonthlyBudget(currentBudget);
       setIsInsightUnlocked(unlockedDate === getDateKey(getNow()));
     } catch (error) {
       console.error(
@@ -747,164 +743,98 @@ export default function ReportScreen() {
     return '월별 지출';
   };
 
-  const previousPeriodExpense = useMemo(() => {
-    const now = getNow();
+  // 기간 탭과 무관하게 지금까지 기록한 모든 지출로 소비 습관을 분석합니다.
+  const validExpenses = useMemo(() => expenses.filter((expense) => {
+    const amount = Number(expense.amount);
+    const date = new Date(expense.createdAt);
+    return Number.isFinite(amount) && amount > 0 &&
+      !Number.isNaN(date.getTime()) && date <= getNow();
+  }), [expenses]);
 
-    if (period === 'week') {
-      const currentStart = startOfDay(now);
-      currentStart.setDate(currentStart.getDate() - 6);
+  const hasEnoughInsightData = validExpenses.length >= 10;
 
-      const previousEnd = new Date(currentStart);
-      previousEnd.setMilliseconds(-1);
+  const spendingAnalysis = useMemo(() => {
+    if (!hasEnoughInsightData) return null;
 
-      const previousStart = new Date(previousEnd);
-      previousStart.setHours(0, 0, 0, 0);
-      previousStart.setDate(previousStart.getDate() - 6);
+    const total = validExpenses.reduce((sum, item) => sum + Number(item.amount), 0);
+    const counts = new Map<string, number>();
+    const amounts = new Map<string, number>();
+    const weekdays = Array(7).fill(0) as number[];
+    let smallCount = 0;
+    let weekendTotal = 0;
+    let earliest = Infinity;
+    let latest = -Infinity;
 
-      return expenses
-        .filter((expense) => {
-          const date = new Date(expense.createdAt);
-          return date >= previousStart && date <= previousEnd;
-        })
-        .reduce((sum, expense) => sum + Number(expense.amount || 0), 0);
+    validExpenses.forEach((item) => {
+      const amount = Number(item.amount);
+      const date = new Date(item.createdAt);
+      const category = item.category || 'etc';
+      counts.set(category, (counts.get(category) || 0) + 1);
+      amounts.set(category, (amounts.get(category) || 0) + amount);
+      weekdays[date.getDay()] += amount;
+      if (date.getDay() === 0 || date.getDay() === 6) weekendTotal += amount;
+      if (amount <= 10000) smallCount += 1;
+      earliest = Math.min(earliest, date.getTime());
+      latest = Math.max(latest, date.getTime());
+    });
+
+    const topAmount = [...amounts.entries()].sort((a, b) => b[1] - a[1])[0];
+    const topCount = [...counts.entries()].sort((a, b) => b[1] - a[1])[0];
+    const categoryName = (id: string) =>
+      CATEGORIES.find((item) => item.id === id)?.label ||
+      customCategories.find((item) => item.id === id)?.label || '기타';
+    const topShare = Math.round((topAmount[1] / total) * 100);
+    const smallShare = Math.round((smallCount / validExpenses.length) * 100);
+    const weekendShare = Math.round((weekendTotal / total) * 100);
+    const spanDays = Math.floor((latest - earliest) / 86400000) + 1;
+    const weekdayNames = ['일', '월', '화', '수', '목', '금', '토'];
+    const topDay = weekdays.indexOf(Math.max(...weekdays));
+
+    let typeTitle = '균형 탐색형';
+    let typeDescription = '여러 항목에 지출이 분산되어 있어요.';
+    let advice = '지출을 꾸준히 기록하면서 자주 사용하는 항목부터 예산을 정해보세요.';
+
+    if (spanDays >= 14 && weekendShare >= 45) {
+      typeTitle = '주말 소비 집중형';
+      typeDescription = `기록된 지출 금액의 ${weekendShare}%가 주말에 발생했어요.`;
+      advice = '주말에 사용할 금액을 미리 정해두면 예상치 못한 지출을 줄이는 데 도움이 돼요.';
+    } else if (smallShare >= 60) {
+      typeTitle = '소액 결제 빈번형';
+      typeDescription = `1만 원 이하 결제가 전체 ${smallShare}%를 차지해요.`;
+      advice = '작은 결제도 모이면 커질 수 있어요. 자주 쓰는 항목의 주간 한도를 정해보세요.';
+    } else if (topShare >= 45) {
+      typeTitle = `${categoryName(topAmount[0])} 중심 소비형`;
+      typeDescription = `${categoryName(topAmount[0])} 지출이 전체 금액의 ${topShare}%를 차지해요.`;
+      advice = `${categoryName(topAmount[0])} 항목에 월별 한도를 정해두면 소비 관리에 도움이 돼요.`;
     }
 
-    if (period === 'month') {
-      const previousYear =
-        now.getMonth() === 0 ? now.getFullYear() - 1 : now.getFullYear();
-      const previousMonth = now.getMonth() === 0 ? 11 : now.getMonth() - 1;
-      const comparableDay = Math.min(
-        now.getDate(),
-        new Date(previousYear, previousMonth + 1, 0).getDate()
-      );
+    const insights: Insight[] = [
+      {
+        id: 'category', icon: 'pie-chart-outline',
+        title: '가장 지출이 큰 항목',
+        text: `${categoryName(topAmount[0])}에 ${formatMoney(topAmount[1])}원을 썼어요. 전체 지출의 ${topShare}%예요.`,
+      },
+      {
+        id: 'frequency', icon: 'receipt-outline',
+        title: '자주 반복된 소비',
+        text: `${categoryName(topCount[0])} 항목을 ${topCount[1]}번 기록했어요. 1만 원 이하 결제는 ${smallCount}건(${smallShare}%)이에요.`,
+      },
+      spanDays >= 14 ? {
+        id: 'weekday', icon: 'calendar-outline',
+        title: '요일별 소비 특징',
+        text: `기록된 지출 중 ${weekdayNames[topDay]}요일의 총액이 가장 높아요. 주말 지출 비중은 ${weekendShare}%예요.`,
+      } : {
+        id: 'average', icon: 'wallet-outline',
+        title: '한 번에 쓰는 금액',
+        text: `지출 1건당 평균 ${formatMoney(Math.round(total / validExpenses.length))}원을 사용했어요.`,
+      },
+    ];
 
-      return expenses
-        .filter((expense) => {
-          const date = new Date(expense.createdAt);
-          return (
-            date.getFullYear() === previousYear &&
-            date.getMonth() === previousMonth &&
-            date.getDate() <= comparableDay
-          );
-        })
-        .reduce((sum, expense) => sum + Number(expense.amount || 0), 0);
-    }
-
-    return expenses
-      .filter(
-        (expense) =>
-          new Date(expense.createdAt).getFullYear() === now.getFullYear() - 1
-      )
-      .reduce((sum, expense) => sum + Number(expense.amount || 0), 0);
-  }, [expenses, period]);
-
-  const insights = useMemo<Insight[]>(() => {
-    const result: Insight[] = [];
-
-    if (period === 'month') {
-      const now = getNow();
-      const daysInMonth = new Date(
-        now.getFullYear(),
-        now.getMonth() + 1,
-        0
-      ).getDate();
-      const remainingDays = Math.max(daysInMonth - now.getDate() + 1, 1);
-      const remainingBudget = monthlyBudget - totalExpense;
-
-      if (monthlyBudget > 0 && remainingBudget >= 0) {
-        const dailyAvailable = Math.floor(remainingBudget / remainingDays);
-
-        result.push({
-          id: 'daily-budget',
-          icon: 'wallet-outline',
-          text: `예산을 지키려면 앞으로 하루 평균 ${formatMoney(
-            dailyAvailable
-          )}원까지 사용할 수 있어요.`,
-        });
-      } else if (monthlyBudget > 0) {
-        result.push({
-          id: 'daily-budget',
-          icon: 'alert-circle-outline',
-          text: `이번 달 예산을 ${formatMoney(
-            Math.abs(remainingBudget)
-          )}원 초과했어요. 남은 기간에는 지출을 줄여보세요.`,
-        });
-      } else {
-        result.push({
-          id: 'daily-budget',
-          icon: 'wallet-outline',
-          text: '예산을 설정하면 하루 사용 가능 금액도 알려드릴게요.',
-        });
-      }
-    }
-
-    if (getPeriodExpenses.length > 0 && previousPeriodExpense > 0) {
-      const differenceRate = Math.round(
-        ((totalExpense - previousPeriodExpense) / previousPeriodExpense) * 100
-      );
-
-      result.push({
-        id: 'comparison',
-        icon:
-          differenceRate > 0
-            ? 'trending-up-outline'
-            : differenceRate < 0
-              ? 'trending-down-outline'
-              : 'swap-horizontal-outline',
-        text:
-          differenceRate === 0
-            ? '이전 같은 기간과 비슷하게 쓰고 있어요.'
-            : `이전 같은 기간보다 ${Math.abs(differenceRate)}% ${differenceRate > 0 ? '더' : '덜'
-            } 쓰고 있어요.`,
-      });
-    } else if (getPeriodExpenses.length > 0) {
-      result.push({
-        id: 'comparison',
-        icon: 'analytics-outline',
-        text: '이전 기간 기록이 쌓이면 소비 변화를 알려드릴게요.',
-      });
-    }
-
-    const topCategory = categoryData[0];
-    if (topCategory) {
-      const topRate = Math.round((topCategory.amount / totalExpense) * 100);
-
-      result.push({
-        id: 'category',
-        icon: 'pie-chart-outline',
-        text: `${topCategory.label}에 가장 많이 썼어요. 전체 지출의 ${topRate}%예요.`,
-      });
-    }
-
-    if (period === 'month' && totalExpense > 0) {
-      const now = getNow();
-      const daysInMonth = new Date(
-        now.getFullYear(),
-        now.getMonth() + 1,
-        0
-      ).getDate();
-      const projectedExpense = Math.round(
-        (totalExpense / Math.max(now.getDate(), 1)) * daysInMonth
-      );
-
-      result.push({
-        id: 'projection',
-        icon: 'calendar-outline',
-        text: `지금 속도라면 이번 달 약 ${formatMoney(projectedExpense)}원을 쓸 것으로 보여요.`,
-      });
-    }
-
-    return result.slice(0, 4);
-  }, [
-    categoryData,
-    getPeriodExpenses.length,
-    monthlyBudget,
-    period,
-    previousPeriodExpense,
-    totalExpense,
-  ]);
+    return { typeTitle, typeDescription, advice, insights, count: validExpenses.length };
+  }, [validExpenses, customCategories, hasEnoughInsightData]);
 
   const showRewardedAd = async () => {
+    if (!hasEnoughInsightData) return;
     if (!isRewardedAdLoaded) {
       setIsRewardedAdLoading(true);
       rewardedAd.load();
@@ -995,53 +925,59 @@ export default function ReportScreen() {
         </Text>
       </View>
 
-      {/* 소비 인사이트 */}
-
+      {/* 소비 습관 분석: 기존 보상형 광고 및 당일 잠금 해제 유지 */}
       <View style={styles.insightCard}>
         <View style={styles.cardHeader}>
           <View style={styles.insightTitleArea}>
-            <Text style={styles.cardTitle}>소비 인사이트</Text>
-
+            <Text style={styles.cardTitle}>나의 소비 습관 분석</Text>
             <Text style={styles.cardDescription}>
-              내 소비 흐름을 간단하게 확인해보세요.
+              지금까지 기록한 지출에서 소비 습관을 찾아드려요.
             </Text>
           </View>
-
           <View style={styles.insightIcon}>
-            <Ionicons name="bulb-outline" size={19} color="#D58B16" />
+            <Ionicons name="sparkles-outline" size={19} color="#D58B16" />
           </View>
         </View>
 
-        {isInsightUnlocked ? (
-          insights.length > 0 ? (
-            <View style={styles.insightList}>
-              {insights.map((insight) => (
-                <View key={insight.id} style={styles.insightRow}>
-                  <View style={styles.insightRowIcon}>
-                    <Ionicons name={insight.icon} size={16} color="#3563C9" />
-                  </View>
-
+        {!hasEnoughInsightData ? (
+          <View style={styles.insightEmpty}>
+            <Text style={styles.insightEmptyText}>
+              분석하려면 지출 기록이 10건 이상 필요해요.{'\n'}
+              현재 {validExpenses.length}건 기록했어요.
+            </Text>
+          </View>
+        ) : isInsightUnlocked && spendingAnalysis ? (
+          <View style={styles.insightList}>
+            <View style={styles.personaCard}>
+              <Text style={styles.personaEyebrow}>나의 소비 유형</Text>
+              <Text style={styles.personaTitle}>{spendingAnalysis.typeTitle}</Text>
+              <Text style={styles.personaDescription}>{spendingAnalysis.typeDescription}</Text>
+            </View>
+            <Text style={styles.insightSectionTitle}>발견한 소비 습관</Text>
+            {spendingAnalysis.insights.map((insight) => (
+              <View key={insight.id} style={styles.insightRow}>
+                <View style={styles.insightRowIcon}>
+                  <Ionicons name={insight.icon} size={16} color="#3563C9" />
+                </View>
+                <View style={styles.insightBody}>
+                  <Text style={styles.insightRowTitle}>{insight.title}</Text>
                   <Text style={styles.insightText}>{insight.text}</Text>
                 </View>
-              ))}
-
-              <Text style={styles.unlockedCaption}>
-                오늘은 광고 없이 다시 확인할 수 있어요.
-              </Text>
+              </View>
+            ))}
+            <View style={styles.adviceCard}>
+              <Text style={styles.adviceTitle}>💡 나를 위한 소비 조언</Text>
+              <Text style={styles.adviceText}>{spendingAnalysis.advice}</Text>
             </View>
-          ) : (
-            <View style={styles.insightEmpty}>
-              <Text style={styles.insightEmptyText}>
-                지출을 기록하면 소비 인사이트를 알려드릴게요.
-              </Text>
-            </View>
-          )
+            <Text style={styles.unlockedCaption}>
+              총 {spendingAnalysis.count}건 분석 · 오늘은 광고 없이 다시 확인할 수 있어요.
+            </Text>
+          </View>
         ) : (
           <View style={styles.insightLocked}>
             <Text style={styles.insightLockedText}>
-              짧은 광고를 보고 오늘의 인사이트를 열어보세요.
+              광고 1회 시청으로 소비 유형과 습관, 맞춤 조언을 확인해보세요.
             </Text>
-
             <Pressable
               disabled={isRewardedAdLoading}
               style={({ pressed }) => [
@@ -1052,22 +988,12 @@ export default function ReportScreen() {
               onPress={showRewardedAd}
             >
               <Ionicons
-                name={
-                  isRewardedAdLoading
-                    ? 'hourglass-outline'
-                    : isRewardedAdLoaded
-                      ? 'play-circle-outline'
-                      : 'refresh-outline'
-                }
+                name={isRewardedAdLoading ? 'hourglass-outline' : isRewardedAdLoaded ? 'play-circle-outline' : 'refresh-outline'}
                 size={19}
                 color="#FFFFFF"
               />
               <Text style={styles.insightButtonText}>
-                {isRewardedAdLoading
-                  ? '광고 준비 중...'
-                  : isRewardedAdLoaded
-                    ? '광고 보고 확인하기'
-                    : '광고 다시 불러오기'}
+                {isRewardedAdLoading ? '광고 준비 중...' : isRewardedAdLoaded ? '광고 보고 소비 습관 분석하기' : '광고 다시 불러오기'}
               </Text>
             </Pressable>
           </View>
@@ -1689,6 +1615,56 @@ const styles = StyleSheet.create({
     marginRight: 10,
   },
 
+  personaCard: {
+    padding: 16,
+    borderRadius: 14,
+    backgroundColor: '#EEF3FC',
+  },
+  personaEyebrow: {
+    fontSize: 12,
+    color: '#687386',
+    fontFamily: 'Pretendard-SemiBold',
+  },
+  personaTitle: {
+    marginTop: 6,
+    fontSize: 19,
+    color: '#172033',
+    fontFamily: 'Pretendard-ExtraBold',
+  },
+  personaDescription: {
+    marginTop: 6,
+    fontSize: 13,
+    lineHeight: 20,
+    color: '#566176',
+  },
+  insightSectionTitle: {
+    marginTop: 4,
+    fontSize: 14,
+    fontFamily: 'Pretendard-Bold',
+    color: '#172033',
+  },
+  insightBody: { flex: 1 },
+  insightRowTitle: {
+    fontSize: 13,
+    fontFamily: 'Pretendard-Bold',
+    color: '#172033',
+  },
+  adviceCard: {
+    borderRadius: 14,
+    backgroundColor: '#FFFFFF',
+    padding: 14,
+  },
+  adviceTitle: {
+    fontSize: 13,
+    fontFamily: 'Pretendard-Bold',
+    color: '#172033',
+  },
+  adviceText: {
+    marginTop: 7,
+    fontSize: 13,
+    lineHeight: 20,
+    color: '#566176',
+  },
   insightText: {
     flex: 1,
     paddingTop: 3,
